@@ -1,0 +1,19 @@
+{
+  "name": "xanani",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TT: 2026-A118 - Xanani. ESCOM IPN",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace frontend\" \"npm run dev --workspace backend\"",
+    "install:all": "npm install",
+    "build": "npm run build --workspace frontend"
+  },
+  "keywords": [],
+  "author": "OSCAR MOISES GARCIA MENDEZ, LUIS JESUS NAVA CLEMENTE, ERICK GUSTAVO CARPIO BECERRA",
+  "license": "ISC",
+  "type": "commonjs"
+}

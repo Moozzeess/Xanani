@@ -1,0 +1,18 @@
+{
+  "name": "xanani-backend",
+  "version": "1.0.0",
+  "pribate": true,
+  "description": "Backend for Xanani project",
+  "main": "/src/c/backend.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
