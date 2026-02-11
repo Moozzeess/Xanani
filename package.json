@@ -15,5 +15,15 @@
   "keywords": [],
   "author": "OSCAR MOISES GARCIA MENDEZ, LUIS JESUS NAVA CLEMENTE, ERICK GUSTAVO CARPIO BECERRA",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.57.1",
+    "@tailwindcss/vite": "^4.1.18",
+    "lucide-react": "^0.563.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18"
+  }
 }

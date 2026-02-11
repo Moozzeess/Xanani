@@ -1,73 +1,112 @@
-# React + TypeScript + Vite
+# Xanani - Frontend de Xanani.
+## Estructura del Proyecto frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+frontend/
+├── public/                     # Archivos estáticos servidos directamente
+│   └── bus_icon_126644.svg     # Logo principal de la aplicación
+│
+├── src/                        # Código fuente principal
+│   │
+│   ├── app/                   # Configuración principal de la aplicación
+│   │   └── (archivos de configuración de rutas y estado global)
+│   │
+│   ├── assets/                # Recursos estáticos
+│   │   ├── images/            # Imágenes de la aplicación
+│   │   └── fonts/             # Fuentes personalizadas
+│   │
+│   ├── auth/                  # Lógica de autenticación
+│   │   ├── LoginPage.tsx      # Página de inicio de sesión
+│   │   ├── RegisterPage.tsx   # Página de registro
+│   │   └── authService.ts     # Servicio de autenticación
+│   │
+│   ├── components/            # Componentes reutilizables
+│   │   ├── common/            # Componentes comunes (botones, inputs, etc.)
+│   │   ├── layout/            # Componentes de diseño (header, footer, etc.)
+│   │   └── ui/                # Componentes de interfaz de usuario
+│   │
+│   ├── hooks/                 # Custom Hooks
+│   │   ├── useAuth.ts         # Hook para manejo de autenticación
+│   │   └── useGeolocation.ts  # Hook para geolocalización
+│   │
+│   ├── layouts/               # Layouts principales
+│   │   ├── MainLayout.tsx     # Layout principal de la aplicación
+│   │   └── AuthLayout.tsx     # Layout para páginas de autenticación
+│   │
+│   ├── pages/                 # Componentes de páginas
+│   │   ├── HomePage.tsx       # Página principal
+│   │   ├── MapPage.tsx        # Página del mapa interactivo
+│   │   └── ProfilePage.tsx    # Página de perfil de usuario
+│   │
+│   ├── services/              # Servicios para comunicación con APIs
+│   │   ├── api.ts            # Configuración de Axios
+│   │   └── mapService.ts     # Servicio para operaciones con mapas
+│   │
+│   ├── styles/               # Estilos globales
+│   │   ├── base.css          # Estilos base
+│   │   ├── login.css         # Estilos específicos para login
+│   │   └── pasajero.css      # Estilos para el módulo de pasajero
+│   │
+│   ├── types/                # Definiciones de tipos TypeScript
+│   │   └── index.ts          # Exportación de tipos
+│   │
+│   ├── utils/                # Utilidades
+│   │   ├── constants.ts      # Constantes de la aplicación
+│   │   ├── helpers.ts        # Funciones de ayuda
+│   │   └── validators.ts     # Funciones de validación
+│   │
+│   ├── App.tsx               # Componente raíz de la aplicación
+│   └── main.tsx              # Punto de entrada de la aplicación
+│
+├── .gitignore                # Archivos ignorados por Git
+├── index.html                # Plantilla HTML principal
+├── package.json              # Dependencias y scripts
+├── tsconfig.json             # Configuración de TypeScript
+├── tsconfig.node.json        # Configuración de TypeScript para Node
+└── vite.config.ts            # Configuración de Vite
 
-Currently, two official plugins are available:
+## Tecnologías Clave
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** - Biblioteca principal para la interfaz de usuario
+- **TypeScript** - Para tipado estático y mejor experiencia de desarrollo
+- **Vite** - Herramienta de construcción y servidor de desarrollo
+- **React Router** - Para el enrutamiento de la aplicación
+- **Axios** - Cliente HTTP para peticiones a la API
+- **Leaflet** - Para mapas interactivos
+- **Tailwind CSS** - Framework CSS para estilos
+- **ESLint** - Para mantener la calidad del código
 
-## React Compiler
+## Inicio Rápido
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Instalar dependencias:
+   ```bash
+   npm install
+   ```
 
-## Expanding the ESLint configuration
+2. Iniciar servidor de desarrollo:
+   ```bash
+   npm run dev
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+3. Abrir en el navegador:
+   ```
+   http://localhost:5173
+   ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Scripts Disponibles
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `npm run dev` - Inicia el servidor de desarrollo
+- `npm run build` - Construye la aplicación para producción
+- `npm run preview` - Previsualiza la versión de producción
+- `npm run lint` - Ejecuta el linter
+- `npm run type-check` - Verifica los tipos de TypeScript
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Estructura de Componentes
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+La aplicación sigue una arquitectura modular donde cada carpeta tiene un propósito específico:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **/auth**: Maneja todo lo relacionado con autenticación
+- **/components**: Componentes reutilizables organizados por dominio
+- **/pages**: Componentes de página que representan rutas
+- **/services**: Lógica para interactuar con APIs externas
+- **/styles**: Estilos globales y específicos
+- **/utils**: Funciones de utilidad y helpers

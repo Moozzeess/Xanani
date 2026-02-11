@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xanani - Vista Invitado</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#1e293b', 900: '#0f172a' }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos base del dispositivo */
+        body {
+            background-color: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+        }
+
+        main {
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        #map { width: 100%; height: 100%; z-index: 0; background: #e5e7eb; }
+        .leaflet-control-attribution { display: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Estilos de Marcadores */
+        .bus-marker-container {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.1));
+        }
+        /* El marcador más cercano será más grande */
+        .nearest-bus {
+            transform: scale(1.2);
+            z-index: 1000 !important;
+        }
+        
+        /* Marcador de Usuario (Punto Azul) */
+        .user-location-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-dot {
+            width: 16px;
+            height: 16px;
+            background-color: #3b82f6;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+        }
+        .user-pulse {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            z-index: 1;
+        }
+        @keyframes ping {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="flex flex-col h-screen w-screen relative bg-slate-200">
+
+        <!-- HEADER SIMPLE -->
+        <div class="fixed top-0 left-0 right-0 px-6 py-6 z-[500] flex justify-between items-center bg-gradient-to-b from-white/90 to-transparent">            
+            <div>
+                <h1 class="text-xl font-extrabold text-slate-900">Xanani</h1>
+                <p class="text-xs text-slate-600 font-medium">Modo Invitado</p>
+            </div>
+            <button onclick="alert('Ir a Login')" 
+                class="bg-slate-900 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">               
+                Iniciar Sesión
+            </button>
+        </div>
+
+        <!-- MAPA -->
+        <div class="flex-1 relative w-full h-full overflow-hidden">
+            <div id="map"></div>
+        </div>
+
+        <!-- TARJETA INFORMATIVA (Estilo Image 1) -->
+        <div class="absolute bottom-8 left-4 right-4 z-[1000]">
+            <!-- Etiqueta flotante sobre la tarjeta -->
+            <div class="flex justify-center mb-2">
+                <span class="bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 animate-bounce">
+                    <i data-lucide="map-pin" class="w-3 h-3"></i> Unidad más cercana
+                </span>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+                <!-- Fila Principal (Réplica de la imagen subida) -->
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900" id="unit-name">Buscando...</h2>
+                        <p class="text-sm text-slate-500 mt-1" id="unit-occupancy">...</p>
+                    </div>
+                    
+                    <div class="flex flex-col items-end gap-2">
+                        <!-- Pill de Estado -->
+                        <span id="unit-status-pill" class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                            --
+                        </span>
+                        <!-- Icono Ojo (Visualización) -->
+                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                            <i data-lucide="eye" class="w-4 h-4 text-slate-900"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer con Distancia -->
+                <div class="bg-slate-50 px-5 py-3 flex justify-between items-center">
+                    <div class="flex items-center gap-2 text-slate-600">
+                        <i data-lucide="footprints" class="w-4 h-4"></i>
+                        <span class="text-xs font-bold" id="unit-distance">Calculando...</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Actualizado ahora</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Configuración ---
+        const userLocation = [19.4326, -99.1332]; // Zócalo CDMX (Ejemplo)
+        
+        const vehicles = [
+            { id: '001', status: 'En ruta', type: 'active', occ: 'Alta', pos: [19.4340, -99.1350] }, // Más cercano
+            { id: '002', status: 'Terminal', type: 'warning', occ: 'Baja', pos: [19.4400, -99.1300] },
+            { id: '003', status: 'Inactivo', type: 'inactive', occ: 'Nula', pos: [19.4250, -99.1400] },
+        ];
+
+        let map;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            lucide.createIcons();
+            // Simular carga de datos del más cercano
+            setTimeout(() => updateNearestInfo(vehicles[0]), 500);
+        });
+
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: true // Permitir explorar, pero limitado visualmente
+            }).setView(userLocation, 15);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            // 1. Marcador de Usuario (Tú estás aquí)
+            const userIcon = L.divIcon({
+                className: 'bg-transparent',
+                html: `<div class="user-location-marker"><div class="user-pulse"></div><div class="user-dot"></div></div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+            L.marker(userLocation, { icon: userIcon }).addTo(map);
+
+            // 2. Marcadores de Unidades
+            vehicles.forEach(v => {
+                // Estilos según estado (basado en imagen)
+                let colorClass = 'bg-gray-400';
+                let textClass = 'text-white';
+                let isNearest = v.id === '001'; // Hardcodeado para demo
+
+                if(v.type === 'active') { colorClass = 'bg-green-400'; textClass = 'text-green-900'; }
+                else if(v.type === 'warning') { colorClass = 'bg-amber-400'; textClass = 'text-amber-900'; }
+                else if(v.type === 'inactive') { colorClass = 'bg-red-600'; textClass = 'text-white'; }
+
+                // Icono del Bus
+                const busSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>`;
+                
+                const html = `
+                    <div class="bus-marker-container ${isNearest ? 'nearest-bus' : ''} relative w-10 h-10 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-xl ${colorClass} opacity-40"></div>
+                        <div class="relative w-8 h-8 ${colorClass} rounded-xl border-2 border-white shadow-md flex items-center justify-center ${textClass}">
+                           ${busSvg}
+                        </div>
+                    </div>
+                `;
+
+                const icon = L.divIcon({
+                    className: 'bg-transparent',
+                    html: html,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+
+                const m = L.marker(v.pos, { icon: icon }).addTo(map);
+                
+                if(isNearest) {
+                    // Dibujar línea punteada hacia el usuario
+                    L.polyline([userLocation, v.pos], {
+                        color: '#3b82f6',
+                        weight: 4,
+                        opacity: 0.6,
+                        dashArray: '5, 10'
+                    }).addTo(map);
+                }
+            });
+        }
+
+        function updateNearestInfo(vehicle) {
+            // Actualizar UI con datos simulados
+            document.getElementById('unit-name').textContent = `Unidad ${vehicle.id}`;
+            document.getElementById('unit-occupancy').textContent = `Ocupabilidad: ${vehicle.occ}`;
+            
+            const statusPill = document.getElementById('unit-status-pill');
+            statusPill.textContent = vehicle.status;
+            
+            // Estilos dinámicos del pill (igual a la imagen)
+            if(vehicle.type === 'active') {
+                statusPill.className = 'bg-green-400 text-green-900 px-3 py-1 rounded-full text-xs font-bold shadow-sm';
+            } else if(vehicle.type === 'warning') {
+                statusPill.className = 'bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-bold shadow-sm';
+            }
+
+            document.getElementById('unit-distance').textContent = "A 250 metros de tu ubicación";
+        }
+    
+        window.addEventListener('resize', () => {
+            map.invalidateSize();
+        });
+
+    </script>
+
+</body>
+</html>

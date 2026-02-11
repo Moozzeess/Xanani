@@ -1,0 +1,115 @@
+//Colección: usuarios
+{
+  "_id": "ObjectId",
+  "nombre_usuario": "String",
+  "correo": "String (Indexado, Único)",
+  "password_hash": "String", // Contraseña encriptada
+  "rol": "String", // Enum: 'pasajero', 'conductor', 'admin' 
+  "fecha_registro": "Date",
+  "estado_cuenta": "Boolean", // Activo / Inactivo (Baneo)
+  // Datos específicos si el rol es 'conductor'
+  "perfil_conductor": {
+    "licencia": "String",
+    "id_unidad_asignada": "ObjectId (Ref: unidades)",
+    "calificacion_promedio": "Double", // Para el módulo de calidad
+    "total_viajes": "Integer", // Estadísticas para conductores
+    "telefono": "String" // Contacto del conductor
+  }
+}
+
+
+//Colección: unidades (Inventario de Combis)
+{
+  "_id": "ObjectId",
+  "placa": "String (Único)",
+  "numero_unidad": "String", // ID visual de la combi
+  "modelo": "String",
+  "capacidad_maxima": "Integer", // Regla de negocio RN 9
+  "id_dispositivo_iot": "String", // SERIAL DEL ESP32 (Vinculación Hardware)
+  "estado_operativo": "String", // 'en_ruta', 'en_base', 'fuera_servicio', 'mantenimiento'
+  "conductor_actual_id": "ObjectId (Ref: usuarios)",
+  "ultima_ubicacion": { // Actualización rápida para mapa en tiempo real
+    "type": "Point",
+    "coordinates": [ -99.1332, 19.4326 ] // [Longitud, Latitud]
+  },
+  "ultimo_reporte": "Date" // Para detectar desconexiones (Watchdog)
+}
+
+//Colección: rutas
+{
+  "_id": "ObjectId",
+  "nombre_ruta": "String", // Ej. "Ruta Centro - Mazatlán"
+  "descripcion": "String",
+  "color_mapa": "String", // Hex code para diferenciar en UI
+  "trazado_geojson": { // La línea que se dibuja en el mapa
+    "type": "LineString",
+    "coordinates": [[lon, lat], [lon, lat], ...] 
+  },
+  "paradas": [ // Puntos de ascenso/descenso
+    {
+      "nombre": "String",
+      "coordenadas": [lon, lat],
+      "orden": "Integer"
+    }
+  ]
+}
+
+//Colección: viajes (Ciclo de Vida del Servicio)
+{
+  "_id": "ObjectId",
+  "id_conductor": "ObjectId (Ref: usuarios)",
+  "id_unidad": "ObjectId (Ref: unidades)",
+  "id_ruta": "ObjectId (Ref: rutas)",
+  "fecha_inicio": "Date", // Inicio de turno
+  "fecha_fin": "Date", // Fin de turno
+  "estado": "String", // 'en_curso', 'finalizado'
+  "estadisticas": { // Datos procesados al finalizar para el Dashboard 
+    "total_pasajeros_transportados": "Integer",
+    "tiempo_total_minutos": "Integer",
+    "velocidad_promedio": "Double",
+    "picos_ocupacion": "Integer" // Máximo de personas detectadas
+  }
+}
+
+
+//Colección: telemetria (Datos crudos del ESP32)
+{
+  "_id": "ObjectId", // Generado automáticamente
+  "metadata": {
+    "id_unidad": "ObjectId",
+    "id_viaje": "ObjectId" // Para saber a qué vuelta pertenece este dato
+  },
+  "timestamp": "Date", // Fecha y hora exacta del sensor GPS 
+  "geolocalizacion": {
+    "type": "Point",
+    "coordinates": [ "Double (Lon)", "Double (Lat)" ] // GPS NEO-6M
+  },
+  "sensores": {
+    "ocupacion_actual": "Integer", // Calculado por ESP32 (Entradas - Salidas)
+    "asientos_disponibles": "Integer", // Capacidad - Ocupación
+    "celdas_carga_activas": "Boolean Array", // [true, false, true...] Estado individual
+    "velocidad_kmh": "Double" // Dato del GPS
+  },
+  "alertas_hardware": { // Reporte de fallas automáticas
+    "error_sensor": "Boolean",
+    "perdida_senal": "Boolean"
+  }
+}
+
+//Colección: incidencias (Reportes y SOS)
+{
+  "_id": "ObjectId",
+  "tipo": "String", // 'trafico', 'falla_mecanica', 'accidente', 'sos'
+  "descripcion": "String",
+  "prioridad": "String", // 'baja', 'media', 'critica' (SOS)
+  "fecha_reporte": "Date",
+  "id_usuario_reporta": "ObjectId",
+  "id_unidad_implicada": "ObjectId", // Si aplica
+  "ubicacion_incidente": { // Dónde se presionó el botón
+    "type": "Point",
+    "coordinates": [lon, lat]
+  },
+  "estado": "String", // 'pendiente', 'atendido', 'resuelto'
+  "acciones_tomadas": "String" // Para auditoría del administrador
+}
+

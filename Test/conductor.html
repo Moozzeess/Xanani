@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xanani - Navegación Conductor</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#1e293b', 900: '#0f172a' },
+                    },
+                    animation: {
+                        'slide-down': 'slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        slideDown: {
+                            '0%': { transform: 'translateY(-100%)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(0)', opacity: '1' },
+                            '100%': { transform: 'translateY(-100%)', opacity: '0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* Evita scrolls accidentales */
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: #e2e8f0;
+        }
+
+        .leaflet-control-attribution { display: none; }
+        
+        .hud-panel {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Contenedor de Notificaciones (Toasts) */
+        #toast-container {
+            pointer-events: none;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- CAPA DE MAPA (FONDO COMPLETO) -->
+    <div id="map" class="absolute inset-0"></div>
+
+    <!-- INTERFAZ DE USUARIO SUPERPUESTA (HUD) -->
+    <main class="flex flex-col h-screen w-screen relative pointer-events-none z-10">
+        <!-- TOP BAR: Información Crítica -->
+        <header class="pt-6 pb-2 px-4 pointer-events-auto relative z-20 max-w-3xl mx-auto">
+            <div class="bg-slate-900/90 text-white p-4 rounded-2xl shadow-lg hud-panel flex justify-between items-start border border-slate-700">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                            <span id="status-indicator" class="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-green-400">En Ruta</span>
+                    </div>
+                    <h1 class="text-2xl font-bold leading-none">Próx: Av. Central</h1>
+                    <p class="text-slate-400 text-xs font-medium mt-1 flex items-center gap-1">
+                        <i data-lucide="navigation" class="w-3 h-3"></i> 
+                        350m • Llegada en 2 min
+                    </p>
+                </div>
+                
+                <!-- Contador Pasajeros (Solo lectura) -->
+                <div class="flex flex-col items-end">
+                    <div class="bg-slate-800 px-3 py-2 rounded-xl border border-slate-600 text-center">
+                        <span id="passenger-count" class="text-2xl font-bold block leading-none text-white">12</span>
+                        <span class="text-[8px] text-slate-400 uppercase font-bold">Pasajeros</span>
+                    </div>
+                    <div class="w-full bg-slate-700 h-1 mt-1 rounded-full overflow-hidden">
+                            <div id="occupancy-bar" class="bg-green-500 h-full w-[60%] transition-all duration-500"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- AREA DE NOTIFICACIONES (TOASTS) -->
+        <div id="toast-container" class="absolute top-36 left-4 right-4 z-30 flex flex-col gap-2">
+            <!-- Aquí se inyectan las notificaciones dinámicamente -->
+        </div>
+
+        <!-- ESPACIO VACÍO PARA VER EL MAPA -->
+        <div class="flex-1"></div>
+
+        <!-- CAPA "SIN RUTA" -->
+        <div id="no-route-overlay" class="absolute inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center p-8 text-center pointer-events-auto hidden">
+            <div class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                <i data-lucide="map-pin-off" class="w-10 h-10 text-slate-500"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">Unidad en Espera</h2>
+            <p class="text-slate-400 text-sm mb-8">El sistema de navegación está en espera. Inicia ruta para activar el rastreo.</p>
+            
+            <button onclick="toggleRoute()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/50 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i data-lucide="play" class="w-5 h-5 fill-current"></i> Iniciar Ruta
+            </button>
+        </div>
+
+        <!-- CONTROLES INFERIORES -->
+        <div class="px-4 pb-6 pointer-events-auto space-y-3">
+            
+            <!-- Botones de Acción -->
+            <div class="grid grid-cols-[1fr_auto] gap-3 max-w-3xl mx-auto w-full">
+                <button onclick="openIncidentModal()" class="bg-white/95 text-slate-900 p-4 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center gap-3 font-bold active:scale-95 transition-transform hover:bg-slate-50">
+                    <div class="bg-yellow-100 p-2 rounded-full text-yellow-600">
+                            <i data-lucide="triangle-alert" class="w-5 h-5"></i>
+                    </div>
+                    <span>Reportar Incidencia</span>
+                </button>
+
+                <!-- Botón SOS (Sin parpadeo agresivo, estilo sólido) -->
+                <button onclick="triggerEmergency()" class="bg-red-600 text-white p-4 rounded-2xl shadow-lg shadow-red-900/30 flex items-center justify-center font-bold active:scale-95 transition-transform border-2 border-red-500">
+                    <i data-lucide="zap" class="w-6 h-6 fill-white"></i>
+                </button>
+            </div>
+
+            <!-- Barra Inferior -->
+            <div class="bg-slate-900/95 backdrop-blur text-white p-4 rounded-2xl flex justify-between items-center shadow-lg border-t border-slate-800 max-w-3xl mx-auto">
+                <button onclick="toggleRoute()" class="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm font-bold">
+                    <i data-lucide="circle-stop" class="w-5 h-5"></i>
+                    Finalizar
+                </button>
+                
+                <div class="h-4 w-[1px] bg-slate-700"></div>
+
+                <div class="flex items-center gap-4">
+                    <div class="text-center">
+                        <span class="block text-[10px] text-slate-400 uppercase">Velocidad</span>
+                        <span class="font-mono font-bold text-sm">45 km/h</span>
+                    </div>
+                        <div class="text-center">
+                        <span class="block text-[10px] text-slate-400 uppercase">Hora</span>
+                        <span class="font-mono font-bold text-sm">10:42</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="w-full flex justify-center pt-1">
+                <div class="w-32 h-1 bg-gray-300/50 rounded-full"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL INCIDENCIAS -->
+    <div id="incident-modal" class="absolute inset-0 z-50 hidden items-end justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-200">
+        <div class="bg-white w-full rounded-t-[2rem] shadow-2xl overflow-hidden transform translate-y-full transition-transform duration-300 pb-8" id="incident-modal-content">
+            <div class="p-6">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                <h3 class="text-xl font-bold text-slate-800 mb-6 text-center">Reporte Rápido</h3>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <button onclick="submitIncident('Accidente')" class="aspect-square bg-red-50 border-2 border-red-100 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-red-100">
+                        <i data-lucide="car-front" class="w-8 h-8 text-red-600"></i>
+                        <span class="font-bold text-red-800">Accidente</span>
+                    </button>
+                    <button onclick="submitIncident('Tráfico')" class="aspect-square bg-yellow-50 border-2 border-yellow-100 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-yellow-100">
+                        <i data-lucide="cone" class="w-8 h-8 text-yellow-600"></i>
+                        <span class="font-bold text-yellow-800">Tráfico</span>
+                    </button>
+                    <button onclick="submitIncident('Falla Mecánica')" class="aspect-square bg-orange-50 border-2 border-orange-100 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-orange-100">
+                        <i data-lucide="wrench" class="w-8 h-8 text-orange-600"></i>
+                        <span class="font-bold text-orange-800">Mecánico</span>
+                    </button>
+                    <button onclick="closeIncidentModal()" class="aspect-square bg-slate-100 border-2 border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform">
+                        <i data-lucide="x" class="w-8 h-8 text-slate-500"></i>
+                        <span class="font-bold text-slate-600">Cancelar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- LÓGICA DE NOTIFICACIONES (TOASTS) ---
+        function showNotification(title, message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            
+            // Crear elemento toast
+            const toast = document.createElement('div');
+            const bgColor = type === 'alert' ? 'bg-red-900/95 border-red-500' : 'bg-slate-800/95 border-slate-600';
+            const iconName = type === 'alert' ? 'triangle-alert' : 'info';
+            const textColor = 'text-white';
+
+            toast.className = `pointer-events-auto w-full p-4 rounded-xl border shadow-xl backdrop-blur-md flex items-start gap-3 transform -translate-y-full opacity-0 transition-all duration-500 animate-slide-down ${bgColor} ${textColor}`;
+            
+            toast.innerHTML = `
+                <div class="mt-0.5 shrink-0">
+                    <i data-lucide="${iconName}" class="w-5 h-5"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-bold text-sm leading-tight">${title}</h4>
+                    <p class="text-xs opacity-90 mt-1 font-medium leading-snug">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white/50 hover:text-white ml-2">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Auto eliminar después de 6 segundos
+            setTimeout(() => {
+                toast.style.animation = 'none';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-100%)';
+                setTimeout(() => toast.remove(), 500);
+            }, 6000);
+        }
+
+        // --- LÓGICA DEL MAPA Y SISTEMA ---
+        let map;
+        let isRouteActive = false;
+        let passengerCount = 12;
+        const capacity = 20;
+        let autoUpdateInterval;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            lucide.createIcons();
+            toggleRoute(false); 
+            
+            // SIMULACIÓN: Recibir una notificación de la central a los 3 segundos
+            setTimeout(() => {
+                showNotification("Aviso Central", "🚧 Obras en Av. Revolución. Carril derecho cerrado. Precaución.", "alert");
+            }, 2500);
+        });
+
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([19.4326, -99.1332], 15);
+
+            // Mapa oscuro limpio (Dark Matter simulation style)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            const routeCoords = [
+                [19.4326, -99.1332],
+                [19.4340, -99.1350],
+                [19.4360, -99.1370],
+                [19.4380, -99.1320],
+                [19.4350, -99.1300]
+            ];
+            
+            const routeLine = L.polyline(routeCoords, {
+                color: '#3b82f6',
+                weight: 6,
+                opacity: 0.8,
+                lineCap: 'round'
+            }).addTo(map);
+
+            const busIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color:#0f172a; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+
+            L.marker([19.4340, -99.1350], { icon: busIcon }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+        }
+
+        function startAutoSimulation() {
+            clearInterval(autoUpdateInterval);
+            autoUpdateInterval = setInterval(() => {
+                const change = Math.floor(Math.random() * 3) - 1; 
+                updatePassengerCount(change);
+            }, 3000);
+        }
+
+        function stopAutoSimulation() {
+            clearInterval(autoUpdateInterval);
+        }
+
+        function updatePassengerCount(change) {
+            if (passengerCount + change < 0 || passengerCount + change > capacity) return;
+            passengerCount += change;
+            const el = document.getElementById('passenger-count');
+            const bar = document.getElementById('occupancy-bar');
+            el.textContent = passengerCount;
+            const pct = (passengerCount / capacity) * 100;
+            bar.style.width = `${pct}%`;
+            
+            if(pct > 90) bar.className = "bg-red-500 h-full transition-all duration-500";
+            else if(pct > 50) bar.className = "bg-yellow-500 h-full transition-all duration-500";
+            else bar.className = "bg-green-500 h-full transition-all duration-500";
+        }
+
+        function toggleRoute(forceState) {
+            if (forceState !== undefined) isRouteActive = !forceState;
+            isRouteActive = !isRouteActive;
+            const overlay = document.getElementById('no-route-overlay');
+            if (isRouteActive) {
+                overlay.classList.add('hidden');
+                startAutoSimulation();
+                showNotification("Sistema", "Ruta iniciada correctamente. Rastreo activo.", "info");
+            } else {
+                overlay.classList.remove('hidden');
+                stopAutoSimulation();
+            }
+        }
+
+        function triggerEmergency() {
+            if(confirm("¿ACTIVAR SOS? Se notificará a seguridad.")) {
+                showNotification("SOS Enviado", "Alerta enviada a central. Ayuda en camino.", "alert");
+            }
+        }
+
+        function openIncidentModal() {
+            const m = document.getElementById('incident-modal');
+            const c = document.getElementById('incident-modal-content');
+            m.classList.remove('hidden');
+            setTimeout(() => {
+                m.classList.remove('opacity-0');
+                c.classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function closeIncidentModal() {
+            const m = document.getElementById('incident-modal');
+            const c = document.getElementById('incident-modal-content');
+            m.classList.add('opacity-0');
+            c.classList.add('translate-y-full');
+            setTimeout(() => m.classList.add('hidden'), 300);
+        }
+
+        function submitIncident(type) {
+            closeIncidentModal();
+            showNotification("Reporte Enviado", `Incidencia: ${type} registrada.`, "info");
+        }
+
+        window.addEventListener('resize', () => {
+            map.invalidateSize();
+        });
+
+    </script>
+</body>
+</html>

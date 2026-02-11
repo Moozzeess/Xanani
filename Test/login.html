@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+<meta charset="UTF-8">
+<title>XANANI | Movilidad Inteligente</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        slate: { 850:'#1e293b',900:'#0f172a',950:'#020617' },
+        primary: { 500:'#3b82f6',600:'#2563eb' }
+      },
+      fontFamily: { sans:['Inter','sans-serif'] }
+    }
+  }
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* MAPA */
+#map-bg {
+  position: fixed;
+  inset: -10%;
+  background-image: url("https://imgs.search.brave.com/Gha625MyjjvkCVjmyA33iYvDsgIt4Wea79Hari_7208/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pbWcu/ZnJlZXBpay5jb20v/dmVjdG9yLWdyYXRp/cy9uYXZlZ2FjaW9u/LWNpdWRhZC1ibGFu/Y28tbmVncm8tbWFw/YV8yMy0yMTQ4MzA5/ODM2LmpwZz9zZW10/PWFpc19oeWJyaWQm/dz03NDAmcT04MA");
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(50%) contrast(1.1);
+  animation: pan 40s linear infinite;
+  z-index: -3;
+}
+
+/* OSCURECER SIN MATAR MAPA */
+#map-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center,
+    rgba(15,23,42,.35),
+    rgba(2,6,23,.85));
+  z-index: -2;
+}
+
+/* ANIMACIÓN MAPA */
+@keyframes pan {
+  0% { transform: scale(1) translate(0,0); }
+  50% { transform: scale(1.1) translate(-4%, -3%); }
+  100% { transform: scale(1) translate(0,0); }
+}
+
+/* GLOW */
+.glow {
+  box-shadow:
+    0 0 0 rgba(59,130,246,.0),
+    0 0 40px rgba(59,130,246,.25);
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 40px rgba(59,130,246,.25); }
+  50% { box-shadow: 0 0 70px rgba(59,130,246,.45); }
+}
+
+/* AJUSTE RESPONSIVO PARA FORMULARIOS OCULTOS */
+.form-container {
+  display: grid;
+  grid-template-columns: 100%;
+  overflow: hidden;
+}
+</style>
+</head>
+
+<body class="min-h-full font-sans text-white bg-slate-950">
+
+<div id="map-bg"></div>
+<div id="map-overlay"></div>
+
+<div class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-[400px] p-6 sm:p-8 rounded-2xl 
+              bg-slate-900/85 backdrop-blur-xl 
+              glow transition-all duration-500">
+
+    <div class="text-center space-y-3">
+      <div class="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full 
+                  bg-gradient-to-br from-primary-500 to-primary-600 
+                  flex items-center justify-center text-2xl font-bold">
+        X
+      </div>
+      <h1 class="text-xl sm:text-2xl font-bold">XANANI</h1>
+      <p class="text-xs sm:text-sm text-slate-400">Movilidad Inteligente</p>
+    </div>
+
+    <div class="relative mt-6 min-h-[300px]">
+
+      <form id="login" class="space-y-4 transition-all duration-500 w-full">
+        <input class="input" placeholder="Usuario">
+        <input type="password" class="input" placeholder="Contraseña">
+        <button class="btn">Iniciar sesión</button>
+        <div class="flex flex-col sm:flex-row justify-between text-sm gap-2 text-center">
+          <button type="button" onclick="go('register')" class="link">Registro</button>
+          <button type="button" onclick="go('recover')" class="link">Recuperar</button>
+        </div>
+      </form>
+
+      <form id="register" class="space-y-4 absolute inset-0 translate-x-full opacity-0 pointer-events-none transition-all duration-500">
+        <input class="input" placeholder="Email">
+        <input class="input" placeholder="Usuario">
+        <input type="password" class="input" placeholder="Contraseña">
+        <input type="password" class="input" placeholder="Confirmar contraseña">
+        <button class="btn-primary">Continuar</button>
+        <button type="button" onclick="go('login')" class="link block text-center w-full">Volver</button>
+      </form>
+
+      <form id="recover" class="space-y-4 absolute inset-0 translate-x-full opacity-0 pointer-events-none transition-all duration-500">
+        <input class="input" placeholder="Email">
+        <button class="btn">Enviar enlace</button>
+        <button type="button" onclick="go('login')" class="link block text-center w-full">Volver</button>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const forms=['login','register','recover']
+
+function go(id){
+  forms.forEach(f=>{
+    const el=document.getElementById(f)
+    el.classList.add('translate-x-full','opacity-0','pointer-events-none')
+    el.classList.add('absolute') 
+  })
+  const active=document.getElementById(id)
+  active.classList.remove('translate-x-full','opacity-0','absolute','pointer-events-none')
+}
+</script>
+
+<style>
+.input{
+  width:100%;
+  padding:.7rem .75rem;
+  border-radius:.5rem;
+  background:#020617;
+  border:1px solid #1e293b;
+  color: white;
+  font-size: 16px; 
+}
+.input:focus{
+  outline:none;
+  border-color:#3b82f6;
+  box-shadow:0 0 0 2px rgba(59,130,246,.4);
+}
+.btn{
+  width:100%;
+  padding:.7rem;
+  border-radius:.5rem;
+  background:#0f172a;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.btn:hover{ background:#1e293b; }
+.btn-primary{
+  width:100%;
+  padding:.7rem;
+  border-radius:.5rem;
+  background:#2563eb;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.btn-primary:hover{ background:#3b82f6; }
+.link{ color:#60a5fa; cursor: pointer; }
+</style>
+
+</body>
+</html>
