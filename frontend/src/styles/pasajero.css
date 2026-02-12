@@ -22,7 +22,6 @@
 
 .leaflet-control-attribution { display: none !important; }
 
-/* HEADER (Réplica exacta del original) */
 .fixed-header {
     position: fixed;
     top: 0;

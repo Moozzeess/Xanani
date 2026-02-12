@@ -14,7 +14,9 @@ const LoginPage = () => {
 
       {/* CARD */}
       <div className="auth-card">
-        <div className="logo-circle">X</div>
+        <div className="logo-circle">
+          <img src="/LOGO.png" alt="XANANI" className="logo-inner" />
+        </div>
         <h1 className="auth-title">XANANI</h1>
         <p className="auth-subtitle">Movilidad Inteligente</p>
 
