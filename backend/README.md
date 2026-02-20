@@ -4,47 +4,40 @@
 
 ```
 backend/
-├── src/                        # Código fuerte principal
+├── src/                        # Código fuente principal
 │   │
 │   ├── config/                # Configuraciones de la aplicación
 │   │   ├── db.js             # Configuración de la base de datos MongoDB
 │   │   ├── env.js            # Manejo de variables de entorno
-│   │   ├── passport.js       # Configuración de autenticación Passport
-│   │   └── server.js         # Configuración del servidor Express
+│   │   └── routes.js         # Configuración de rutas
 │   │
 │   ├── controllers/           # Controladores para las rutas
 │   │   ├── auth.controller.js # Controlador de autenticación
-│   │   ├── user.controller.js # Controlador de usuarios
-│   │   └── vehicle.controller.js # Controlador de vehículos
+│   │   └── user.controller.js # Controlador de usuarios
 │   │
 │   ├── middlewares/           # Middlewares personalizados
-│   │   ├── auth.middleware.js # Middleware de autenticación
-│   │   ├── error.middleware.js # Manejo de errores
-│   │   └── validation.middleware.js # Validación de datos
+│   │   └── (archivos de middleware)
 │   │
 │   ├── models/                # Modelos de MongoDB
 │   │   ├── User.js           # Modelo de usuario
-│   │   ├── Vehicle.js        # Modelo de vehículo
-│   │   └── index.js          # Exportación de modelos
+│   │   └── (otros modelos)
 │   │
 │   ├── routes/                # Definición de rutas
 │   │   ├── auth.routes.js    # Rutas de autenticación
-│   │   ├── user.routes.js    # Rutas de usuarios
-│   │   └── vehicle.routes.js # Rutas de vehículos
+│   │   └── user.routes.js    # Rutas de usuarios
 │   │
 │   ├── services/              # Lógica de negocio
-│   │   ├── auth.service.js   # Servicio de autenticación
-│   │   ├── user.service.js   # Servicio de usuarios
-│   │   └── vehicle.service.js # Servicio de vehículos
+│   │   └── auth.service.js   # Servicio de autenticación
 │   │
 │   ├── utils/                # Utilidades
-│   │   ├── apiError.js       # Clase personalizada para errores
-│   │   ├── logger.js         # Utilidad para logs
-│   │   └── validators.js     # Funciones de validación
+│   │   └── (archivos de utilidades)
 │   │
-│   └── app.js               # Configuración principal de Express
+│   └── modules/              # Módulos adicionales
 │
-├── .env.example             # Plantilla de variables de entorno
+├── .env                      # Variables de entorno
 ├── .gitignore              # Archivos ignorados por Git
+├── app.js                  # Configuración principal de Express
 ├── package.json            # Dependencias y scripts
-└── server.js               # Punto de entrada de la aplicación
+├── routes.js               # Configuración de rutas principal
+├── server.js               # Punto de entrada de la aplicación
+└── README.md               # Documentación del proyecto
