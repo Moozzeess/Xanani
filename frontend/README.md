@@ -1,9 +1,12 @@
 # Xanani - Frontend de Xanani.
 ## Estructura del Proyecto frontend
 
+```
 frontend/
 ├── public/                     # Archivos estáticos servidos directamente
-│   └── bus_icon_126644.svg     # Logo principal de la aplicación
+│   ├── LOGO.png               # Logo principal de la aplicación
+│   ├── bus_icon_126644.svg    # Ícono de autobús
+│   └── combi.svg              # Ícono de combi
 │
 ├── src/                        # Código fuente principal
 │   │
@@ -11,58 +14,61 @@ frontend/
 │   │   └── (archivos de configuración de rutas y estado global)
 │   │
 │   ├── assets/                # Recursos estáticos
-│   │   ├── images/            # Imágenes de la aplicación
-│   │   └── fonts/             # Fuentes personalizadas
+│   │   └── (recursos adicionales)
 │   │
 │   ├── auth/                  # Lógica de autenticación
+│   │   ├── LandingPage.tsx    # Página de aterrizaje
 │   │   ├── LoginPage.tsx      # Página de inicio de sesión
-│   │   ├── RegisterPage.tsx   # Página de registro
-│   │   └── authService.ts     # Servicio de autenticación
+│   │   ├── mockAuth.ts        # Mock de autenticación
+│   │   └── useAuth.ts         # Hook de autenticación
 │   │
 │   ├── components/            # Componentes reutilizables
-│   │   ├── common/            # Componentes comunes (botones, inputs, etc.)
-│   │   ├── layout/            # Componentes de diseño (header, footer, etc.)
-│   │   └── ui/                # Componentes de interfaz de usuario
+│   │   ├── administrador/     # Componentes para administrador
+│   │   ├── common/            # Componentes comunes
+│   │   ├── conductor/         # Componentes para conductor
+│   │   ├── pasajero/          # Componentes para pasajero
+│   │   └── superuser/         # Componentes para superusuario
 │   │
 │   ├── hooks/                 # Custom Hooks
-│   │   ├── useAuth.ts         # Hook para manejo de autenticación
-│   │   └── useGeolocation.ts  # Hook para geolocalización
+│   │   └── (hooks personalizados)
 │   │
 │   ├── layouts/               # Layouts principales
-│   │   ├── MainLayout.tsx     # Layout principal de la aplicación
-│   │   └── AuthLayout.tsx     # Layout para páginas de autenticación
+│   │   ├── AdminLayaout.tsx   # Layout para administrador
+│   │   ├── ConductorLayout.tsx # Layout para conductor
+│   │   ├── PasajeroLayout.tsx  # Layout para pasajero
+│   │   └── PublicLayout.tsx   # Layout público
 │   │
 │   ├── pages/                 # Componentes de páginas
-│   │   ├── HomePage.tsx       # Página principal
-│   │   ├── MapPage.tsx        # Página del mapa interactivo
-│   │   └── ProfilePage.tsx    # Página de perfil de usuario
+│   │   ├── administrador/     # Páginas de administrador
+│   │   ├── conductor/         # Páginas de conductor
+│   │   ├── pasajero/          # Páginas de pasajero
+│   │   └── superuser/         # Páginas de superusuario
 │   │
 │   ├── services/              # Servicios para comunicación con APIs
-│   │   ├── api.ts            # Configuración de Axios
-│   │   └── mapService.ts     # Servicio para operaciones con mapas
+│   │   └── (servicios de API)
 │   │
 │   ├── styles/               # Estilos globales
-│   │   ├── base.css          # Estilos base
-│   │   ├── login.css         # Estilos específicos para login
-│   │   └── pasajero.css      # Estilos para el módulo de pasajero
+│   │   └── (archivos de estilos)
 │   │
 │   ├── types/                # Definiciones de tipos TypeScript
-│   │   └── index.ts          # Exportación de tipos
+│   │   └── (tipos globales)
 │   │
 │   ├── utils/                # Utilidades
-│   │   ├── constants.ts      # Constantes de la aplicación
-│   │   ├── helpers.ts        # Funciones de ayuda
-│   │   └── validators.ts     # Funciones de validación
+│   │   └── (funciones de ayuda)
 │   │
 │   ├── App.tsx               # Componente raíz de la aplicación
-│   └── main.tsx              # Punto de entrada de la aplicación
+│   ├── main.tsx              # Punto de entrada de la aplicación
+│   └── vite-env.d.ts         # Definiciones de tipos para Vite
 │
 ├── .gitignore                # Archivos ignorados por Git
+├── eslint.config.js          # Configuración de ESLint
 ├── index.html                # Plantilla HTML principal
 ├── package.json              # Dependencias y scripts
-├── tsconfig.json             # Configuración de TypeScript
+├── tsconfig.app.json         # Configuración de TypeScript para la app
+├── tsconfig.json             # Configuración de TypeScript principal
 ├── tsconfig.node.json        # Configuración de TypeScript para Node
-└── vite.config.ts            # Configuración de Vite
+├── vite.config.ts            # Configuración de Vite
+└── README.md                 # Documentación del proyecto
 
 ## Tecnologías Clave
 
