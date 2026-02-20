@@ -44,12 +44,11 @@ backend/
 
 ## Variables de entorno
 Crear un archivo de variables de entorno dentro de la carpeta de la raiz de backend,  con la siguiente nomenclatura:
+
 ```
-# Configuración del servidor, por defecto es el 4000, pero puede cambiar 
+//Configuración del servidor, por defecto es el 4000, pero puede cambiar 
 PORT=4000
-
-# Base de datos MongoDB
+//Base de datos MongoDB
 MONGO_URI='conexion de base de datos de mongodb'
-
-# Secreto para JWT (debe ser una cadena larga y segura)
+//Secreto para JWT (debe ser una cadena larga y segura)
 JWT_SECRET="token cifrado. Puede ser cualquier clave generada por jwt"
