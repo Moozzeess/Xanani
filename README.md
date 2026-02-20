@@ -15,18 +15,38 @@ Xanani es una plataforma de movilidad inteligente diseñada para optimizar el tr
 
 ```
 Xanani/
-├── backend/         # API REST y lógica del servidor
-│   ├── src/         # Código fuente del backend
-│   └── ...          # Configuración y dependencias
+├── .git/                     # Control de versiones
+├── .gitignore               # Archivos ignorados por Git
+├── .vscode/                 # Configuración de VS Code
+├── README.md                # Documentación principal
+├── package.json             # Dependencias del proyecto raíz
+├── package-lock.json        # Lock de dependencias
 │
-├── frontend/        # Aplicación web del cliente
-│   ├── src/         # Código fuente del frontend
-│   └── ...          # Configuración y dependencias
+├── backend/                 # API REST y lógica del servidor
+│   ├── src/                 # Código fuente del backend
+│   ├── .env                 # Variables de entorno
+│   ├── app.js               # Configuración principal de Express
+│   ├── package.json         # Dependencias del backend
+│   ├── routes.js            # Configuración de rutas principal
+│   ├── server.js            # Punto de entrada del servidor
+│   └── README.md            # Documentación detallada del backend
 │
-└── docs/            # Documentación adicional
-```
+├── frontend/                # Aplicación web del cliente
+│   ├── src/                 # Código fuente del frontend
+│   ├── public/              # Archivos estáticos
+│   ├── package.json         # Dependencias del frontend
+│   ├── vite.config.ts       # Configuración de Vite
+│   ├── tsconfig.json        # Configuración TypeScript
+│   └── README.md            # Documentación detallada del frontend
+│
+└── Test/                    # Archivos de prueba
+    ├── README.MD            # Documentación de pruebas
+    ├── admin.html           # Interfaz admin
+    ├── conductor.html       # Interfaz conductor
+    ├── landing pasajero.html # Landing pasajero
+    ├── login.html           # Interfaz login
+    └── pasajero_autenticado.html # Interfaz pasajero autenticado
 
-## 🚀 Comenzando
 
 ### Requisitos Previos
 
@@ -45,15 +65,14 @@ Xanani/
 2. Configurar el backend:
    ```bash
    cd backend
-   cp .env.example .env
-   # Editar .env con tus credenciales
+   cp .env
+   # Editar .env con las credenciales coresponientes
    npm install
    ```
 
 3. Configurar el frontend:
    ```bash
    cd ../frontend
-   cp .env.example .env
    npm install
    ```
 
@@ -70,7 +89,7 @@ Xanani/
 
 5. Acceder a las aplicaciones:
    - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3000
+   - Backend API: http://localhost:4000
 
 ## 📚 Documentación
 
