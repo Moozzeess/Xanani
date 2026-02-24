@@ -4,6 +4,7 @@ import LoginPage from "./auth/LoginPage";
 import LandingPage from "./auth/LandingPage";
 import { useAuth } from "./auth/useAuth";
 import type { Role } from "./types/auth";
+import ProtectedRoute from "./auth/ProtectedRoute";
 
 import SuperusuarioPage from "./pages/superuser/superuser";
 import AdminDashboard from "./pages/administrador/adminDasboard";
@@ -49,10 +50,38 @@ function App() {
         <Route path="/" element={<HomeRoute />} />
         <Route path="/login" element={<LoginPage />} />
 
-        <Route path="/superuser" element={<SuperusuarioPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/conductor" element={<ConductorDashboard />} />
-        <Route path="/pasajero" element={<PasajeroPerfil />} />
+        <Route
+          path="/superuser"
+          element={
+            <ProtectedRoute allowedRoles={["SUPERUSUARIO"]}>
+              <SuperusuarioPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["ADMINISTRADOR"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/conductor"
+          element={
+            <ProtectedRoute allowedRoles={["CONDUCTOR"]}>
+              <ConductorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pasajero"
+          element={
+            <ProtectedRoute allowedRoles={["PASAJERO"]}>
+              <PasajeroPerfil />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
