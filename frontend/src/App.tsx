@@ -8,8 +8,8 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 
 import SuperusuarioPage from "./pages/superuser/superuser";
 import AdminDashboard from "./pages/administrador/adminDasboard";
-import ConductorDashboard from "./pages/conductor/conductorDasboard";
-import PasajeroPerfil from "./pages/pasajero/pasajeroPerfil";
+import Conductor from "./pages/conductor/Conductor";
+import Pasajero from "./pages/pasajero/Pasajero";
 
 function getDefaultRouteByRole(role: Role): string {
   switch (role) {
@@ -70,7 +70,7 @@ function App() {
           path="/conductor"
           element={
             <ProtectedRoute allowedRoles={["CONDUCTOR"]}>
-              <ConductorDashboard />
+              <Conductor/>
             </ProtectedRoute>
           }
         />
@@ -78,7 +78,7 @@ function App() {
           path="/pasajero"
           element={
             <ProtectedRoute allowedRoles={["PASAJERO"]}>
-              <PasajeroPerfil />
+              <Pasajero />
             </ProtectedRoute>
           }
         />

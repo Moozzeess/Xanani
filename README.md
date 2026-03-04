@@ -33,6 +33,12 @@ Xanani/
 │
 ├── frontend/                # Aplicación web del cliente
 │   ├── src/                 # Código fuente del frontend
+│   │   ├── components/      # Componentes reutilizables
+│   │   │   ├── common/      # Componentes compartidos (Mapa, Navbar)
+│   │   │   └── pasajero/    # Componentes específicos (Alerta, Asientos, TarjetaBus)
+│   │   ├── pages/           # Páginas principales
+│   │   │   └── pasajero/    # Vista de pasajero (Pasajero.jsx)
+│   │   └── ...
 │   ├── public/              # Archivos estáticos
 │   ├── package.json         # Dependencias del frontend
 │   ├── vite.config.ts       # Configuración de Vite
