@@ -1,0 +1,1 @@
+router.post('/update-location', locationController.updateLocation);
