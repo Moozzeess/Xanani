@@ -4,39 +4,39 @@ const mongoose = require('mongoose');
  * Roles del sistema.
  * Nota: Se usan valores normalizados (sin acentos) para evitar errores.
  */
-const USER_ROLES = Object.freeze({
+const ROLES_USUARIO = Object.freeze({
   SUPERUSUARIO: 'SUPERUSUARIO',
   ADMINISTRADOR: 'ADMINISTRADOR',
   CONDUCTOR: 'CONDUCTOR',
   PASAJERO: 'PASAJERO'
 });
 
-const userSchema = new mongoose.Schema(
+const usuarioSchema = new mongoose.Schema(
   {
-    username: {
+    nombreUsuario: {
       type: String,
       required: true,
       unique: true,
       trim: true
     },
-    email: {
+    correoElectronico: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
       trim: true
     },
-    passwordHash: {
+    hashContrasena: {
       type: String,
       required: true
     },
-    role: {
+    rol: {
       type: String,
-      enum: Object.values(USER_ROLES),
-      default: USER_ROLES.PASAJERO,
+      enum: Object.values(ROLES_USUARIO),
+      default: ROLES_USUARIO.PASAJERO,
       required: true
     },
-    isActive: {
+    estaActivo: {
       type: Boolean,
       default: true
     }
@@ -45,6 +45,6 @@ const userSchema = new mongoose.Schema(
 );
 
 module.exports = {
-  User: mongoose.model('User', userSchema),
-  USER_ROLES
+  Usuario: mongoose.model('Usuario', usuarioSchema),
+  ROLES_USUARIO
 };

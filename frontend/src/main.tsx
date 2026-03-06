@@ -1,13 +1,13 @@
-// src/main.tsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import { AuthProvider } from './auth/useAuth'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './styles/index.css';
+import App from './App';
+import { ProveedorAutenticacion } from './autenticacion/usarAutenticacion';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AuthProvider>
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ProveedorAutenticacion>
       <App />
-    </AuthProvider>
-  </React.StrictMode>
-)
+    </ProveedorAutenticacion>
+  </StrictMode>
+);

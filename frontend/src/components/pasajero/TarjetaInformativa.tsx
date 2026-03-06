@@ -29,9 +29,9 @@ const TarjetaInformativa: React.FC<TarjetaInformativaProps> = ({
   };
 
   const estadoActual = estadoInfo[estado];
-// Botón de ojo que redirige al login
+// Botón de ojo que redirige a inicio de sesión
   const handleEyeClick = () => {
-    navigate('/login');
+    navigate('/iniciar-sesion');
   };
 
   return (

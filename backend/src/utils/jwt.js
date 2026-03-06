@@ -3,10 +3,10 @@ const { JWT_SECRET } = require('../config/env');
 
 /**
  * Firma un JWT para el usuario autenticado.
- * @param {{ id: string, role: string, username?: string, email?: string }} payload
+ * @param {{ id: string, rol: string, nombreUsuario?: string, correoElectronico?: string }} payload
  * @returns {string}
  */
-function signAccessToken(payload) {
+function firmarTokenAcceso(payload) {
   if (!JWT_SECRET) {
     throw new Error('JWT_SECRET no está configurado en variables de entorno.');
   }
@@ -14,9 +14,9 @@ function signAccessToken(payload) {
   return jwt.sign(
     {
       sub: payload.id,
-      role: payload.role,
-      username: payload.username,
-      email: payload.email
+      rol: payload.rol,
+      nombreUsuario: payload.nombreUsuario,
+      correoElectronico: payload.correoElectronico
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -28,7 +28,7 @@ function signAccessToken(payload) {
  * @param {string} token
  * @returns {import('jsonwebtoken').JwtPayload}
  */
-function verifyAccessToken(token) {
+function verificarTokenAcceso(token) {
   if (!JWT_SECRET) {
     throw new Error('JWT_SECRET no está configurado en variables de entorno.');
   }
@@ -37,6 +37,6 @@ function verifyAccessToken(token) {
 }
 
 module.exports = {
-  signAccessToken,
-  verifyAccessToken
+  firmarTokenAcceso,
+  verificarTokenAcceso
 };

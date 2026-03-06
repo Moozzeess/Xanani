@@ -1,85 +1,79 @@
-// src/App.tsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./auth/LoginPage";
-import LandingPage from "./auth/LandingPage";
-import { useAuth } from "./auth/useAuth";
-import type { Role } from "./types/auth";
-import ProtectedRoute from "./auth/ProtectedRoute";
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import PaginaInicioSesion from './autenticacion/PaginaInicioSesion';
+import PaginaInicioInvitado from './autenticacion/PaginaInicioInvitado';
+import { usarAutenticacion } from './autenticacion/usarAutenticacion';
+import type { Rol } from './types/autenticacion';
+import RutaProtegida from './autenticacion/RutaProtegida';
 
-import SuperusuarioPage from "./pages/superuser/superuser";
-import AdminDashboard from "./pages/administrador/adminDasboard";
-import ConductorDashboard from "./pages/conductor/conductorDasboard";
-import PasajeroPerfil from "./pages/pasajero/pasajeroPerfil";
+import PaginaSuperusuario from './pages/superusuario/superusuario';
+import PanelAdministrador from './pages/administrador/panelAdministrador';
+import PanelConductor from './pages/conductor/panelConductor';
+import PerfilPasajero from './pages/pasajero/perfilPasajero';
 
-function getDefaultRouteByRole(role: Role): string {
-  switch (role) {
-    case "SUPERUSUARIO":
-      return "/superuser";
-    case "ADMINISTRADOR":
-      return "/admin";
-    case "CONDUCTOR":
-      return "/conductor";
-    case "PASAJERO":
-      return "/pasajero";
+function obtenerRutaPorRol(rol: Rol): string {
+  switch (rol) {
+    case 'SUPERUSUARIO':
+      return '/superusuario';
+    case 'ADMINISTRADOR':
+      return '/administrador';
+    case 'CONDUCTOR':
+      return '/conductor';
+    case 'PASAJERO':
+      return '/pasajero';
     default:
-      return "/";
+      return '/';
   }
 }
 
-/**
- * Página raíz:
- * - Invitado: muestra LandingPage.
- * - Autenticado: redirige según el rol.
- */
-function HomeRoute() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+function RutaInicio() {
+  const { estaAutenticado, estaCargando, usuario } = usarAutenticacion();
 
-  if (isLoading) return null;
+  if (estaCargando) return null;
 
-  if (!isAuthenticated || !user) {
-    return <LandingPage />;
+  if (!estaAutenticado || !usuario) {
+    return <PaginaInicioInvitado />;
   }
 
-  return <Navigate to={getDefaultRouteByRole(user.role)} replace />;
+  return <Navigate to={obtenerRutaPorRol(usuario.rol)} replace />;
 }
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomeRoute />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<RutaInicio />} />
+        <Route path="/iniciar-sesion" element={<PaginaInicioSesion />} />
 
         <Route
-          path="/superuser"
+          path="/superusuario"
           element={
-            <ProtectedRoute allowedRoles={["SUPERUSUARIO"]}>
-              <SuperusuarioPage />
-            </ProtectedRoute>
+            <RutaProtegida rolesPermitidos={['SUPERUSUARIO']}>
+              <PaginaSuperusuario />
+            </RutaProtegida>
           }
         />
         <Route
-          path="/admin"
+          path="/administrador"
           element={
-            <ProtectedRoute allowedRoles={["ADMINISTRADOR"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
+            <RutaProtegida rolesPermitidos={['ADMINISTRADOR']}>
+              <PanelAdministrador />
+            </RutaProtegida>
           }
         />
         <Route
           path="/conductor"
           element={
-            <ProtectedRoute allowedRoles={["CONDUCTOR"]}>
-              <ConductorDashboard />
-            </ProtectedRoute>
+            <RutaProtegida rolesPermitidos={['CONDUCTOR']}>
+              <PanelConductor />
+            </RutaProtegida>
           }
         />
         <Route
           path="/pasajero"
           element={
-            <ProtectedRoute allowedRoles={["PASAJERO"]}>
-              <PasajeroPerfil />
-            </ProtectedRoute>
+            <RutaProtegida rolesPermitidos={['PASAJERO']}>
+              <PerfilPasajero />
+            </RutaProtegida>
           }
         />
 

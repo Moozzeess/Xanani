@@ -6,8 +6,7 @@ import '../styles/pasajero.css';
 import { MarcadorBus, EstadoBus, crearMarcadorBus } from '../components/common/MarcadorBus';
 import TarjetaInformativa from '../components/pasajero/TarjetaInformativa';
 
-
-const PassengerLanding: React.FC = () => {
+const PaginaInicioInvitado: React.FC = () => {
   const navigate = useNavigate();
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -16,33 +15,30 @@ const PassengerLanding: React.FC = () => {
 
   useEffect(() => {
     if (containerRef.current && !mapRef.current) {
-      // Coordenadas iniciales
-      const userLoc: [number, number] = [19.4326, -99.1332];
-      const busLoc: [number, number] = [19.4340, -99.1350];
+      const ubicacionUsuario: [number, number] = [19.4326, -99.1332];
+      const ubicacionBus: [number, number] = [19.434, -99.135];
 
-      // Inicializar Mapa
       mapRef.current = L.map('map', {
         zoomControl: false,
         attributionControl: false
-      }).setView(userLoc, 15);
+      }).setView(ubicacionUsuario, 15);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mapRef.current);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(
+        mapRef.current
+      );
 
-      // Marcador Usuario
-      const userIcon = L.divIcon({
+      const iconoUsuario = L.divIcon({
         className: '',
         html: `<div style="display:flex;align-items:center;justify-content:center;"><div class="user-pulse"></div><div class="user-dot"></div></div>`,
         iconSize: [40, 40],
         iconAnchor: [20, 20]
       });
-      L.marker(userLoc, { icon: userIcon }).addTo(mapRef.current);
+      L.marker(ubicacionUsuario, { icon: iconoUsuario }).addTo(mapRef.current);
 
-      // Marcador Bus
-      const marcadorBus = crearMarcadorBus(busLoc, estadoBusActual, mapRef.current);
+      const marcadorBus = crearMarcadorBus(ubicacionBus, estadoBusActual, mapRef.current);
       marcadorBusRef.current = marcadorBus;
 
-      // Línea de conexión
-      L.polyline([userLoc, busLoc], {
+      L.polyline([ubicacionUsuario, ubicacionBus], {
         color: '#3b82f6',
         weight: 4,
         opacity: 0.6,
@@ -56,9 +52,8 @@ const PassengerLanding: React.FC = () => {
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [estadoBusActual]);
 
-  // Efecto para sincronizar cambios de estado
   useEffect(() => {
     if (marcadorBusRef.current) {
       marcadorBusRef.current.actualizarEstado(estadoBusActual);
@@ -67,21 +62,18 @@ const PassengerLanding: React.FC = () => {
 
   return (
     <div className="passenger-body" ref={containerRef}>
-      {/* HEADER */}
       <header className="fixed-header">
         <div>
           <h1 className="header-title">Xanani</h1>
           <p className="header-subtitle">Modo Invitado</p>
         </div>
-        <button className="btn-login" onClick={() => navigate('/login')}>
+        <button className="btn-login" onClick={() => navigate('/iniciar-sesion')}>
           Iniciar Sesión
         </button>
       </header>
 
-      {/* MAPA */}
       <div id="map"></div>
 
-      {/* TARJETA INFORMATIVA */}
       <TarjetaInformativa
         unidad="001"
         ocupabilidad="Alta"
@@ -93,4 +85,4 @@ const PassengerLanding: React.FC = () => {
   );
 };
 
-export default PassengerLanding;
+export default PaginaInicioInvitado;
