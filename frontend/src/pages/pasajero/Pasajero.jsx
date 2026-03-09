@@ -10,6 +10,9 @@ import Navbar from "../../components/common/Navbar";
 import AlertaFlotante from "../../components/pasajero/AlertaFlotante";
 import ReporteModal from "../../components/pasajero/ReporteModal";
 import TarjetaBus from "../../components/pasajero/TarjetaBus";
+import UbicacionModal from "../../components/common/UbicacionModal";
+
+
 
 /**
  * Página principal del Pasajero.
@@ -24,6 +27,12 @@ const Pasajero = () => {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [centerOnUserTrigger, setCenterOnUserTrigger] = useState(0);
 
+  // Estados de permisos de ubicación
+  const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
+  const [ubicacionPermitida, setUbicacionPermitida] = useState(false);
+  const [showMapUserLocation, setShowMapUserLocation] = useState(false);
+
+
   // Obtener inicial e información del usuario autenticado
   const username = user?.username || 'Pasajero';
   const userInitial = username.charAt(0).toUpperCase();
@@ -33,6 +42,19 @@ const Pasajero = () => {
 
   // Generar vehículos cerca del usuario cuando se obtiene su ubicación
   useEffect(() => {
+    // Verificar si el usuario ya otorgó permiso o si necesitamos mostrar el modal
+    const hasPermission = localStorage.getItem('locationPermissionGranted') === 'true';
+
+    if (hasPermission) {
+      setUbicacionPermitida(true);
+      setShowMapUserLocation(true);
+      requestUserLocation();
+    } else {
+      setIsUbicacionModalOpen(true);
+    }
+  }, []);
+
+  const requestUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
         const { latitude, longitude } = position.coords;
@@ -48,16 +70,31 @@ const Pasajero = () => {
         setVehicles(nearbyVehicles);
       }, (error) => {
         console.error("Error obteniendo ubicación para mock data:", error);
-        // Fallback a ubicación por defecto (Ciudad de México) si falla el permiso
-        const defaultLat = 19.4326;
-        const defaultLon = -99.1332;
-        setVehicles([
-          { id: 1, plate: 'MX-001', status: 'En ruta', color: 'bg-green-400', text: 'text-green-900', pillBg: 'bg-green-100 text-green-700', eta: '2 min', occ: 'Alta', pos: [defaultLat + 0.002, defaultLon + 0.002], driver: 'Juan P.' },
-          { id: 2, plate: 'MX-002', status: 'Terminal', color: 'bg-amber-400', text: 'text-amber-900', pillBg: 'bg-amber-100 text-amber-700', eta: '5 min', occ: 'Baja', pos: [defaultLat - 0.003, defaultLon + 0.001], driver: 'Luis G.' },
-        ]);
+        setDefaultVehicles();
       });
+    } else {
+      setDefaultVehicles();
     }
-  }, []);
+  };
+
+  const setDefaultVehicles = () => {
+    // Fallback a ubicación por defecto (Ciudad de México) si falla el permiso
+    const defaultLat = 19.4326;
+    const defaultLon = -99.1332;
+    setVehicles([
+      { id: 1, plate: 'MX-001', status: 'En ruta', color: 'bg-green-400', text: 'text-green-900', pillBg: 'bg-green-100 text-green-700', eta: '2 min', occ: 'Alta', pos: [defaultLat + 0.002, defaultLon + 0.002], driver: 'Juan P.' },
+      { id: 2, plate: 'MX-002', status: 'Terminal', color: 'bg-amber-400', text: 'text-amber-900', pillBg: 'bg-amber-100 text-amber-700', eta: '5 min', occ: 'Baja', pos: [defaultLat - 0.003, defaultLon + 0.001], driver: 'Luis G.' },
+    ]);
+  };
+
+  const handleAcceptLocation = () => {
+    localStorage.setItem('locationPermissionGranted', 'true');
+    setUbicacionPermitida(true);
+    setIsUbicacionModalOpen(false);
+    setShowMapUserLocation(true);
+    requestUserLocation();
+  };
+
 
   const onLogout = () => {
     logout();
@@ -92,7 +129,7 @@ const Pasajero = () => {
         <Mapa
           vehicles={vehicles}
           onVehicleClick={handleVehicleClick}
-          showUserLocation={true}
+          showUserLocation={showMapUserLocation}
           centerOnUserTrigger={centerOnUserTrigger}
         />
 
@@ -117,6 +154,16 @@ const Pasajero = () => {
       <ReporteModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+      />
+
+      {/* MODAL DE UBICACION */}
+      <UbicacionModal
+        isOpen={isUbicacionModalOpen}
+        onClose={() => {
+          setIsUbicacionModalOpen(false);
+          setDefaultVehicles();
+        }}
+        onAccept={handleAcceptLocation}
       />
     </main>
   );

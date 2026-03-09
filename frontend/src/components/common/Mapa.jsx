@@ -35,56 +35,6 @@ const Mapa = ({
       }).addTo(mapInstanceRef.current);
 
       markersGroupRef.current.addTo(mapInstanceRef.current);
-
-      // Opciones para máxima precisión y solicitud de permisos
-      const geoOptions = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      };
-
-      // Geolocalización inicial
-      if (showUserLocation && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            const userPos = [latitude, longitude];
-
-            if (userMarkerRef.current) {
-              userMarkerRef.current.setLatLng(userPos);
-            } else {
-              const userIcon = L.divIcon({
-                className: 'user-location-marker',
-                html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-              });
-              userMarkerRef.current = L.marker(userPos, { icon: userIcon }).addTo(mapInstanceRef.current);
-            }
-            mapInstanceRef.current.setView(userPos, zoom);
-          },
-          (error) => {
-            let errorMsg = "";
-            switch (error.code) {
-              case error.PERMISSION_DENIED:
-                errorMsg = "El usuario denegó la solicitud de geolocalización.";
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMsg = "La información de ubicación no está disponible.";
-                break;
-              case error.TIMEOUT:
-                errorMsg = "Se agotó el tiempo de espera para obtener la ubicación.";
-                break;
-              default:
-                errorMsg = "Ocurrió un error desconocido al obtener la ubicación.";
-                break;
-            }
-            console.error(errorMsg);
-            alert(errorMsg + " Por favor, activa el GPS y otorga permisos.");
-          },
-          geoOptions
-        );
-      }
     }
 
     // Limpieza al desmontar
@@ -95,6 +45,61 @@ const Mapa = ({
       }
     };
   }, []);
+
+  // Efecto para manejar la ubicación del usuario
+  useEffect(() => {
+    if (showUserLocation && navigator.geolocation && mapInstanceRef.current) {
+      const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const userPos = [latitude, longitude];
+
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng(userPos);
+          } else {
+            const userIcon = L.divIcon({
+              className: 'user-location-marker',
+              html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`,
+              iconSize: [16, 16],
+              iconAnchor: [8, 8]
+            });
+            userMarkerRef.current = L.marker(userPos, { icon: userIcon }).addTo(mapInstanceRef.current);
+          }
+          mapInstanceRef.current.setView(userPos, zoom);
+        },
+        (error) => {
+          let errorMsg = "";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMsg = "Permiso de geolocalización denegado.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMsg = "Ubicación no disponible.";
+              break;
+            case error.TIMEOUT:
+              errorMsg = "Tiempo de espera agotado.";
+              break;
+            default:
+              errorMsg = "Error de ubicación.";
+              break;
+          }
+          console.warn(errorMsg);
+        },
+        geoOptions
+      );
+    } else if (!showUserLocation && userMarkerRef.current) {
+      // Eliminar marcador si se desactiva
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+  }, [showUserLocation]);
+
 
   // Actualizar Polilínea de la Ruta
   useEffect(() => {
