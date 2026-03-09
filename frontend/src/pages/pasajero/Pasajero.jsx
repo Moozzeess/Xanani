@@ -20,7 +20,7 @@ import UbicacionModal from "../../components/common/UbicacionModal";
  */
 const Pasajero = () => {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { cerrarSesion, usuario } = useAuth();
 
   // Estados de la interfaz
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -34,7 +34,7 @@ const Pasajero = () => {
 
 
   // Obtener inicial e información del usuario autenticado
-  const username = user?.username || 'Pasajero';
+  const username = usuario?.username || 'Pasajero';
   const userInitial = username.charAt(0).toUpperCase();
 
   // Datos simulados (Mock Data) que se actualizarán según la ubicación del usuario
@@ -97,7 +97,7 @@ const Pasajero = () => {
 
 
   const onLogout = () => {
-    logout();
+    cerrarSesion();
     navigate("/", { replace: true });
   };
 

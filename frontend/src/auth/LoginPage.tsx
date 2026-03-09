@@ -6,8 +6,14 @@ import type { Role } from "../types/auth";
 
 type FormType = "login" | "register" | "recover";
 
-function getDefaultRouteByRole(role: Role): string {
-  switch (role) {
+/**
+ * Determina la ruta por defecto según el rol del usuario.
+ *
+ * @param {Role} rol - El rol del usuario autenticado.
+ * @returns {string} La ruta de redirección.
+ */
+function obtenerRutaPorDefecto(rol: Role): string {
+  switch (rol) {
     case "SUPERUSUARIO":
       return "/superuser";
     case "ADMINISTRADOR":
@@ -21,88 +27,103 @@ function getDefaultRouteByRole(role: Role): string {
   }
 }
 
-const LoginPage = () => {
-  const [activeForm, setActiveForm] = useState<FormType>("login");
-  const navigate = useNavigate();
-  const { login, register, isAuthenticated, user, isLoading } = useAuth();
+/**
+ * Componente de la página de inicio de sesión y registro.
+ * Maneja la autenticación de usuarios y la persistencia de sesión.
+ */
+const PaginaLogin = () => {
+  const [formularioActivo, setFormularioActivo] = useState<FormType>("login");
+  const navegar = useNavigate();
+  const { iniciarSesion, registrarUsuario, estaAutenticado, usuario, estaCargando } = useAuth();
 
+  // Efecto para redirigir si el usuario ya está autenticado
   useEffect(() => {
-    if (isLoading) return;
-    if (isAuthenticated && user) {
-      navigate(getDefaultRouteByRole(user.role), { replace: true });
+    if (estaCargando) return;
+    if (estaAutenticado && usuario) {
+      navegar(obtenerRutaPorDefecto(usuario.role), { replace: true });
     }
-  }, [isAuthenticated, user, isLoading, navigate]);
+  }, [estaAutenticado, usuario, estaCargando, navegar]);
 
-  const [usernameOrEmail, setUsernameOrEmail] = useState("");
-  const [password, setPassword] = useState("");
+  // Estados del formulario de login
+  const [usuarioOEmail, setUsuarioOEmail] = useState("");
+  const [contrasena, setContrasena] = useState("");
 
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerUsername, setRegisterUsername] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
-  const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
+  // Estados del formulario de registro
+  const [emailRegistro, setEmailRegistro] = useState("");
+  const [usuarioRegistro, setUsuarioRegistro] = useState("");
+  const [contrasenaRegistro, setContrasenaRegistro] = useState("");
+  const [confirmarContrasenaRegistro, setConfirmarContrasenaRegistro] = useState("");
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [estaEnviando, setEstaEnviando] = useState(false);
+  const [mensajeError, setMensajeError] = useState<string | null>(null);
 
-  const canSubmitLogin = useMemo(() => {
-    return usernameOrEmail.trim().length > 0 && password.length > 0;
-  }, [usernameOrEmail, password]);
+  // Validación para habilitar el botón de login
+  const puedeEnviarLogin = useMemo(() => {
+    return usuarioOEmail.trim().length > 0 && contrasena.length > 0;
+  }, [usuarioOEmail, contrasena]);
 
-  const canSubmitRegister = useMemo(() => {
+  // Validación para habilitar el botón de registro
+  const puedeEnviarRegistro = useMemo(() => {
     return (
-      registerEmail.trim().length > 0 &&
-      registerUsername.trim().length > 0 &&
-      registerPassword.length > 0 &&
-      registerPasswordConfirm.length > 0
+      emailRegistro.trim().length > 0 &&
+      usuarioRegistro.trim().length > 0 &&
+      contrasenaRegistro.length > 0 &&
+      confirmarContrasenaRegistro.length > 0
     );
-  }, [registerEmail, registerUsername, registerPassword, registerPasswordConfirm]);
+  }, [emailRegistro, usuarioRegistro, contrasenaRegistro, confirmarContrasenaRegistro]);
 
-  const onSubmitLogin = async () => {
+  /**
+   * Maneja el envío del formulario de inicio de sesión.
+   */
+  const alEnviarLogin = async () => {
     try {
-      setIsSubmitting(true);
-      setErrorMessage(null);
-      await login({ usernameOrEmail: usernameOrEmail.trim(), password });
-      navigate("/", { replace: true });
+      setEstaEnviando(true);
+      setMensajeError(null);
+      await iniciarSesion({ usernameOrEmail: usuarioOEmail.trim(), password: contrasena });
+      navegar("/", { replace: true });
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Error al iniciar sesión.';
-      setErrorMessage(message);
+      const mensaje = e instanceof Error ? e.message : 'Error al iniciar sesión.';
+      setMensajeError(mensaje);
     } finally {
-      setIsSubmitting(false);
+      setEstaEnviando(false);
     }
   };
 
-  const onSubmitRegister = async () => {
+  /**
+   * Maneja el envío del formulario de registro.
+   */
+  const alEnviarRegistro = async () => {
     try {
-      setIsSubmitting(true);
-      setErrorMessage(null);
+      setEstaEnviando(true);
+      setMensajeError(null);
 
-      if (registerPassword !== registerPasswordConfirm) {
-        setErrorMessage('Las contraseñas no coinciden.');
+      if (contrasenaRegistro !== confirmarContrasenaRegistro) {
+        setMensajeError('Las contraseñas no coinciden.');
         return;
       }
 
-      await register({
-        email: registerEmail.trim(),
-        username: registerUsername.trim(),
-        password: registerPassword
+      await registrarUsuario({
+        email: emailRegistro.trim(),
+        username: usuarioRegistro.trim(),
+        password: contrasenaRegistro
       });
 
-      navigate("/", { replace: true });
+      navegar("/", { replace: true });
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Error al registrarse.';
-      setErrorMessage(message);
+      const mensaje = e instanceof Error ? e.message : 'Error al registrarse.';
+      setMensajeError(mensaje);
     } finally {
-      setIsSubmitting(false);
+      setEstaEnviando(false);
     }
   };
 
   return (
     <div className="login-page-container">
-      {/* BACKGROUND */}
+      {/* FONDO (MAPA) */}
       <div id="map-bg"></div>
       <div id="map-overlay"></div>
 
-      {/* CARD */}
+      {/* TARJETA DE AUTENTICACION */}
       <div className="auth-card">
         <div className="logo-circle">
           <img src="/LOGO.png" alt="XANANI" className="logo-inner" />
@@ -111,91 +132,91 @@ const LoginPage = () => {
         <p className="auth-subtitle">Movilidad Inteligente</p>
 
         <div className="form-wrapper">
-          {errorMessage && (
+          {mensajeError && (
             <div style={{ color: '#ef4444', marginBottom: 12, textAlign: 'center' }}>
-              {errorMessage}
+              {mensajeError}
             </div>
           )}
-          
+
           {/* LOGIN */}
-          {activeForm === "login" && (
+          {formularioActivo === "login" && (
             <div className="auth-form">
               <input
                 className="input-style"
                 placeholder="Usuario o Email"
                 type="text"
-                value={usernameOrEmail}
-                onChange={(e) => setUsernameOrEmail(e.target.value)}
+                value={usuarioOEmail}
+                onChange={(e) => setUsuarioOEmail(e.target.value)}
               />
               <input
                 className="input-style"
                 placeholder="Contraseña"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
               />
               <button
                 className="btn-auth"
-                onClick={onSubmitLogin}
-                disabled={!canSubmitLogin || isSubmitting}
+                onClick={alEnviarLogin}
+                disabled={!puedeEnviarLogin || estaEnviando}
               >
                 Iniciar sesión
               </button>
               <div className="footer-links">
-                <button onClick={() => setActiveForm("register")} className="link-style">Registro</button>
-                <button onClick={() => setActiveForm("recover")} className="link-style">Recuperar</button>
+                <button onClick={() => setFormularioActivo("register")} className="link-style">Registro</button>
+                <button onClick={() => setFormularioActivo("recover")} className="link-style">Recuperar</button>
               </div>
             </div>
           )}
 
           {/* REGISTER */}
-          {activeForm === "register" && (
+          {formularioActivo === "register" && (
             <div className="auth-form">
               <input
                 className="input-style"
                 placeholder="Email"
                 type="email"
-                value={registerEmail}
-                onChange={(e) => setRegisterEmail(e.target.value)}
+                value={emailRegistro}
+                onChange={(e) => setEmailRegistro(e.target.value)}
               />
               <input
                 className="input-style"
                 placeholder="Usuario"
                 type="text"
-                value={registerUsername}
-                onChange={(e) => setRegisterUsername(e.target.value)}
+                value={usuarioRegistro}
+                onChange={(e) => setUsuarioRegistro(e.target.value)}
               />
               <input
                 className="input-style"
                 placeholder="Contraseña"
                 type="password"
-                value={registerPassword}
-                onChange={(e) => setRegisterPassword(e.target.value)}
+                value={contrasenaRegistro}
+                onChange={(e) => setContrasenaRegistro(e.target.value)}
               />
               <input
                 className="input-style"
                 placeholder="Confirmar contraseña"
                 type="password"
-                value={registerPasswordConfirm}
-                onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
+                value={confirmarContrasenaRegistro}
+                onChange={(e) => setConfirmarContrasenaRegistro(e.target.value)}
               />
               <button
                 className="btn-auth btn-primary-auth"
-                onClick={onSubmitRegister}
-                disabled={!canSubmitRegister || isSubmitting}
+                onClick={alEnviarRegistro}
+                disabled={!puedeEnviarRegistro || estaEnviando}
               >
                 Continuar
               </button>
-              <button onClick={() => setActiveForm("login")} className="link-style" style={{textAlign: 'center'}}>Volver</button>
+              <button onClick={() => setFormularioActivo("login")} className="link-style" style={{ textAlign: 'center' }}>Volver</button>
             </div>
           )}
 
           {/* RECOVER */}
-          {activeForm === "recover" && (
+          {formularioActivo === "recover" && (
             <div className="auth-form">
               <input className="input-style" placeholder="Email" type="email" />
               <button className="btn-auth">Enviar enlace</button>
-              <button onClick={() => setActiveForm("login")} className="link-style" style={{textAlign: 'center'}}>Volver</button>
+              <button onClick={() => setFormularioActivo("login")} className="link-style" style={{ textAlign: 'center' }}>Volver</button>
             </div>
           )}
 
@@ -205,4 +226,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default PaginaLogin;

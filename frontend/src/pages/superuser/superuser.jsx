@@ -4,10 +4,10 @@ import { useAuth } from "../../auth/useAuth";
 
 const Superususario = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { cerrarSesion } = useAuth();
 
   const onLogout = () => {
-    logout();
+    cerrarSesion();
     navigate("/", { replace: true });
   };
   return (

@@ -3,100 +3,134 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { AuthResponse, AuthUser, LoginRequest, RegisterRequest, Role } from '../types/auth';
 import * as authApi from '../services/auth';
 
-type AuthContextValue = {
+/**
+ * Define la estructura del valor que el contexto de autenticación proporcionará.
+ */
+type ValorContextoAuth = {
   token: string | null;
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (payload: LoginRequest) => Promise<void>;
-  register: (payload: RegisterRequest) => Promise<void>;
-  logout: () => void;
-  hasRole: (role: Role) => boolean;
+  usuario: AuthUser | null;
+  estaAutenticado: boolean;
+  estaCargando: boolean;
+  iniciarSesion: (datos: LoginRequest) => Promise<void>;
+  registrarUsuario: (datos: RegisterRequest) => Promise<void>;
+  cerrarSesion: () => void;
+  tieneRol: (rol: Role) => boolean;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+/**
+ * Contexto de React para la autenticación.
+ */
+const ContextoAuth = createContext<ValorContextoAuth | null>(null);
 
-const STORAGE_TOKEN_KEY = 'xanani_token';
-const STORAGE_USER_KEY = 'xanani_user';
+// Claves para el almacenamiento local (localStorage)
+const CLAVE_TOKEN_ALMACENAMIENTO = 'xanani_token';
+const CLAVE_USUARIO_ALMACENAMIENTO = 'xanani_usuario';
 
-function readStoredAuth(): { token: string | null; user: AuthUser | null } {
-  const token = localStorage.getItem(STORAGE_TOKEN_KEY);
-  const rawUser = localStorage.getItem(STORAGE_USER_KEY);
+/**
+ * Lee la información de autenticación almacenada en el localStorage.
+ * 
+ * @returns {Object} Un objeto con el token y el usuario almacenados, o null si no existen.
+ */
+function obtenerAuthAlmacenado(): { token: string | null; usuario: AuthUser | null } {
+  const token = localStorage.getItem(CLAVE_TOKEN_ALMACENAMIENTO);
+  const usuarioCrudo = localStorage.getItem(CLAVE_USUARIO_ALMACENAMIENTO);
 
-  if (!token || !rawUser) {
-    return { token: null, user: null };
+  if (!token || !usuarioCrudo) {
+    return { token: null, usuario: null };
   }
 
   try {
-    const user = JSON.parse(rawUser) as AuthUser;
-    return { token, user };
-  } catch {
-    return { token: null, user: null };
+    const usuario = JSON.parse(usuarioCrudo) as AuthUser;
+    return { token, usuario };
+  } catch (error) {
+    console.error("Error al parsear el usuario almacenado:", error);
+    return { token: null, usuario: null };
   }
 }
 
-function persistAuth(auth: AuthResponse) {
-  localStorage.setItem(STORAGE_TOKEN_KEY, auth.token);
-  localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(auth.user));
+/**
+ * Persiste la información de autenticación en el localStorage.
+ * 
+ * @param {AuthResponse} auth - La respuesta de autenticación del servidor.
+ */
+function guardarAuth(auth: AuthResponse) {
+  localStorage.setItem(CLAVE_TOKEN_ALMACENAMIENTO, auth.token);
+  localStorage.setItem(CLAVE_USUARIO_ALMACENAMIENTO, JSON.stringify(auth.user));
 }
 
-function clearPersistedAuth() {
-  localStorage.removeItem(STORAGE_TOKEN_KEY);
-  localStorage.removeItem(STORAGE_USER_KEY);
+/**
+ * Elimina la información de autenticación del localStorage.
+ */
+function limpiarAuthAlmacenado() {
+  localStorage.removeItem(CLAVE_TOKEN_ALMACENAMIENTO);
+  localStorage.removeItem(CLAVE_USUARIO_ALMACENAMIENTO);
 }
 
+/**
+ * Proveedor de contexto que envuelve la aplicación para manejar el estado global de autenticación.
+ * 
+ * @param {Object} props - Propiedades del componente.
+ * @param {React.ReactNode} props.children - Componentes hijos que tendrán acceso al contexto.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [usuario, setUsuario] = useState<AuthUser | null>(null);
+  const [estaCargando, setEstaCargando] = useState(true);
 
+  // Efecto para cargar la sesión al iniciar la aplicación
   useEffect(() => {
-    const stored = readStoredAuth();
-    setToken(stored.token);
-    setUser(stored.user);
-    setIsLoading(false);
+    const almacenado = obtenerAuthAlmacenado();
+    setToken(almacenado.token);
+    setUsuario(almacenado.usuario);
+    setEstaCargando(false);
   }, []);
 
-  const isAuthenticated = Boolean(token && user);
+  const estaAutenticado = Boolean(token && usuario);
 
-  const value = useMemo<AuthContextValue>(
+  // Memorización del valor del contexto para evitar re-renderizados innecesarios
+  const valor = useMemo<ValorContextoAuth>(
     () => ({
       token,
-      user,
-      isAuthenticated,
-      isLoading,
-      login: async (payload) => {
-        const auth = await authApi.login(payload);
-        persistAuth(auth);
+      usuario,
+      estaAutenticado,
+      estaCargando,
+      iniciarSesion: async (datos) => {
+        const auth = await authApi.login(datos);
+        guardarAuth(auth);
         setToken(auth.token);
-        setUser(auth.user);
+        setUsuario(auth.user);
       },
-      register: async (payload) => {
-        const auth = await authApi.register(payload);
-        persistAuth(auth);
+      registrarUsuario: async (datos) => {
+        const auth = await authApi.register(datos);
+        guardarAuth(auth);
         setToken(auth.token);
-        setUser(auth.user);
+        setUsuario(auth.user);
       },
-      logout: () => {
-        clearPersistedAuth();
+      cerrarSesion: () => {
+        limpiarAuthAlmacenado();
         setToken(null);
-        setUser(null);
+        setUsuario(null);
       },
-      hasRole: (role) => {
-        return user?.role === role;
+      tieneRol: (rol) => {
+        return usuario?.role === rol;
       }
     }),
-    [token, user, isAuthenticated, isLoading]
+    [token, usuario, estaAutenticado, estaCargando]
   );
 
-  return React.createElement(AuthContext.Provider, { value: value }, children);
+  return React.createElement(ContextoAuth.Provider, { value: valor }, children);
 }
 
+/**
+ * Hook personalizado para acceder de forma sencilla al contexto de autenticación.
+ * 
+ * @returns {ValorContextoAuth} El estado y las funciones de autenticación.
+ * @throws {Error} Si se usa fuera de un AuthProvider.
+ */
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth debe usarse dentro de AuthProvider.');
+  const contexto = useContext(ContextoAuth);
+  if (!contexto) {
+    throw new Error('useAuth debe usarse dentro de un AuthProvider.');
   }
-  return ctx;
+  return contexto;
 }
-

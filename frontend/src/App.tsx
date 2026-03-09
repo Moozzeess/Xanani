@@ -1,18 +1,24 @@
-// src/App.tsx
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./auth/LoginPage";
-import LandingPage from "./auth/LandingPage";
+import PaginaLogin from "./auth/LoginPage";
+import LandingPasajero from "./auth/LandingPage";
 import { useAuth } from "./auth/useAuth";
 import type { Role } from "./types/auth";
-import ProtectedRoute from "./auth/ProtectedRoute";
+import RutaProtegida from "./auth/ProtectedRoute";
 
 import SuperusuarioPage from "./pages/superuser/superuser";
 import AdminDashboard from "./pages/administrador/adminDasboard";
 import Conductor from "./pages/conductor/Conductor";
 import Pasajero from "./pages/pasajero/Pasajero";
 
-function getDefaultRouteByRole(role: Role): string {
-  switch (role) {
+/**
+ * Determina la ruta por defecto según el rol del usuario.
+ * 
+ * @param {Role} rol - El rol del usuario.
+ * @returns {string} La ruta de destino.
+ */
+function obtenerRutaPorDefecto(rol: Role): string {
+  switch (rol) {
     case "SUPERUSUARIO":
       return "/superuser";
     case "ADMINISTRADOR":
@@ -27,59 +33,63 @@ function getDefaultRouteByRole(role: Role): string {
 }
 
 /**
- * Página raíz:
- * - Invitado: muestra LandingPage.
- * - Autenticado: redirige según el rol.
+ * Componente que maneja la ruta raíz:
+ * - Si es invitado: muestra LandingPasajero.
+ * - Si está autenticado: redirige según el rol.
  */
-function HomeRoute() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+function RutaHome() {
+  const { estaAutenticado, estaCargando, usuario } = useAuth();
 
-  if (isLoading) return null;
+  if (estaCargando) return null;
 
-  if (!isAuthenticated || !user) {
-    return <LandingPage />;
+  if (!estaAutenticado || !usuario) {
+    return <LandingPasajero />;
   }
 
-  return <Navigate to={getDefaultRouteByRole(user.role)} replace />;
+  return <Navigate to={obtenerRutaPorDefecto(usuario.role)} replace />;
 }
 
+/**
+ * Componente principal de la aplicación.
+ * Define la estructura de rutas y envuelve las páginas en proveedores y protecciones.
+ */
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomeRoute />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<RutaHome />} />
+        <Route path="/login" element={<PaginaLogin />} />
 
         <Route
           path="/superuser"
           element={
-            <ProtectedRoute allowedRoles={["SUPERUSUARIO"]}>
+            <RutaProtegida allowedRoles={["SUPERUSUARIO"]}>
               <SuperusuarioPage />
-            </ProtectedRoute>
+            </RutaProtegida>
           }
         />
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={["ADMINISTRADOR"]}>
+            <RutaProtegida allowedRoles={["ADMINISTRADOR"]}>
               <AdminDashboard />
-            </ProtectedRoute>
+            </RutaProtegida>
           }
         />
         <Route
           path="/conductor"
           element={
-            <ProtectedRoute allowedRoles={["CONDUCTOR"]}>
-              <Conductor/>
-            </ProtectedRoute>
+            <RutaProtegida allowedRoles={["CONDUCTOR"]}>
+              <Conductor />
+            </RutaProtegida>
           }
         />
         <Route
           path="/pasajero"
           element={
-            <ProtectedRoute allowedRoles={["PASAJERO"]}>
+            <RutaProtegida allowedRoles={["PASAJERO"]}>
               <Pasajero />
-            </ProtectedRoute>
+            </RutaProtegida>
           }
         />
 

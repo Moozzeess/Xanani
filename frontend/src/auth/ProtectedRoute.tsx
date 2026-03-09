@@ -8,17 +8,29 @@ type ProtectedRouteProps = {
   allowedRoles?: Role[];
 };
 
-export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const location = useLocation();
-  const { isAuthenticated, isLoading, user } = useAuth();
+/**
+ * Componente que protege rutas según el estado de autenticación y los roles permitidos.
+ * Si el usuario no está autenticado, lo redirige al login.
+ * Si el usuario no tiene el rol necesario, lo redirige a la raíz.
+ * 
+ * @param {Object} props - Propiedades del componente.
+ * @param {ReactNode} props.children - Componentes hijos a renderizar si el acceso está permitido.
+ * @param {Role[]} [props.allowedRoles] - Lista opcional de roles permitidos para acceder a la ruta.
+ */
+export default function RutaProtegida({ children, allowedRoles }: ProtectedRouteProps) {
+  const ubicacion = useLocation();
+  const { estaAutenticado, estaCargando, usuario } = useAuth();
 
-  if (isLoading) return null;
+  // Mostrar nada mientras se verifica el estado de autenticación
+  if (estaCargando) return null;
 
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // Redirigir al login si no está autenticado
+  if (!estaAutenticado || !usuario) {
+    return <Navigate to="/login" replace state={{ from: ubicacion.pathname }} />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // Redirigir si el rol del usuario no está dentro de los permitidos
+  if (allowedRoles && !allowedRoles.includes(usuario.role)) {
     return <Navigate to="/" replace />;
   }
 
