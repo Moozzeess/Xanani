@@ -1,28 +1,43 @@
 const Ubicacion = require('../models/Ubicacion');
+const Unidad = require('../models/Unidad');
 
-async function actualizarUbicacion(req, res) {
+/**
+ * Registrar ubicación de una unidad
+ */
+exports.registrarUbicacion = async (req, res) => {
+
   try {
-    const { conductorId, latitud, longitud, velocidad } = req.body;
 
-    if (!conductorId || latitud == null || longitud == null) {
-      return res.status(400).json({
-        mensaje: 'conductorId, latitud y longitud son requeridos.'
-      });
-    }
+    const nuevaUbicacion = new Ubicacion({
+      unidadId: req.body.unidadId,
+      conductorId: req.body.conductorId,
+      rutaId: req.body.rutaId,
+      recorridoId: req.body.recorridoId,
 
-    const ubicacion = await Ubicacion.create({
-      conductorId,
       ubicacion: {
-        latitud,
-        longitud
+        latitud: req.body.ubicacion.latitud,
+        longitud: req.body.ubicacion.longitud
       },
-      velocidad
+
+      velocidad: req.body.velocidad,
+      direccion: req.body.direccion,
+      precisionGps: req.body.precisionGps
     });
 
-    return res.status(201).json(ubicacion);
-  } catch (error) {
-    return res.status(500).json({ mensaje: error.message || 'Error interno.' });
-  }
-}
+    await nuevaUbicacion.save();
 
-module.exports = { actualizarUbicacion };
+    res.status(201).json({
+      mensaje: "Ubicación registrada",
+      ubicacion: nuevaUbicacion
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      mensaje: "Error al registrar ubicación",
+      error: error.message
+    });
+
+  }
+
+};

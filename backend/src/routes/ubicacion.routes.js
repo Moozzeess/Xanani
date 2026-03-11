@@ -1,13 +1,8 @@
-const router = require('express').Router();
-const controladorUbicacion = require('../controllers/ubicacion.controller');
-const { requerirAutenticacion, requerirRol } = require('../middlewares/autenticacion.middleware');
-const { ROLES_USUARIO } = require('../models/Usuario');
+const express = require('express');
+const router = express.Router();
 
-router.post(
-  '/actualizar',
-  requerirAutenticacion,
-  requerirRol([ROLES_USUARIO.CONDUCTOR, ROLES_USUARIO.ADMINISTRADOR, ROLES_USUARIO.SUPERUSUARIO]),
-  controladorUbicacion.actualizarUbicacion
-);
+const ubicacionController = require('../controllers/ubicacion.controller');
+
+router.post('/', ubicacionController.registrarUbicacion);
 
 module.exports = router;

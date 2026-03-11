@@ -25,9 +25,28 @@ const unidadSchema = new mongoose.Schema(
 
     estado: {
       type: String,
-      enum: ['activo', 'inactivo', 'mantenimiento'],
-      default: 'activo'
-    }
+      enum: ['activa', 'inactiva','llena', 'en_ruta', 'base'],
+      default: 'activa'
+    },
+
+  capacidadMaxima: {
+    type: Number,
+    default: 15
+  },
+
+  ocupacionActual: {
+    type: Number,
+    default: 0
+  },
+
+
+    activa: {
+    type: Boolean,
+    default: true
+  }
+
+
+
   },
   { timestamps: true }
 );
