@@ -130,6 +130,7 @@ const LandingPasajero: React.FC = () => {
           mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
         }
         dispararError(mensaje, error.message, "Error de Ubicación");
+        setEstaAbiertoModalUbicacion(true); // Reabrir el modal en caso de error
       });
     }
   };

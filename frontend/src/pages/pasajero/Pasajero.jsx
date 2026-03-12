@@ -77,6 +77,7 @@ const Pasajero = () => {
           mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
         }
         dispararError(mensaje, error.message, "Error de Ubicación");
+        setIsUbicacionModalOpen(true); // Reabrir el modal en caso de error
         setDefaultVehicles();
       });
     } else {
