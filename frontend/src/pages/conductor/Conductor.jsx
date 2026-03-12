@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
+import { useAlertaGlobal } from "../../context/AlertaContext";
 
 // Importación de estilos específicos
 import '../../styles/conductor.css';
@@ -12,6 +13,7 @@ import { NoRouteOverlay } from '../../components/conductor/IniciarFinalizar';
 import Reportes from '../../components/conductor/Reportes';
 
 const Conductor = () => {
+  const { disparar } = useAlertaGlobal();
   const navigate = useNavigate();
   const { cerrarSesion } = useAuth();
 
@@ -44,8 +46,11 @@ const Conductor = () => {
   };
 
   const handleTriggerSOS = () => {
-    // Lógica para activar SOS
-    console.log("SOS activado");
+    disparar({
+      tipo: 'advertencia',
+      titulo: 'SOS Enviado',
+      mensaje: 'La alerta de emergencia ha sido enviada al centro de control. Mantén la calma.'
+    });
   };
 
   const removeNotification = (id) => {

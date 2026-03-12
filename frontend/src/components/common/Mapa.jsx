@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Bus } from 'lucide-react';
+import { useAlertaGlobal } from '../../context/AlertaContext';
 
 /**
  * Componente de Mapa reutilizable basado en Leaflet.
@@ -16,6 +17,7 @@ const Mapa = ({
   showUserLocation = true,
   centerOnUserTrigger = 0
 }) => {
+  const { dispararError } = useAlertaGlobal();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const polylineRef = useRef(null);
@@ -186,10 +188,9 @@ const Mapa = ({
         (error) => {
           let errorMsg = "No se pudo obtener la ubicación para centrar.";
           if (error.code === error.PERMISSION_DENIED) {
-            errorMsg = "Permiso de ubicación denegado por el usuario.";
+            errorMsg = "No se puede acceder a la ubicación. Por favor, concede permisos en el navegador.";
           }
-          console.error(errorMsg, error);
-          alert(errorMsg);
+          dispararError(errorMsg, error.message, "Error de Mapa");
         },
         geoOptions
       );

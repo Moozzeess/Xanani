@@ -1,7 +1,4 @@
-/**
- * Servicio de ruteo común utilizando la API pública de OSRM.
- * Permite obtener trayectorias que siguen las calles para navegación.
- */
+import api from './api';
 
 export interface PuntoRuta {
     lat: number;
@@ -19,27 +16,20 @@ export const obtenerRutaPorCalles = async (
     fin: [number, number]
 ): Promise<[number, number][]> => {
     try {
-        // OSRM espera el formato [longitude, latitude]
         const url = `https://router.project-osrm.org/route/v1/driving/${inicio[1]},${inicio[0]};${fin[1]},${fin[0]}?overview=full&geometries=geojson`;
 
-        const respuesta = await fetch(url);
-        if (!respuesta.ok) {
-            throw new Error(`Error en la solicitud OSRM: ${respuesta.statusText}`);
-        }
-
-        const datos = await respuesta.json();
+        // Usamos la instancia api para tener el interceptor
+        // Marcamos con mostrarAlertaGlobal: true (por defecto ya es true en el interceptor)
+        const { data: datos } = await api.get(url);
 
         if (datos.routes && datos.routes.length > 0) {
-            // Invertir coordenadas de [lng, lat] a [lat, lng] para Leaflet
             return datos.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
         }
 
-        // Fallback a línea recta si no se encuentra ruta
-        console.warn("No se encontró una ruta válida en OSRM, usando línea recta.");
         return [inicio, fin];
     } catch (error) {
-        console.error("Error al obtener ruta de OSRM:", error);
-        // Fallback absoluto a línea recta
+        // En este caso específico, el fallback a línea recta es mejor que bloquear al usuario
+        // pero el interceptor ya habrá mostrado el modal de advertencia/error.
         return [inicio, fin];
     }
 };

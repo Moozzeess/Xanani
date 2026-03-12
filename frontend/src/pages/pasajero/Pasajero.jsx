@@ -11,6 +11,7 @@ import AlertaFlotante from "../../components/pasajero/AlertaFlotante";
 import ReporteModal from "../../components/pasajero/ReporteModal";
 import TarjetaBus from "../../components/pasajero/TarjetaBus";
 import UbicacionModal from "../../components/common/UbicacionModal";
+import { useAlertaGlobal } from "../../context/AlertaContext";
 
 
 
@@ -54,6 +55,8 @@ const Pasajero = () => {
     }
   }, []);
 
+  const { dispararError } = useAlertaGlobal();
+
   const requestUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
@@ -69,10 +72,15 @@ const Pasajero = () => {
 
         setVehicles(nearbyVehicles);
       }, (error) => {
-        console.error("Error obteniendo ubicación para mock data:", error);
+        let mensaje = "No se pudo obtener tu ubicación actual.";
+        if (error.code === error.PERMISSION_DENIED) {
+          mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
+        }
+        dispararError(mensaje, error.message, "Error de Ubicación");
         setDefaultVehicles();
       });
     } else {
+      dispararError("Tu navegador no soporta geolocalización.", "navigator.geolocation is undefined", "Error de Sistema");
       setDefaultVehicles();
     }
   };

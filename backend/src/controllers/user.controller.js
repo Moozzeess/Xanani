@@ -1,62 +1,56 @@
 const bcrypt = require('bcryptjs');
 const { User, USER_ROLES } = require('../models/User');
+const catchAsync = require('../utils/catchAsync');
+const ErrorApp = require('../utils/ErrorApp');
 
 /**
  * Alta de usuarios (solo roles privilegiados).
- * Reglas:
- * - SUPERUSUARIO puede crear: SUPERUSUARIO, ADMINISTRADOR, CONDUCTOR, PASAJERO
- * - ADMINISTRADOR puede crear: CONDUCTOR
  */
-async function createUser(req, res) {
-  try {
-    const { username, email, password, role } = req.body;
+const createUser = catchAsync(async (req, res, next) => {
+  const { username, email, password, role } = req.body;
 
-    if (!username || !email || !password || !role) {
-      return res
-        .status(400)
-        .json({ message: 'username, email, password y role son requeridos.' });
-    }
-
-    const actorRole = req.auth?.role;
-
-    if (actorRole === USER_ROLES.ADMINISTRADOR && role !== USER_ROLES.CONDUCTOR) {
-      return res.status(403).json({
-        message: 'ADMINISTRADOR solo puede dar de alta CONDUCTOR.'
-      });
-    }
-
-    if (actorRole !== USER_ROLES.SUPERUSUARIO && actorRole !== USER_ROLES.ADMINISTRADOR) {
-      return res.status(403).json({ message: 'No tienes permisos para esta acción.' });
-    }
-
-    const existing = await User.findOne({
-      $or: [{ username }, { email: email.toLowerCase() }]
-    });
-
-    if (existing) {
-      return res.status(409).json({ message: 'Usuario o correo ya existe.' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      username,
-      email: email.toLowerCase(),
-      passwordHash,
-      role
-    });
-
-    return res.status(201).json({
-      user: {
-        id: user._id.toString(),
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({ message: error.message || 'Error interno.' });
+  if (!username || !email || !password || !role) {
+    throw new ErrorApp('Datos incompletos: username, email, password y role son requeridos.', 400);
   }
-}
+
+  const actorRole = req.auth?.role;
+
+  // Verificación de permisos
+  if (actorRole === USER_ROLES.ADMINISTRADOR && role !== USER_ROLES.CONDUCTOR) {
+    throw new ErrorApp('Permisos insuficientes: Un ADMINISTRADOR solo puede dar de alta CONDUCTORES.', 403);
+  }
+
+  if (actorRole !== USER_ROLES.SUPERUSUARIO && actorRole !== USER_ROLES.ADMINISTRADOR) {
+    throw new ErrorApp('Acceso denegado: No tienes permisos para crear usuarios.', 403);
+  }
+
+  const existing = await User.findOne({
+    $or: [{ username }, { email: email.toLowerCase() }]
+  });
+
+  if (existing) {
+    throw new ErrorApp('Conflicto: El nombre de usuario o el correo ya están registrados.', 409, 'Error de unicidad en base de datos Mongoose.');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await User.create({
+    username,
+    email: email.toLowerCase(),
+    passwordHash,
+    role
+  });
+
+  res.status(201).json({
+    status: 'exito',
+    mensaje: 'Usuario creado correctamente.',
+    user: {
+      id: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      role: user.role
+    }
+  });
+});
 
 module.exports = {
   createUser

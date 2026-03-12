@@ -7,6 +7,7 @@ import { MarcadorBus, EstadoBus, crearMarcadorBus } from '../components/common/M
 import TarjetaInformativa from '../components/pasajero/TarjetaInformativa';
 import UbicacionModal from '../components/common/UbicacionModal';
 import { obtenerRutaPorCalles } from '../services/osrmService';
+import { useAlertaGlobal } from '../context/AlertaContext';
 
 /**
  * Página de aterrizaje (Landing) para pasajeros en modo invitado.
@@ -14,6 +15,7 @@ import { obtenerRutaPorCalles } from '../services/osrmService';
  * permitiendo la visualización de rutas en tiempo real.
  */
 const LandingPasajero: React.FC = () => {
+  const { dispararError } = useAlertaGlobal();
   const navegar = useNavigate();
   const mapaRef = useRef<L.Map | null>(null);
   const contenedorRef = useRef<HTMLDivElement | null>(null);
@@ -123,7 +125,11 @@ const LandingPasajero: React.FC = () => {
         setUbicacionUsuario([latitude, longitude]);
         actualizarElementosMapa(latitude, longitude);
       }, (error) => {
-        console.error("Error obteniendo ubicación:", error);
+        let mensaje = "No se pudo obtener tu ubicación actual.";
+        if (error.code === error.PERMISSION_DENIED) {
+          mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
+        }
+        dispararError(mensaje, error.message, "Error de Ubicación");
       });
     }
   };
