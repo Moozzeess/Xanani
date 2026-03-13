@@ -11,43 +11,43 @@ frontend/
 ├── src/                        # Código fuente principal
 │   │
 │   ├── app/                   # Configuración principal de la aplicación
-│   │   ├── roleConfig.ts      # Configuración de roles
-│   │   ├── router.tsx         # Router principal
-│   │   └── routes.tsx         # Definición de rutas
+│   │   ├── configuracionRoles.ts      # Configuración de roles
+│   │   ├── enrutador.tsx         # Router principal
+│   │   └── rutas.tsx         # Definición de rutas
 │   │
 │   ├── assets/                # Recursos estáticos
 │   │   └── react.svg          # Logo de React
 │   │
-│   ├── auth/                  # Lógica de autenticación
+│   ├── autenticacion/                  # Lógica de autenticación
 │   │   ├── LandingPage.tsx    # Página de aterrizaje
-│   │   ├── LoginPage.tsx      # Página de inicio de sesión
-│   │   └── useAuth.ts         # Hook de autenticación
+│   │   ├── PaginaInicioSesion.tsx      # Página de inicio de sesión
+│   │   └── usarAutenticacion.ts         # Hook de autenticación
 │   │
 │   ├── components/            # Componentes reutilizables
 │   │   ├── administrador/     # Componentes para administrador
 │   │   ├── common/            # Componentes comunes
 │   │   ├── conductor/         # Componentes para conductor
 │   │   ├── pasajero/          # Componentes para pasajero
-│   │   └── superuser/         # Componentes para superusuario
+│   │   └── superusuario/         # Componentes para superusuario
 │   │
 │   ├── hooks/                 # Custom Hooks
-│   │   └── useRole.ts         # Hook de manejo de roles
+│   │   └── usarRol.ts         # Hook de manejo de roles
 │   │
 │   ├── layouts/               # Layouts principales
-│   │   ├── AdminLayaout.tsx   # Layout para administrador
-│   │   ├── ConductorLayout.tsx # Layout para conductor
-│   │   ├── PasajeroLayout.tsx  # Layout para pasajero
-│   │   └── PublicLayout.tsx   # Layout público
+│   │   ├── LayoutAdministrador.tsx   # Layout para administrador
+│   │   ├── LayoutConductor.tsx # Layout para conductor
+│   │   ├── LayoutPasajero.tsx  # Layout para pasajero
+│   │   └── LayoutPublico.tsx   # Layout público
 │   │
 │   ├── pages/                 # Componentes de páginas
 │   │   ├── administrador/     # Páginas de administrador
 │   │   ├── conductor/         # Páginas de conductor
 │   │   ├── pasajero/          # Páginas de pasajero
-│   │   └── superuser/         # Páginas de superusuario
+│   │   └── superusuario/         # Páginas de superusuario
 │   │
 │   ├── services/              # Servicios para comunicación con APIs
-│   │   ├── auth.mock.ts       # Mock de autenticación para desarrollo
-│   │   └── auth.ts            # Servicio de autenticación
+│   │   ├── autenticacion.simulada.ts       # Mock de autenticación para desarrollo
+│   │   └── autenticacion.ts            # Servicio de autenticación
 │   │
 │   ├── styles/               # Estilos globales
 │   │   ├── App.css            # Estilos principales de la aplicación
@@ -56,7 +56,7 @@ frontend/
 │   │   └── pasajero.css       # Estilos para el módulo de pasajero
 │   │
 │   ├── types/                # Definiciones de tipos TypeScript
-│   │   └── auth.ts            # Tipos para autenticación
+│   │   └── autenticacion.ts            # Tipos para autenticación
 │   │
 │   ├── utils/                # Utilidades
 │   │   └── (funciones de ayuda)
@@ -98,20 +98,20 @@ La aplicación está organizada por roles de usuario:
 - **/administrador**: Componentes y páginas para administradores del sistema
 - **/conductor**: Componentes y páginas para conductores de transporte
 - **/pasajero**: Componentes y páginas para pasajeros
-- **/superuser**: Componentes y páginas para superusuarios
+- **/superusuario**: Componentes y páginas para superusuarios
 - **/common**: Componentes compartidos entre todos los roles
 - **/public**: Layouts y componentes públicos
 
 ### Autenticación
 - **LandingPage.tsx**: Página principal de bienvenida
-- **LoginPage.tsx**: Formulario de inicio de sesión
-- **useAuth.ts**: Hook personalizado para manejo de autenticación
+- **PaginaInicioSesion.tsx**: Formulario de inicio de sesión
+- **usarAutenticacion.ts**: Hook personalizado para manejo de autenticación
 
 ### Layouts
-- **PublicLayout.tsx**: Layout para páginas públicas
-- **AdminLayout.tsx**: Layout para administradores
-- **ConductorLayout.tsx**: Layout para conductores
-- **PasajeroLayout.tsx**: Layout para pasajeros
+- **LayoutPublico.tsx**: Layout para páginas públicas
+- **LayoutAdministrador.tsx**: Layout para administradores
+- **LayoutConductor.tsx**: Layout para conductores
+- **LayoutPasajero.tsx**: Layout para pasajeros
 
 ## Inicio Rápido
 
@@ -144,7 +144,7 @@ La aplicación está organizada por roles de usuario:
 2. **Login**: Autenticación con credenciales (username/email + password)
 3. **Token Storage**: Almacenamiento del token JWT en localStorage
 4. **Role-based Routing**: Redirección según el rol del usuario
-5. **Protected Routes**: Rutas protegidas con verificación de autenticación
+5. **Rutas protegidas**: Rutas protegidas con verificación de autenticación
 
 ## Configuración de Rutas
 
