@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { User, USER_ROLES } = require('../models/User');
+const { Conductor } = require('../models/Conductor');
 const catchAsync = require('../utils/catchAsync');
 const ErrorApp = require('../utils/ErrorApp');
 
@@ -40,6 +41,17 @@ const createUser = catchAsync(async (req, res, next) => {
     role
   });
 
+  if (role === USER_ROLES.CONDUCTOR) {
+    const { telefono, licencia, unidad, edad } = req.body;
+    await Conductor.create({
+      user: user._id,
+      telefono: telefono || '',
+      licencia: licencia || '',
+      unidad: unidad || '',
+      edad: edad || null
+    });
+  }
+
   res.status(201).json({
     status: 'exito',
     mensaje: 'Usuario creado correctamente.',
@@ -52,6 +64,56 @@ const createUser = catchAsync(async (req, res, next) => {
   });
 });
 
+const getConductores = catchAsync(async (req, res, next) => {
+  const conductoresData = await Conductor.find().populate('user', '-passwordHash');
+
+  res.status(200).json({
+    status: 'exito',
+    resultados: conductoresData.length,
+    data: {
+      conductores: conductoresData
+    }
+  });
+});
+
+const updateConductor = catchAsync(async (req, res, next) => {
+  const { id } = req.params; // Usará el ID del User
+  const { username, email, telefono, licencia, unidad, edad } = req.body;
+
+  const user = await User.findById(id);
+  if (!user) throw new ErrorApp('Conductor no encontrado', 404);
+
+  if (username || email) {
+    if (username) user.username = username;
+    if (email) user.email = email.toLowerCase();
+    await user.save();
+  }
+
+  // Actualiza o crea el conductor si era un conductor fantasma sin sub-documento
+  const conductor = await Conductor.findOneAndUpdate(
+    { user: id },
+    { telefono, licencia, unidad, edad },
+    { new: true, runValidators: true, upsert: true }
+  );
+
+  res.status(200).json({
+    status: 'exito',
+    mensaje: 'Información de conductor actualizada',
+    data: {
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive
+      },
+      conductor
+    }
+  });
+});
+
 module.exports = {
-  createUser
+  createUser,
+  getConductores,
+  updateConductor
 };

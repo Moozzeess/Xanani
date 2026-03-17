@@ -10,4 +10,18 @@ router.post(
   userController.createUser
 );
 
+router.get(
+  '/conductores',
+  requireAuth,
+  requireRole([USER_ROLES.SUPERUSUARIO, USER_ROLES.ADMINISTRADOR]),
+  userController.getConductores
+);
+
+router.put(
+  '/:id',
+  requireAuth,
+  requireRole([USER_ROLES.SUPERUSUARIO, USER_ROLES.ADMINISTRADOR]),
+  userController.updateConductor
+);
+
 module.exports = router;
