@@ -3,7 +3,7 @@ const app = require('./app');
 const connectDB = require('./src/config/db');
 const { PORT, MONGO_URI } = require('./src/config/env');
 const { inicializarSocket } = require('./src/services/socketService');
-//const { conectarMQTT } = require('./src/services/mqttService');
+const { conectarMQTT } = require('./src/services/mqttService');
 
 const server = http.createServer(app);
 
@@ -14,7 +14,7 @@ const server = http.createServer(app);
   inicializarSocket(server);
 
   // Inicializar Conexión MQTT
-  //conectarMQTT();
+  conectarMQTT();
 
   server.listen(PORT, () =>
     console.log(`Servidor corriendo en el puerto: ${PORT}`)

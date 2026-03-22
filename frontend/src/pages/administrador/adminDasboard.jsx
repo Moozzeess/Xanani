@@ -10,7 +10,7 @@ import SOSModal from '../../components/administrador/SOSModal';
 import DashboardView from '../../components/administrador/views/DashboardView';
 import LiveMapView from '../../components/administrador/views/LiveMapView';
 import DriversView from '../../components/administrador/views/DriversView';
-import RoutesView from '../../components/administrador/views/RoutesView';
+import VistaRutas from '../../components/administrador/views/VistaRutas';
 import UnitsView from '../../components/administrador/views/UnitsView';
 import IncidentsView from '../../components/administrador/views/IncidentsView';
 import ReportsView from '../../components/administrador/views/ReportsView';
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
           {activeView === 'dashboard' && <DashboardView onGoToIncidents={() => switchView('incidents')} />}
           {activeView === 'map' && <LiveMapView />}
           {activeView === 'drivers' && <DriversView />}
-          {activeView === 'routes' && <RoutesView />}
+          {activeView === 'routes' && <VistaRutas />}
           {activeView === 'units' && <UnitsView />}
           {activeView === 'incidents' && <IncidentsView />}
           {activeView === 'reports' && <ReportsView />}

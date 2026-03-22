@@ -13,7 +13,7 @@ let io;
 const inicializarSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "*", // En producción, especificar el dominio del frontend
+      origin: "*",
       methods: ["GET", "POST"]
     }
   });
@@ -24,7 +24,6 @@ const inicializarSocket = (server) => {
     // Escuchar peticiones de reconfiguración MQTT desde el superusuario
     socket.on('configurar_mqtt', (configuracion) => {
       console.log(`Petición para reconfigurar MQTT recibida de ${socket.id}:`, configuracion);
-      // Evitar referencias circulares requiriendo localmente
       const { reconfigurarMQTT } = require('./mqttService');
       
       try {
