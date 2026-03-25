@@ -1,60 +1,69 @@
 import React from 'react';
-import { MapPinOff, Play, CircleStop } from 'lucide-react';
+import { MapPinOff, Play, LogOut, Route } from 'lucide-react';
+import Navbar from '../common/Navbar';
 
 /**
- * Overlay de pantalla completa cuando la unidad no está en ruta.
+ * Vista de Inicio (Espera)
+ * Fusiona el Dashboard de visualización (antes navegación)
+ * y el estado de inactividad, incluyendo el Navbar del pasajero.
  */
-export const NoRouteOverlay = ({ onStart }) => {
+export const NoRouteOverlay = ({ onStart, onLogout, unidadAsignada = "Sin Asignar", rutaDefecto = "Sin Ruta" }) => {
     return (
-        <div className="absolute inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center p-8 text-center pointer-events-auto">
-            <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                <MapPinOff className="w-10 h-10 text-slate-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Unidad en Espera</h2>
-            <p className="text-slate-400 text-sm mb-8">El sistema de navegación está en espera. Inicia ruta para activar el rastreo.</p>
-
-            <button
-                onClick={onStart}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/50 transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-                <Play className="w-5 h-5 fill-current" /> Iniciar Ruta
-            </button>
-        </div>
-    );
-};
-
-/**
- * Controles de la barra inferior para finalizar ruta y ver info.
- */
-export const BarraInferior = ({ onStop, speed = '45 km/h', time = '10:42' }) => {
-    return (
-        <div className="px-4 pb-6 pointer-events-auto space-y-3">
-            <div className="bg-slate-900/95 backdrop-blur text-white p-4 rounded-2xl flex justify-between items-center shadow-lg border-t border-slate-800 max-w-3xl mx-auto">
-                <button
-                    onClick={onStop}
-                    className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm font-bold"
-                >
-                    <CircleStop className="w-5 h-5" />
-                    Finalizar
-                </button>
-
-                <div className="h-4 w-[1px] bg-slate-700"></div>
-
-                <div className="flex items-center gap-4">
-                    <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase">Velocidad</span>
-                        <span className="font-mono font-bold text-sm">{speed}</span>
+        <React.Fragment>
+            <div className="absolute inset-0 bg-slate-900 z-[60] flex flex-col p-6 text-white pb-24 overflow-y-auto">
+                
+                {/* Header / Perfil */}
+                <div className="flex justify-between items-center mb-6 pt-4">
+                    <div>
+                        <h1 className="text-3xl font-extrabold tracking-tight">Inicio</h1>
+                        <p className="text-slate-400 font-medium">Panel Principal del Conductor</p>
                     </div>
-                    <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase">Hora</span>
-                        <span className="font-mono font-bold text-sm">{time}</span>
+                </div>
+
+                {/* Tarjetas de Información Rápida (Datos listos para backend) */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-slate-800/80 p-5 rounded-3xl border border-slate-700 shadow-lg flex flex-col items-start backdrop-blur-sm">
+                        <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-1">Unidad Asignada</span>
+                        <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">{unidadAsignada}</span>
                     </div>
+                    <div className="bg-slate-800/80 p-5 rounded-3xl border border-slate-700 shadow-lg flex flex-col items-start backdrop-blur-sm">
+                        <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-1">Ruta Defecto</span>
+                        <div className="flex items-center gap-2">
+                            <Route className="w-5 h-5 text-indigo-400" />
+                            <span className="text-xl font-bold text-white">{rutaDefecto}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sección Central de Estado */}
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-800/40 rounded-[2rem] border border-slate-700/50 mt-4 mb-6 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
+                    
+                    <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-2xl relative z-10 border-4 border-slate-700/50">
+                        <MapPinOff className="w-10 h-10 text-slate-400" />
+                    </div>
+                    
+                    <h2 className="text-2xl font-bold text-white mb-2 relative z-10">Unidad en Espera</h2>
+                    <p className="text-slate-400 text-sm text-center mb-8 max-w-xs relative z-10 leading-relaxed font-medium">
+                        El seguimiento GPS y el contador de pasajeros se activarán en el recorrido.
+                    </p>
+
+                    <button
+                        onClick={onStart}
+                        className="w-full relative z-10 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg shadow-[0_4px_30px_rgba(37,99,235,0.4)] transition-all active:scale-95 flex items-center justify-center gap-3 border border-blue-400"
+                    >
+                        <Play className="w-6 h-6 fill-current" /> INICIAR RUTA
+                    </button>
                 </div>
             </div>
 
-            <div className="w-full flex justify-center pt-1">
-                <div className="w-32 h-1 bg-gray-300/50 rounded-full"></div>
+            {/* NAVBAR INFERIOR (Estilo Pasajero en el Inicio) */}
+            <div className="pointer-events-auto z-[70]">
+                <Navbar 
+                    onLogout={onLogout} 
+                    onCenterLocation={() => { console.log("Recentrar en el Inicio"); }}
+                />
             </div>
-        </div>
+        </React.Fragment>
     );
 };

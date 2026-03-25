@@ -1,119 +1,174 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
-import { useAlertaGlobal } from "../../context/AlertaContext";
 
-// Importación de estilos específicos
 import '../../styles/conductor.css';
 
-// Importación de componentes
 import Mapa from '../../components/common/Mapa';
-import ModoNavegacion from '../../components/conductor/ModoNavegacion';
+import ModoConduccion from '../../components/conductor/ModoConduccion';
+import ResumenViaje from '../../components/conductor/ResumenViaje';
 import { NoRouteOverlay } from '../../components/conductor/IniciarFinalizar';
-import Reportes from '../../components/conductor/Reportes';
 
 const Conductor = () => {
-  const { disparar } = useAlertaGlobal();
   const navigate = useNavigate();
   const { cerrarSesion } = useAuth();
 
-  // Estados del componente
   const [routeLine, setRouteLine] = useState(null);
   const [busPosition, setBusPosition] = useState({ lat: 0, lng: 0 });
-  const [isRouteActive, setIsRouteActive] = useState(false);
+  const [viewMode, setViewMode] = useState('espera');
+
   const [passengerCount, setPassengerCount] = useState(0);
-  const [capacity] = useState(50);
+  const [unidadActual, setUnidadActual] = useState("Sin Asignar");
+  const [rutaActual, setRutaActual] = useState("Sin Ruta");
+  const [capacity, setCapacity] = useState(15);
   const [notificaciones, setNotificaciones] = useState([]);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  // Efecto para consultar la asignación de ruta y unidad
+  useEffect(() => {
+    const cargarAsignacion = async () => {
+    const data = await api.getAsignacion();
+    setUnidadActual(data.unidad);
+    setRutaActual(data.ruta);
+    setCapacity(data.capacidad);
+    }
+    cargarAsignacion();
+  }, []);
+
+  const [tripStats, setTripStats] = useState({
+    timeStarted: null,
+    pasajerosTotales: 0,
+    ganancias: 0,
+    kmRecorridos: 0,
+    calificacion: 5.0
+  });
 
   const onLogout = () => {
     cerrarSesion();
     navigate("/", { replace: true });
   };
 
-  // Manejadores de eventos
+  const addToastNotification = (title, message, type = 'info') => {
+    const id = Date.now() + Math.random();
+    setNotificaciones(prev => [...prev, { id, title, message, type }]);
+
+    setTimeout(() => {
+      setNotificaciones(prev => prev.filter(n => n.id !== id));
+    }, 4500);
+  };
+
   const handleStartRoute = () => {
-    setIsRouteActive(true);
-    // Aquí se podría inicializar la ruta y posición del autobús
-    setBusPosition({ lat: 19.4326, lng: -99.1332 }); // Ejemplo: Ciudad de México
+    setViewMode('conduccion');
+    setBusPosition({ lat: 19.4326, lng: -99.1332 });
+    setPassengerCount(0);
+    setTripStats({
+      timeStarted: Date.now(),
+      pasajerosTotales: 0,
+      ganancias: 0,
+      kmRecorridos: 0,
+      calificacion: parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1))
+    });
   };
 
   const handleStopRoute = () => {
-    setIsRouteActive(false);
+    const timeEnded = Date.now();
+    const durationMs = timeEnded - (tripStats.timeStarted || timeEnded);
+    const durationMinutes = Math.max(1, Math.floor(durationMs / 60000));
+    const km = parseFloat((Math.random() * 20 + 5).toFixed(1));
+
+    setTripStats(prev => ({
+      ...prev,
+      kmRecorridos: prev.kmRecorridos > 0 ? prev.kmRecorridos : km,
+      tiempoMinutos: durationMinutes
+    }));
+
+    setViewMode('resumen');
+  };
+
+  const handleCloseResumen = () => {
+    setViewMode('espera');
     setRouteLine(null);
     setPassengerCount(0);
     setNotificaciones([]);
   };
 
   const handleTriggerSOS = () => {
-    disparar({
-      tipo: 'advertencia',
-      titulo: 'SOS Enviado',
-      mensaje: 'La alerta de emergencia ha sido enviada al centro de control. Mantén la calma.'
-    });
+    addToastNotification(
+      'SOS Registrado',
+      'Autoridades alertadas discretamente.',
+      'alert'
+    );
+  };
+
+  const handleFastReport = () => {
+    addToastNotification(
+      'Incidencia Marcada',
+      'Se ha guardado un reporte en tu ubicación actual.',
+      'info'
+    );
   };
 
   const removeNotification = (id) => {
     setNotificaciones(prev => prev.filter(notif => notif.id !== id));
   };
 
-  const handleSubmitReport = (reportData) => {
-    // Lógica para enviar reporte
-    console.log("Reporte enviado:", reportData);
-    setIsReportModalOpen(false);
-  };
-
-  // Efecto para simular actualización de pasajeros
   useEffect(() => {
-    if (isRouteActive) {
+    if (viewMode === 'conduccion') {
       const interval = setInterval(() => {
-        setPassengerCount(prev => Math.min(prev + Math.floor(Math.random() * 3), capacity));
-      }, 5000);
+        const newPassengers = Math.floor(Math.random() * 3);
+        if (newPassengers > 0) {
+          setPassengerCount(prev => Math.min(prev + newPassengers, capacity));
+          setTripStats(prev => ({
+            ...prev,
+            pasajerosTotales: prev.pasajerosTotales + newPassengers,
+            ganancias: prev.ganancias + (newPassengers * 15)
+          }));
+        }
+      }, 7000);
       return () => clearInterval(interval);
     }
-  }, [isRouteActive, capacity]);
+  }, [viewMode, capacity]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-900">
-      {/* BOTÓN DE LOGOUT */}
-      <button
-        onClick={onLogout}
-        className="absolute top-4 right-4 z-50 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 flex items-center gap-2"
-        title="Cerrar sesión"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-        Cerrar sesión
-      </button>
 
-      {/* CAPA DE MAPA */}
-      <Mapa
-        routeLine={routeLine}
-        busPosition={busPosition}
-      />
+      {/* CAPA DE MAPA (Oculta en modo espera) */}
+      {viewMode !== 'espera' && (
+        <Mapa
+          routeLine={routeLine}
+          lockedToUser={true} // Obliga al mapa a ser fijo y seguir al conductor
+        />
+      )}
 
-      {/* INTERFAZ HUD */}
-      {!isRouteActive ? (
-        <NoRouteOverlay onStart={handleStartRoute} />
-      ) : (
-        <ModoNavegacion
+      {/* VISTA DE INICIO (Espera / Dashboard) */}
+      {viewMode === 'espera' && (
+        <NoRouteOverlay
+          onStart={handleStartRoute}
+          onLogout={onLogout}
+          unidadAsignada={unidadActual}
+          rutaDefecto={rutaActual}
+        />
+      )}
+
+      {/* VISTA DE CONDUCCIÓN (Ruta Activa) */}
+      {viewMode === 'conduccion' && (
+        <ModoConduccion
           pasajeros={passengerCount}
           capacidad={capacity}
           notificaciones={notificaciones}
           onRemoveNotificacion={removeNotification}
-          onOpenReportes={() => setIsReportModalOpen(true)}
+          onOpenReportes={handleFastReport}
           onTriggerSOS={handleTriggerSOS}
           onStopRoute={handleStopRoute}
         />
       )}
 
-      {/* MODAL DE REPORTES */}
-      <Reportes
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        onSubmit={handleSubmitReport}
-      />
+      {/* VISTA DE RESUMEN AL FINALIZAR */}
+      {viewMode === 'resumen' && (
+        <ResumenViaje
+          estadisticas={tripStats}
+          onClose={handleCloseResumen}
+        />
+      )}
     </div>
   );
 };

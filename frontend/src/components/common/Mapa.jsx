@@ -15,7 +15,8 @@ const Mapa = ({
   vehicles = [],
   onVehicleClick = () => { },
   showUserLocation = true,
-  centerOnUserTrigger = 0
+  centerOnUserTrigger = 0,
+  lockedToUser = false // SI ES TRUE: bloquea el movimiento manual del usuario
 }) => {
   const { dispararError } = useAlertaGlobal();
   const mapRef = useRef(null);
@@ -29,7 +30,13 @@ const Mapa = ({
     if (!mapInstanceRef.current && mapRef.current) {
       mapInstanceRef.current = L.map(mapRef.current, {
         zoomControl: false,
-        attributionControl: false
+        attributionControl: false,
+        dragging: !lockedToUser,
+        touchZoom: !lockedToUser,
+        doubleClickZoom: !lockedToUser,
+        scrollWheelZoom: !lockedToUser,
+        boxZoom: !lockedToUser,
+        keyboard: !lockedToUser
       }).setView(center, zoom);
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -50,6 +57,7 @@ const Mapa = ({
 
   // Efecto para manejar la ubicación del usuario
   useEffect(() => {
+    let watchId;
     if (showUserLocation && navigator.geolocation && mapInstanceRef.current) {
       const geoOptions = {
         enableHighAccuracy: true,
@@ -57,7 +65,7 @@ const Mapa = ({
         maximumAge: 0
       };
 
-      navigator.geolocation.getCurrentPosition(
+      watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           const userPos = [latitude, longitude];
@@ -73,7 +81,14 @@ const Mapa = ({
             });
             userMarkerRef.current = L.marker(userPos, { icon: userIcon }).addTo(mapInstanceRef.current);
           }
-          mapInstanceRef.current.setView(userPos, zoom);
+          
+          // Si el mapa pertenece al conductor (lockedToUser), forzamos centro
+          if (lockedToUser) {
+            mapInstanceRef.current.setView(userPos, zoom, { animate: true });
+          } else if (!userMarkerRef.current) {
+             // Si es la primera vez que se carga y NO es locked, centrar 1 sola vez
+             mapInstanceRef.current.setView(userPos, zoom);
+          }
         },
         (error) => {
           let errorMsg = "";
@@ -95,12 +110,21 @@ const Mapa = ({
         },
         geoOptions
       );
-    } else if (!showUserLocation && userMarkerRef.current) {
-      // Eliminar marcador si se desactiva
-      userMarkerRef.current.remove();
-      userMarkerRef.current = null;
-    }
-  }, [showUserLocation]);
+    } 
+
+    return () => {
+      // Limpieza al desmontar o si showUserLocation se vuelve false
+      if (watchId !== undefined && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      if (!showUserLocation && userMarkerRef.current) {
+        if (mapInstanceRef.current) {
+            userMarkerRef.current.remove();
+        }
+        userMarkerRef.current = null;
+      }
+    };
+  }, [showUserLocation, lockedToUser, zoom]);
 
 
   // Actualizar Polilínea de la Ruta
@@ -219,4 +243,3 @@ const Mapa = ({
 };
 
 export default Mapa;
-

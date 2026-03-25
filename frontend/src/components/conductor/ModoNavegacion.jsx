@@ -1,65 +1,72 @@
 import React from 'react';
-import { TriangleAlert, Zap } from 'lucide-react';
+import { Route, Navigation } from 'lucide-react';
 import Ruta from './Ruta';
 import { Contador, Notificaciones } from './HUD_Components';
-import { BarraInferior } from './IniciarFinalizar';
+import Navbar from '../common/Navbar'; // Importando el Navbar del pasajero
 
 /**
- * HUD Principal que orquesta la información en tiempo real.
+ * Modo Navegación (Dashboard)
+ * Incluye más detalles de la ruta, el Navbar del pasajero,
+ * y un layout más extendido y manejable para el conductor.
  */
 const ModoNavegacion = ({
     pasajeros,
     capacidad,
     notificaciones,
     onRemoveNotificacion,
-    onOpenReportes,
-    onTriggerSOS,
-    onStopRoute
+    onChangeToConduccion,
+    onStopRoute,
+    onLogout
 }) => {
     return (
         <main className="flex flex-col h-screen w-screen relative pointer-events-none z-10">
-            {/* TOP BAR: Información Crítica */}
+            {/* TOP BAR: Dashboard Style Header */}
             <header className="pt-6 pb-2 px-4 pointer-events-auto relative z-20 max-w-3xl mx-auto w-full">
-                <div className="bg-slate-900/90 text-white p-4 rounded-2xl shadow-lg hud-panel flex justify-between items-start border border-slate-700">
-                    <Ruta />
-                    <Contador count={pasajeros} capacity={capacidad} />
+                <div className="bg-slate-900 text-white p-5 rounded-3xl shadow-2xl flex flex-col gap-4 border border-slate-700/80 backdrop-blur-md">
+                    <div className="flex justify-between items-center w-full">
+                        <Ruta />
+                        <Contador count={pasajeros} capacity={capacidad} className="scale-90" />
+                    </div>
+                    <hr className="border-slate-700/50" />
+                    <div className="flex justify-between items-center w-full">
+                        <div className="flex items-center gap-2 text-slate-300">
+                            <Route className="w-5 h-5 text-blue-400" />
+                            <span className="text-sm font-semibold">Dashboard Activo</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={onStopRoute}
+                                className="bg-red-600 hover:bg-red-700 active:scale-95 transition-all text-white px-3 py-2 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-red-900/40 border border-red-500 text-sm"
+                            >
+                                Terminar Ruta
+                            </button>
+                            <button
+                                onClick={onChangeToConduccion}
+                                className="bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all text-white px-3 py-2 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-blue-900/40 border border-blue-500 text-sm"
+                            >
+                                <Navigation className="w-4 h-4" />
+                                <span>Conducción</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
-            {/* AREA DE NOTIFICACIONES (TOASTS) */}
+            {/* AREA DE NOTIFICACIONES */}
             <Notificaciones
                 items={notificaciones}
                 onRemoveItem={onRemoveNotificacion}
             />
 
-            {/* ESPACIO VACÍO PARA VER EL MAPA */}
+            {/* ESPACIO VACÍO PARA VER EL MAPA EN EL CENTRO */}
             <div className="flex-1"></div>
 
-            {/* CONTROLES INFERIORES */}
-            <div className="px-4 pb-2 pointer-events-auto space-y-3">
-                {/* Botones de Acción */}
-                <div className="grid grid-cols-[1fr_auto] gap-3 max-w-3xl mx-auto w-full">
-                    <button
-                        onClick={onOpenReportes}
-                        className="bg-white/95 text-slate-900 p-4 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center gap-3 font-bold active:scale-95 transition-transform hover:bg-slate-50"
-                    >
-                        <div className="bg-yellow-100 p-2 rounded-full text-yellow-600">
-                            <TriangleAlert className="w-5 h-5" />
-                        </div>
-                        <span>Reportar Incidencia</span>
-                    </button>
-
-                    {/* Botón SOS */}
-                    <button
-                        onClick={onTriggerSOS}
-                        className="bg-red-600 text-white p-4 rounded-2xl shadow-lg shadow-red-900/30 flex items-center justify-center font-bold active:scale-95 transition-transform border-2 border-red-500"
-                    >
-                        <Zap className="w-6 h-6 fill-white" />
-                    </button>
-                </div>
-
-                {/* Barra Inferior */}
-                <BarraInferior onStop={onStopRoute} />
+            {/* NAVBAR INFERIOR (Estilo Pasajero) */}
+            <div className="pointer-events-auto z-50">
+                <Navbar 
+                    onLogout={onLogout} 
+                    onCenterLocation={() => { console.log("Recentrar mapa desde Modo Navegación"); }}
+                />
             </div>
         </main>
     );
