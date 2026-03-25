@@ -236,7 +236,7 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, alGuardarExi
           onClick={guardarYFinalizar}
           className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition-all flex justify-center items-center gap-2"
         >
-          Guardar y Finalizar Ruta
+          Guardar Ruta
         </button>
       </div>
 

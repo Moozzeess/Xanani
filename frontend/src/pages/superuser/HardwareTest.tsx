@@ -32,6 +32,8 @@ const HardwareTest = () => {
   // Estado Físico de los dispositivos
   const [deviceStatus, setDeviceStatus] = useState({
     esp32: false,
+    macAddress: '',
+    statusCode: -1,
     sim800l: {
       connected: false,
       signalStrength: 0,
@@ -50,10 +52,11 @@ const HardwareTest = () => {
     }
   });
 
-  // Estado Operativo y Restricciones (Superusuario -> ESP32)
+  // Estado Operativo y Restricciones de Hardware
   const [hardwareSettings, setHardwareSettings] = useState({
     capacidadMaxima: 15,
-    umbralPeso: 10
+    umbralPeso: 10,
+    powerOn: true
   });
 
   // Alertas Globales del Frontend
@@ -67,6 +70,8 @@ const HardwareTest = () => {
     setIsConnected(false);
     setDeviceStatus({
       esp32: false,
+      macAddress: '',
+      statusCode: -1,
       sim800l: { connected: false, signalStrength: 0, dataPlanActive: false }
     });
     if (timeoutRef.current) {
@@ -143,12 +148,14 @@ const HardwareTest = () => {
           disparar({
             tipo: 'info',
             titulo: 'ESP32 Detectado',
-            mensaje: 'Se reestableció el flujo de telemetría desde el microcontrolador.'
+            mensaje: `Se reestableció el flujo de telemetría desde el microcontrolador ${data.payload?.id ? `(${data.payload.id})` : ''}.`
           });
         }
         return {
           ...prev,
           esp32: true,
+          macAddress: data.payload?.id || prev.macAddress,
+          statusCode: data.payload?.st !== undefined ? data.payload.st : prev.statusCode,
           sim800l: {
             connected: true,
             signalStrength: data.payload?.sim_signal || 85,
@@ -158,9 +165,15 @@ const HardwareTest = () => {
       });
 
       if (data.payload) {
-        const paramEntradas = data.payload.entradas !== undefined ? data.payload.entradas : sensorData.pasajeros.entradas;
-        const paramSalidas = data.payload.salidas !== undefined ? data.payload.salidas : sensorData.pasajeros.salidas;
-        const paramActuales = data.payload.actuales !== undefined ? data.payload.actuales : sensorData.pasajeros.actuales;
+        // Se leen "in", "out", "act" para alinear con el payload estructurado stringificado de Arduino `mosqitto.ino`,
+        // Haciendo fallback a "entradas" por compatibilidad vieja
+        const vEntradas = data.payload.in !== undefined ? data.payload.in : data.payload.entradas;
+        const vSalidas = data.payload.out !== undefined ? data.payload.out : data.payload.salidas;
+        const vActuales = data.payload.act !== undefined ? data.payload.act : data.payload.actuales;
+        
+        const paramEntradas = vEntradas !== undefined ? vEntradas : sensorData.pasajeros.entradas;
+        const paramSalidas = vSalidas !== undefined ? vSalidas : sensorData.pasajeros.salidas;
+        const paramActuales = vActuales !== undefined ? vActuales : sensorData.pasajeros.actuales;
 
         if (paramActuales > hardwareSettings.capacidadMaxima) {
           disparar({
@@ -178,7 +191,7 @@ const HardwareTest = () => {
         }
 
         setSensorData(prev => ({
-          hardwareId: data.payload.hardwareId || prev.hardwareId,
+          hardwareId: data.payload?.id || prev.hardwareId,
           celdasCarga: data.payload.celdasCarga || prev.celdasCarga,
           pasajeros: { entradas: paramEntradas, salidas: paramSalidas, actuales: paramActuales }
         }));
@@ -251,7 +264,7 @@ const HardwareTest = () => {
     setHardwareSettings(prev => ({ ...prev, [name]: Number(value) }));
   };
 
-  const sendHardwareCommand = (tipo: 'config' | 'reset') => {
+  const sendHardwareCommand = (tipo: 'config' | 'reset' | 'power_toggle') => {
     if (!socket || !isConnected) {
       return dispararError(
         'Sin conexión',
@@ -268,6 +281,8 @@ const HardwareTest = () => {
       };
     } else if (tipo === 'reset') {
       payload = { action: 'reset_counters' };
+    } else if (tipo === 'power_toggle') {
+      payload = { action: 'power_toggle', status: hardwareSettings.powerOn ? 'ON' : 'OFF' };
     }
 
     socket.emit('enviar_comando_hardware', payload);
@@ -317,6 +332,10 @@ const HardwareTest = () => {
               onChange={handleHardwareSettingsChange}
               onSendConfig={() => sendHardwareCommand('config')}
               onResetCounters={() => sendHardwareCommand('reset')}
+              onTogglePower={() => {
+                setHardwareSettings(prev => ({ ...prev, powerOn: !prev.powerOn }));
+                setTimeout(() => sendHardwareCommand('power_toggle'), 50);
+              }}
               isConnected={isConnected}
             />
 

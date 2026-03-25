@@ -3,6 +3,8 @@ import { Signal, Cpu, CheckCircle2, XCircle, Wifi, WifiOff } from 'lucide-react'
 interface DeviceStatusPanelProps {
   deviceStatus: {
     esp32: boolean;
+    macAddress?: string;
+    error_code?: number;
     sim800l: {
       connected: boolean;
       signalStrength: number;
@@ -12,6 +14,16 @@ interface DeviceStatusPanelProps {
 }
 
 export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
+  const parseEstatusCodigo = (code?: number) => {
+    switch(code) {
+      case 0: return { t: 'Tráfico Normal', c: 'text-emerald-600', bg: 'bg-emerald-100/50' };
+      case 1: return { t: 'Unidad Llena', c: 'text-amber-600', bg: 'bg-amber-100/50' };
+      default: return { t: 'Esperando datos...', c: 'text-slate-400', bg: 'bg-slate-100' };
+    }
+  };
+
+  const statusText = parseEstatusCodigo(deviceStatus.error_code);
+
   return (
     <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
       <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -21,21 +33,35 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
       
       <div className="space-y-4">
         {/* ESP32 */}
-        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${deviceStatus.esp32 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-400'}`}>
-              <Cpu size={16} />
+        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${deviceStatus.esp32 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-400'}`}>
+                <Cpu size={16} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-700">Microcontrolador ESP32</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  Transmisión Principal
+                  {deviceStatus.macAddress && (
+                     <span className="font-mono bg-slate-200 px-1 py-0.5 rounded text-[9px] text-slate-600">
+                       MAC: {deviceStatus.macAddress}
+                     </span>
+                  )}
+                </p>
+              </div>
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-700">Microcontrolador ESP32</p>
-              <p className="text-xs text-slate-500">Transmisión principal</p>
+              {deviceStatus.esp32 ? 
+                <CheckCircle2 size={20} className="text-green-500" /> : 
+                <XCircle size={20} className="text-slate-300" />
+              }
             </div>
           </div>
-          <div>
-            {deviceStatus.esp32 ? 
-              <CheckCircle2 size={20} className="text-green-500" /> : 
-              <XCircle size={20} className="text-slate-300" />
-            }
+          
+          <div className={`mt-3 pt-2 text-center rounded-md ${statusText.bg}`}>
+             <p className="text-[10px] font-bold text-slate-500 uppercase">Mensaje de Diagnóstico Actual</p>
+             <p className={`text-xs font-bold pb-2 ${statusText.c}`}>{statusText.t}</p>
           </div>
         </div>
 

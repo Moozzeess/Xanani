@@ -10,7 +10,7 @@ export const HardwareInstructions = () => {
           <li><strong>1. Configuración de Red:</strong> Para evitar consumos en vano de saldo en el SIM800L, el hardware no tiene conexión viva permanente. Usa "Conectar" introduciendo tu MQTT para enlazar el socket al ESP32.</li>
           <li><strong>2. Monitoreo Activo:</strong> El ESP32 mandará telemetría de forma constante. Cuentas con un temporizador; si la placa deja de comunicar por más de 30 segundos, el sistema interpretará caída de red y lo marcará offline.</li>
           <li><strong>3. Mapeo Reactivo:</strong> El mapa de pasajeros actualizará en tiempo real sus asientos dibujados respecto a la "Capacidad Máxima" que apliques mediante el panel del Microcontrolador.</li>
-          <li><strong>4. Finalización Consciente:</strong> Al terminar la auditoría del autobús, debes dar "Desconectar" de forma imperativa para cerrar el hilo con el Bróker. No hay simulación de datos, este entorno es de producción.</li>
+          <li><strong>4. Finalización Consciente:</strong> Al terminar la auditoría de la combi, debes dar "Desconectar" de forma imperativa para cerrar el hilo con el Bróker. No hay simulación de datos, este entorno es de producción.</li>
         </ul>
       </div>
     </div>
