@@ -40,3 +40,26 @@ backend/
 ├── routes.js               # Configuración de rutas principal
 ├── server.js               # Punto de entrada de la aplicación
 └── README.md               # Documentación del proyecto
+```
+
+Configurar el backend:
+   ```bash
+   cd backend
+   cp .env
+   # Editar .env con las credenciales coresponientes
+   npm install
+   ```
+## Estructura del archivo de variables de entorno .env
+```
+# Configuración del servidor
+# Base de datos MongoDB
+MONGO_URI='mongodb+srv://ENLACE_DE_MONGO_EN_ATLAS'
+# JSON WEB TOKEN (USAR EL PROGRAMA https://jwtsecretkeygenerator.com/es/)
+JWT_SECRET="TOKEN"
+```
+
+ Iniciar los servicios:
+   ```bash
+   # En una terminal (backend)
+   cd backend
+   npm run dev
