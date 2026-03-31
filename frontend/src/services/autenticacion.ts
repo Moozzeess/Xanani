@@ -5,7 +5,7 @@ import type {
   SolicitudRegistro
 } from '../types/autenticacion';
 
-const URL_BASE_API = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api';
+const URL_BASE_API = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
 
 const http = axios.create({
   baseURL: URL_BASE_API,
@@ -32,7 +32,7 @@ export async function iniciarSesion(
 ): Promise<RespuestaAutenticacion> {
   try {
     const { data } = await http.post<RespuestaAutenticacion>(
-      '/autenticacion/iniciar-sesion',
+      '/auth/login',
       payload
     );
     return data;
@@ -46,7 +46,7 @@ export async function registrar(
 ): Promise<RespuestaAutenticacion> {
   try {
     const { data } = await http.post<RespuestaAutenticacion>(
-      '/autenticacion/registrar',
+      '/auth/register',
       payload
     );
     return data;

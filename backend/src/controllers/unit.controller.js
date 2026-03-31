@@ -1,6 +1,6 @@
 const Unidad = require('../models/Unidad');
 
-exports.crearUnidad = async (req, res) => {
+exports.createUnit = async (req, res) => {
 
   try {
 
@@ -24,7 +24,7 @@ exports.crearUnidad = async (req, res) => {
 
 };
 
-exports.obtenerUnidades = async (req, res) => {
+exports.getUnits = async (req, res) => {
 
   try {
 

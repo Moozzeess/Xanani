@@ -9,12 +9,15 @@ app.use(express.json());
 app.use('/api', routes);
 
 module.exports = app;
-const rutaRoutes = require('./src/routes/ruta.routes');
-const paradaRoutes = require('./src/routes/parada.routes');
-const ubicacionRoutes = require('./src/routes/ubicacion.routes');
-const unidadRoutes = require('./src/routes/unidad.routes');
 
-app.use('/api/ubicaciones', ubicacionRoutes);
-app.use('/api/rutas', rutaRoutes);
-app.use('/api/paradas', paradaRoutes);
-app.use('/api/unidades', unidadRoutes);
+const driverRoutes = require('./src/routes/driver.routes');
+const routeRoutes = require('./src/routes/route.routes');
+const stopRoutes = require('./src/routes/stop.routes');
+const locationRoutes = require('./src/routes/location.routes');
+const unitRoutes = require('./src/routes/unit.routes');
+
+app.use('/api/drivers', driverRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/routes', routeRoutes);
+app.use('/api/stops', stopRoutes);
+app.use('/api/units', unitRoutes);

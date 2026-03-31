@@ -1,6 +1,6 @@
 const servicioAutenticacion = require('../services/autenticacion.service');
 
-async function registrar(req, res) {
+async function register(req, res) {
   try {
     const { nombreUsuario, correoElectronico, contrasena } = req.body;
 
@@ -23,7 +23,7 @@ async function registrar(req, res) {
   }
 }
 
-async function iniciarSesion(req, res) {
+async function login(req, res) {
   try {
     const { nombreUsuarioOCorreo, contrasena } = req.body;
 
@@ -46,6 +46,6 @@ async function iniciarSesion(req, res) {
 }
 
 module.exports = {
-  registrar,
-  iniciarSesion
+  register,
+  login
 };

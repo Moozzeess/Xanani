@@ -1,14 +1,14 @@
 const router = require('express').Router();
-const rutasAutenticacion = require('./src/routes/autenticacion.routes');
-const rutasUsuarios = require('./src/routes/usuario.routes');
-const rutasUbicaciones = require('./src/routes/ubicacion.routes');
+const authRoutes = require('./src/routes/auth.routes');
+const userRoutes = require('./src/routes/user.routes');
+const locationRoutes = require('./src/routes/location.routes');
 
 router.get('/salud', (_, res) => {
   res.json({ estado: 'ok' });
 });
 
-router.use('/autenticacion', rutasAutenticacion);
-router.use('/usuarios', rutasUsuarios);
-router.use('/ubicaciones', rutasUbicaciones);
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/locations', locationRoutes);
 
 module.exports = router;

@@ -3,7 +3,7 @@ const Parada = require('../models/Parada');
 /**
  * Crear una parada
  */
-exports.crearParada = async (req, res) => {
+exports.createStop = async (req, res) => {
   try {
     const nuevaParada = new Parada(req.body);
 
@@ -26,7 +26,7 @@ exports.crearParada = async (req, res) => {
 /**
  * Obtener todas las paradas
  */
-exports.obtenerParadas = async (req, res) => {
+exports.getStops = async (req, res) => {
   try {
 
     const paradas = await Parada.find().populate('ruta');
@@ -47,7 +47,7 @@ exports.obtenerParadas = async (req, res) => {
 /**
  * Obtener paradas por ruta
  */
-exports.obtenerParadasPorRuta = async (req, res) => {
+exports.getStopsByRoute = async (req, res) => {
 
   try {
 

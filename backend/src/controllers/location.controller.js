@@ -4,7 +4,7 @@ const Unidad = require('../models/Unidad');
 /**
  * Registrar ubicación de una unidad
  */
-exports.registrarUbicacion = async (req, res) => {
+exports.registerLocation = async (req, res) => {
 
   try {
 

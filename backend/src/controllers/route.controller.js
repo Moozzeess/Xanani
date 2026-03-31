@@ -3,7 +3,7 @@ const Ruta = require('../models/Ruta');
 /**
  * Crear una nueva ruta
  */
-exports.crearRuta = async (req, res) => {
+exports.createRoute = async (req, res) => {
   try {
     const nuevaRuta = new Ruta(req.body);
 
@@ -24,7 +24,7 @@ exports.crearRuta = async (req, res) => {
 /**
  * Obtener todas las rutas
  */
-exports.obtenerRutas = async (req, res) => {
+exports.getRoutes = async (req, res) => {
   try {
     const rutas = await Ruta.find();
 
@@ -40,7 +40,7 @@ exports.obtenerRutas = async (req, res) => {
 /**
  * Obtener una ruta por ID
  */
-exports.obtenerRutaPorId = async (req, res) => {
+exports.getRouteById = async (req, res) => {
   try {
     const ruta = await Ruta.findById(req.params.id);
 
@@ -62,7 +62,7 @@ exports.obtenerRutaPorId = async (req, res) => {
 /**
  * Actualizar una ruta
  */
-exports.actualizarRuta = async (req, res) => {
+exports.updateRoute = async (req, res) => {
   try {
     const rutaActualizada = await Ruta.findByIdAndUpdate(
       req.params.id,
@@ -85,7 +85,7 @@ exports.actualizarRuta = async (req, res) => {
 /**
  * Eliminar una ruta
  */
-exports.eliminarRuta = async (req, res) => {
+exports.deleteRoute = async (req, res) => {
   try {
     await Ruta.findByIdAndDelete(req.params.id);
 
