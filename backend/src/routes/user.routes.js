@@ -17,6 +17,13 @@ router.get(
   userController.getConductores
 );
 
+router.get(
+  '/admins',
+  requireAuth,
+  requireRole([USER_ROLES.SUPERUSUARIO]),
+  userController.getAdmins
+);
+
 router.put(
   '/:id',
   requireAuth,

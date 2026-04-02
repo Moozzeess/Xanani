@@ -12,14 +12,14 @@ import { SensorDataPanel } from '../../components/superuser/hardware/PanelSensor
 import { ConfigSummaryPanel } from '../../components/superuser/hardware/ConfiguracionIot';
 import { DeviceIdentificationPanel } from '../../components/superuser/hardware/IdHardware';
 
-const HardwareTest = () => {
+const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initialDevice?: any }) => {
   // Estado para la configuración MQTT
   const [mqttConfig, setMqttConfig] = useState({
-    broker: 'mqtt://[IP_ADDRESS]',
-    port: '1883',
-    username: '',
-    password: '',
-    topic: 'xanani/hardware/test'
+    broker: initialDevice?.broker || 'mqtt://[IP_ADDRESS]',
+    port: initialDevice?.puerto || '1883',
+    username: initialDevice?.usuario_mqtt || '',
+    password: initialDevice?.password_mqtt || '',
+    topic: initialDevice?.topico || 'xanani/hardware/test'
   });
 
   // Estado de conexión del WebSocket
@@ -43,7 +43,7 @@ const HardwareTest = () => {
 
   // Memoria de Sensores Físicos
   const [sensorData, setSensorData] = useState({
-    hardwareId: null as string | null,
+    hardwareId: initialDevice?.Id_Dispositivo_Hardware || null as string | null,
     celdasCarga: Array(16).fill(false),
     pasajeros: {
       entradas: 0,
@@ -54,9 +54,9 @@ const HardwareTest = () => {
 
   // Estado Operativo y Restricciones de Hardware
   const [hardwareSettings, setHardwareSettings] = useState({
-    capacidadMaxima: 15,
-    umbralPeso: 10,
-    powerOn: true
+    capacidadMaxima: initialDevice?.capacidadMaxima || 15,
+    umbralPeso: initialDevice?.umbralPeso || 10,
+    powerOn: initialDevice?.estado ? initialDevice.estado === 'activo' : true
   });
 
   // Alertas Globales del Frontend
@@ -343,6 +343,10 @@ const HardwareTest = () => {
               isConnected={isConnected}
               esp32Online={deviceStatus.esp32}
               hardwareId={sensorData.hardwareId}
+              onSaved={onSaved}
+              mqttConfig={mqttConfig}
+              hardwareSettings={hardwareSettings}
+              initialDevice={initialDevice}
             />
           </div>
 

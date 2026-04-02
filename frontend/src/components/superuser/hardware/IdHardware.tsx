@@ -6,13 +6,17 @@ interface DeviceIdentificationPanelProps {
   isConnected: boolean;
   esp32Online: boolean;
   hardwareId: string | null;
+  onSaved?: () => void;
+  mqttConfig: any;
+  hardwareSettings: any;
+  initialDevice?: any;
 }
 
-export const DeviceIdentificationPanel = ({ isConnected, esp32Online, hardwareId }: DeviceIdentificationPanelProps) => {
-  const [unitName, setUnitName] = useState('');
+export const DeviceIdentificationPanel = ({ isConnected, esp32Online, hardwareId, onSaved, mqttConfig, hardwareSettings, initialDevice }: DeviceIdentificationPanelProps) => {
+  const [unitName, setUnitName] = useState(initialDevice?.Id_Dispositivo_Hardware || '');
   const { disparar, dispararError } = useAlertaGlobal();
 
-  const handleIdentify = () => {
+  const handleIdentify = async () => {
     if (!unitName.trim()) {
       dispararError('Campo vacío', 'Por favor, ingresa un identificador para la unidad (Ej: Unidad 4).');
       return;
@@ -23,17 +27,59 @@ export const DeviceIdentificationPanel = ({ isConnected, esp32Online, hardwareId
       return;
     }
 
-    // Aquí en el futuro iría la petición POST al backend para guardar en DB
-    console.log("Petición de Aprovisionamiento:", {
-      identificador: unitName,
-      hardwareId: hardwareId
-    });
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+      const payload = {
+        Direccion_Mac: hardwareId,
+        Id_Dispositivo_Hardware: unitName,
+        topico: mqttConfig.topic,
+        broker: mqttConfig.broker,
+        puerto: mqttConfig.port,
+        usuario_mqtt: mqttConfig.username,
+        password_mqtt: mqttConfig.password,
+        capacidadMaxima: hardwareSettings.capacidadMaxima,
+        umbralPeso: hardwareSettings.umbralPeso,
+        estado: isConnected ? 'activo' : 'inactivo'
+      };
 
-    disparar({
-      tipo: 'exito',
-      titulo: 'Dispositivo Identificado',
-      mensaje: `El hardware MAC: ${hardwareId} se ha asignado exitosamente a "${unitName}".`
-    });
+      let url = `${backendUrl}/api/hardware`;
+      let method = 'POST';
+
+      if (initialDevice?._id) {
+          url = `${backendUrl}/api/hardware/${initialDevice._id}/assign`;
+          method = 'PUT';
+      }
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        disparar({
+          tipo: 'exito',
+          titulo: 'Dispositivo Configurado',
+          mensaje: `El hardware MAC: ${hardwareId} se ha guardado y configurado exitosamente como "${unitName}".`
+        });
+        
+        setTimeout(() => {
+          if (onSaved) {
+            onSaved();
+          } else {
+            window.location.href = '/superuser/hardware';
+          }
+        }, 1500);
+      } else {
+        dispararError('Error al guardar dispositivo', data.message || 'La MAC ya podría estar registrada.');
+      }
+    } catch (error: any) {
+      dispararError('Error de conexión', error.message);
+    }
 
     setUnitName('');
   };
