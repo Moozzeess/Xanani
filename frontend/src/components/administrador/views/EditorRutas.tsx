@@ -12,11 +12,12 @@ interface ResultadoBusqueda {
 
 interface PropsEditorRutas {
   disparar: any;
+  rutaInicial?: any;
   alGuardarExitoso: (nuevaRuta: any) => void;
   alVolver: () => void;
 }
 
-export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, alGuardarExitoso, alVolver }) => {
+export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, rutaInicial, alGuardarExitoso, alVolver }) => {
   const [nombreRuta, setNombreRuta] = useState('');
   const [consultaBusqueda, setConsultaBusqueda] = useState('');
   const [resultadosBusqueda, setResultadosBusqueda] = useState<ResultadoBusqueda[]>([]);
@@ -25,12 +26,23 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, alGuardarExi
   // Hook personalizado que maneja OSRM y Leaflet
   const {
     paradas,
+    geometria,
     agregarParada,
+    cargarParadasManuales,
     cambiarNombreParada,
     eliminarParada,
     centrarMapaEn,
     limpiarMapa
   } = useMapaRutas('mapa-rutas', true);
+
+  React.useEffect(() => {
+    if (rutaInicial) {
+      setNombreRuta(rutaInicial.nombre || '');
+      if (rutaInicial.paradas && Array.isArray(rutaInicial.paradas)) {
+         cargarParadasManuales(rutaInicial.paradas);
+      }
+    }
+  }, [rutaInicial, cargarParadasManuales]);
 
   const buscarDireccion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,15 +97,31 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, alGuardarExi
 
     disparar({
       tipo: 'exito',
-      titulo: 'Ruta Guardada',
-      mensaje: `La ruta "${nombreRuta}" se ha trazado y guardado exitosamente con ${paradas.length} estaciones.`
+      titulo: 'Procesando Ruta',
+      mensaje: `La ruta "${nombreRuta}" ha sido trazada y se enviará para guardarse.`
     });
 
+    const paradasMapeadas = paradas.map(p => ({
+      nombre: p.nombre,
+      latitud: p.marcador.getLatLng().lat,
+      longitud: p.marcador.getLatLng().lng
+    }));
+
+    const geometriaMapeada = geometria.map(g => ({
+      latitud: g[0],
+      longitud: g[1]
+    }));
+
     const nuevaRuta = {
-      id: Date.now(),
       nombre: nombreRuta,
-      paradas: paradas.length,
-      estado: 'Activa'
+      paradas: paradasMapeadas,
+      geometria: geometriaMapeada,
+      configuracionDespacho: {
+        modo: 'intervalo',
+        intervaloMinutos: 5,
+        requiereVehiculoLleno: false,
+        capacidadMaxima: 15
+      }
     };
 
     alGuardarExitoso(nuevaRuta);

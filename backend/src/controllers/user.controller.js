@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { User, USER_ROLES } = require('../models/User');
-const { Conductor } = require('../models/Conductor');
+const Conductor = require('../models/Conductor');
 const catchAsync = require('../utils/catchAsync');
 const ErrorApp = require('../utils/ErrorApp');
 
@@ -42,12 +42,14 @@ const createUser = catchAsync(async (req, res, next) => {
   });
 
   if (role === USER_ROLES.CONDUCTOR) {
-    const { telefono, licencia, unidad, edad } = req.body;
+    const { telefono, licencia, unidad, edad, ruta, rutaAsignadaId } = req.body;
     await Conductor.create({
       user: user._id,
       telefono: telefono || '',
       licencia: licencia || '',
       unidad: unidad || '',
+      ruta: ruta || 'Sin ruta',
+      rutaAsignadaId: rutaAsignadaId || null,
       edad: edad || null
     });
   }
@@ -65,7 +67,23 @@ const createUser = catchAsync(async (req, res, next) => {
 });
 
 const getConductores = catchAsync(async (req, res, next) => {
-  const conductoresData = await Conductor.find().populate('user', '-passwordHash');
+  const users = await User.find({ role: { $regex: new RegExp(`^${USER_ROLES.CONDUCTOR}$`, 'i') } }, '-passwordHash').lean();
+  const userIds = users.map(u => u._id);
+  const fichas = await Conductor.find({ user: { $in: userIds } }).lean();
+
+  const conductoresData = users.map(u => {
+    const ficha = fichas.find(f => f.user.toString() === u._id.toString()) || {};
+    return {
+      user: u,
+      _id: ficha._id || u._id,
+      licencia: ficha.licencia,
+      unidad: ficha.unidad,
+      ruta: ficha.ruta,
+      rutaAsignadaId: ficha.rutaAsignadaId,
+      telefono: ficha.telefono,
+      edad: ficha.edad
+    };
+  });
 
   res.status(200).json({
     status: 'exito',
@@ -78,7 +96,7 @@ const getConductores = catchAsync(async (req, res, next) => {
 
 const updateConductor = catchAsync(async (req, res, next) => {
   const { id } = req.params; // Usará el ID del User
-  const { username, email, telefono, licencia, unidad, edad } = req.body;
+  const { username, email, telefono, licencia, unidad, edad, ruta, rutaAsignadaId } = req.body;
 
   const user = await User.findById(id);
   if (!user) throw new ErrorApp('Conductor no encontrado', 404);
@@ -92,7 +110,7 @@ const updateConductor = catchAsync(async (req, res, next) => {
   // Actualiza o crea el conductor si era un conductor fantasma sin sub-documento
   const conductor = await Conductor.findOneAndUpdate(
     { user: id },
-    { telefono, licencia, unidad, edad },
+    { telefono, licencia, unidad, edad, ruta, rutaAsignadaId },
     { new: true, runValidators: true, upsert: true }
   );
 
@@ -111,9 +129,18 @@ const updateConductor = catchAsync(async (req, res, next) => {
     }
   });
 });
+const getAdmins = catchAsync(async (req, res, next) => {
+  const admins = await User.find({ role: USER_ROLES.ADMINISTRADOR }, '-passwordHash');
+  res.status(200).json({
+    status: 'exito',
+    resultados: admins.length,
+    data: admins
+  });
+});
 
 module.exports = {
   createUser,
   getConductores,
-  updateConductor
+  updateConductor,
+  getAdmins
 };

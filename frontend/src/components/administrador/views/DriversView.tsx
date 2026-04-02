@@ -12,6 +12,8 @@ interface Conductor {
   apMaterno: string;
   licencia: string;
   unidad: string;
+  ruta: string;
+  rutaAsignadaId: string | null;
   telefono: string;
   correo: string;
   rol: string;
@@ -43,10 +45,12 @@ const DriversView: React.FC = () => {
     apMaterno: '',
     licencia: '',
     unidad: '',
+    rutaAsignadaId: '',
     telefono: '',
     correo: '',
     edad: '' as number | ''
   });
+  const [listaRutas, setListaRutas] = useState<any[]>([]);
 
   // Mock de viajes recientes según requerimiento (hasta que se conecte API)
   const [viajesRecientes] = useState([
@@ -73,18 +77,23 @@ const DriversView: React.FC = () => {
     const fetchConductores = async () => {
       try {
         if (!token) return;
-        const res = await api.get('/users/conductores', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const [resCond, resRutas] = await Promise.all([
+           api.get('/users/conductores', { headers: { Authorization: `Bearer ${token}` } }),
+           api.get('/routes', { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
+        ]);
         
+        setListaRutas(resRutas.data || []);
+
         // Mapear los usuarios del backend a la interfaz Conductor del frontend
-        const conductoresMapeados = res.data.data.conductores.map((cData: any) => ({
+        const conductoresMapeados = resCond.data.data.conductores.map((cData: any) => ({
           id: cData.user?._id || cData._id,
           nombre: cData.user?.username || cData.username || 'Sin Nombre',
           apPaterno: '',
           apMaterno: '',
           licencia: cData.licencia || 'Pendiente',
           unidad: cData.unidad || 'Por asignar',
+          ruta: cData.ruta || 'Sin ruta',
+          rutaAsignadaId: cData.rutaAsignadaId || null,
           telefono: cData.telefono || 'Pendiente',
           correo: cData.user?.email || cData.email || '',
           rol: cData.user?.role || cData.role || 'CONDUCTOR',
@@ -125,6 +134,10 @@ const DriversView: React.FC = () => {
 
       const nombreBase = `${form.nombre} ${form.apPaterno} ${form.apMaterno}`.trim();
 
+      // Encontrar el nombre de la ruta seleccionada
+      const rutaSeleccionada = listaRutas.find(r => r._id === form.rutaAsignadaId);
+      const nombreRuta = rutaSeleccionada ? rutaSeleccionada.nombre : 'Sin ruta';
+
       if (conductorEditando) {
         // Modo Edición
         const payload = {
@@ -133,6 +146,8 @@ const DriversView: React.FC = () => {
           telefono: form.telefono,
           licencia: form.licencia,
           unidad: form.unidad,
+          ruta: nombreRuta,
+          rutaAsignadaId: form.rutaAsignadaId || null,
           edad: Number(form.edad)
         };
 
@@ -151,6 +166,8 @@ const DriversView: React.FC = () => {
             telefono: actualizado.conductor.telefono,
             licencia: actualizado.conductor.licencia,
             unidad: actualizado.conductor.unidad,
+            ruta: actualizado.conductor.ruta,
+            rutaAsignadaId: actualizado.conductor.rutaAsignadaId,
             edad: actualizado.conductor.edad,
             iniciales: obtenerIniciales(actualizado.user.username)
           };
@@ -177,6 +194,8 @@ const DriversView: React.FC = () => {
           telefono: form.telefono,
           licencia: form.licencia,
           unidad: form.unidad,
+          ruta: nombreRuta,
+          rutaAsignadaId: form.rutaAsignadaId || null,
           edad: Number(form.edad)
         };
 
@@ -193,6 +212,8 @@ const DriversView: React.FC = () => {
           apMaterno: '',
           licencia: form.licencia,
           unidad: form.unidad,
+          ruta: nombreRuta,
+          rutaAsignadaId: form.rutaAsignadaId || null,
           telefono: form.telefono,
           correo: nuevoConductorBase.email,
           rol: nuevoConductorBase.role,
@@ -230,6 +251,7 @@ const DriversView: React.FC = () => {
       apMaterno,
       licencia: conductor.licencia,
       unidad: conductor.unidad,
+      rutaAsignadaId: conductor.rutaAsignadaId || '',
       telefono: conductor.telefono,
       correo: conductor.correo,
       edad: conductor.edad
@@ -243,7 +265,7 @@ const DriversView: React.FC = () => {
     setConductorEditando(null);
     setForm({
       nombre: '', apPaterno: '', apMaterno: '', licencia: '',
-      unidad: '', telefono: '', correo: '', edad: ''
+      unidad: '', rutaAsignadaId: '', telefono: '', correo: '', edad: ''
     });
   };
 
@@ -378,7 +400,10 @@ const DriversView: React.FC = () => {
                         <div className="text-xs text-slate-400">Licencia: {conductor.licencia}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-mono select-all">{conductor.unidad}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-mono text-sm uppercase">{conductor.unidad}</div>
+                      <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> {conductor.ruta}</div>
+                    </td>
                     <td className="px-6 py-4">
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse"></span>
@@ -575,6 +600,16 @@ const DriversView: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unidad Asignada *</label>
                       <input type="text" name="unidad" value={form.unidad} onChange={handleChange} required placeholder="Ej. MX7-105"
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono uppercase" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Ruta Asignada (Opcional)</label>
+                      <select name="rutaAsignadaId" value={form.rutaAsignadaId} onChange={handleChange as any}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                        <option value="">Selecciona una ruta</option>
+                        {listaRutas.map(r => (
+                          <option key={r._id} value={r._id}>{r.nombre}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>

@@ -43,6 +43,12 @@ const unidadSchema = new mongoose.Schema(
         activa: {
             type: Boolean,
             default: true
+        },
+
+        dispositivoHardware: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'DispositivoHardware',
+            default: null
         }
 
 
