@@ -5,7 +5,7 @@ import MapaAsientos from './MapaAsientos';
 /**
  * Hoja de detalles del vehículo (Bottom Sheet).
  */
-const TarjetaBus = ({ vehicle, onClose, onReport }) => {
+const TarjetaBus = ({ vehicle, onClose, onReport, onVerRuta }) => {
     if (!vehicle) return null;
 
     return (
@@ -39,7 +39,9 @@ const TarjetaBus = ({ vehicle, onClose, onReport }) => {
                     <MapaAsientos ocupabilidad={vehicle.occ} />
 
                     <div className="grid grid-cols-2 gap-3">
-                        <button className="bg-slate-100 py-3.5 rounded-xl font-bold text-sm hover:bg-slate-200 text-slate-700 transition-colors flex items-center justify-center gap-2">
+                        <button 
+                            onClick={onVerRuta}
+                            className="bg-slate-100 py-3.5 rounded-xl font-bold text-sm hover:bg-slate-200 text-slate-700 transition-colors flex items-center justify-center gap-2">
                             <MapPin className="w-4 h-4" /> Ver Ruta
                         </button>
                         <button

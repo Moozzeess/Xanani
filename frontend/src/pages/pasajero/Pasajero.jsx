@@ -23,10 +23,10 @@ const Pasajero = () => {
   const navigate = useNavigate();
   const { cerrarSesion, usuario } = useAuth();
 
-  // Estados de la interfaz
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [centerOnUserTrigger, setCenterOnUserTrigger] = useState(0);
+  const [routeLine, setRouteLine] = useState([]);
 
   // Estados de permisos de ubicación
   const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
@@ -112,6 +112,38 @@ const Pasajero = () => {
 
   const handleVehicleClick = (vehicle) => {
     setSelectedVehicle(vehicle);
+    setRouteLine([]); // Limpiar ruta previa al ver otra combi
+  };
+
+  const handleVerRuta = async () => {
+    try {
+      // Como los vehículos actualmente son Mocks, obtendremos las rutas de la DB
+      // para demostrar el trazado dinámico real.
+      setSelectedVehicle(null); // Ocultar tarjeta para que el usuario vea el mapa
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/routes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data && data.length > 0) {
+        // Tomaremos la primera ruta de la DB, idealmente la que tenga geometría
+        const rutaReal = data.find(r => r.geometria && r.geometria.length > 0) || data[0];
+        
+        if (rutaReal && rutaReal.geometria && rutaReal.geometria.length > 0) {
+          const mappedLine = rutaReal.geometria.map(p => [p.latitud, p.longitud]);
+          setRouteLine(mappedLine);
+          dispararError('Ruta Cargada', `Se trazó la ruta: ${rutaReal.nombre}`, 'Exito');
+        } else {
+          dispararError('No hay trazado', 'La ruta seleccionada no tiene geometría asignada.');
+        }
+      } else {
+        dispararError('Sin Rutas', 'No hay rutas guardadas en la base de datos.');
+      }
+    } catch (error) {
+       console.error("Error obteniendo ruta real", error);
+       dispararError('Error de Conexión', 'No se pudo cargar la ruta del servidor.');
+    }
   };
 
   const handleOpenReport = () => {
@@ -140,6 +172,7 @@ const Pasajero = () => {
           onVehicleClick={handleVehicleClick}
           showUserLocation={showMapUserLocation}
           centerOnUserTrigger={centerOnUserTrigger}
+          routeLine={routeLine}
         />
 
         {/* BOTÓN DE ALERTA FLOTANTE */}
@@ -157,6 +190,7 @@ const Pasajero = () => {
         vehicle={selectedVehicle}
         onClose={() => setSelectedVehicle(null)}
         onReport={handleOpenReport}
+        onVerRuta={handleVerRuta}
       />
 
       {/* MODAL DE REPORTE */}

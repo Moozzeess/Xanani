@@ -7,7 +7,7 @@ import Navbar from '../common/Navbar';
  * Fusiona el Dashboard de visualización (antes navegación)
  * y el estado de inactividad, incluyendo el Navbar del pasajero.
  */
-export const NoRouteOverlay = ({ onStart, onLogout, unidadAsignada = "Sin Asignar", rutaDefecto = "Sin Ruta" }) => {
+export const NoRouteOverlay = ({ onStart, onLogout, unidadAsignada = "Sin Asignar", rutaAsignada = "Sin Ruta" }) => {
     return (
         <React.Fragment>
             <div className="absolute inset-0 bg-slate-900 z-[60] flex flex-col p-6 text-white pb-24 overflow-y-auto">
@@ -27,10 +27,10 @@ export const NoRouteOverlay = ({ onStart, onLogout, unidadAsignada = "Sin Asigna
                         <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">{unidadAsignada}</span>
                     </div>
                     <div className="bg-slate-800/80 p-5 rounded-3xl border border-slate-700 shadow-lg flex flex-col items-start backdrop-blur-sm">
-                        <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-1">Ruta Defecto</span>
+                        <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-1">Ruta Asignada</span>
                         <div className="flex items-center gap-2">
                             <Route className="w-5 h-5 text-indigo-400" />
-                            <span className="text-xl font-bold text-white">{rutaDefecto}</span>
+                            <span className="text-xl font-bold text-white">{rutaAsignada}</span>
                         </div>
                     </div>
                 </div>

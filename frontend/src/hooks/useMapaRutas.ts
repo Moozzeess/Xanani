@@ -27,6 +27,7 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
   
   const [paradas, setParadas] = useState<ItemParada[]>([]);
   const paradasRef = useRef<ItemParada[]>([]);
+  const [geometria, setGeometria] = useState<L.LatLngTuple[]>([]);
 
   // Efecto para inicializar el mapa
   useEffect(() => {
@@ -112,6 +113,8 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
           color: '#3b82f6',
           weight: 5,
         }).addTo(mapa);
+        
+        setGeometria(latlngs);
 
       } catch (err) {
         if (!montado) return;
@@ -124,6 +127,8 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
           weight: 4,
           dashArray: '10, 10'
         }).addTo(mapa);
+
+        setGeometria(coordsRespaldo);
       }
     };
 
@@ -160,6 +165,38 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
     });
   }, []);
 
+  const cargarParadasManuales = useCallback((nuevasParadas: { nombre: string, latitud: number, longitud: number }[]) => {
+    const mapa = mapaRef.current;
+    if (!mapa) {
+      setTimeout(() => cargarParadasManuales(nuevasParadas), 200);
+      return;
+    }
+    
+    // Limpiar previas
+    setParadas((prev) => {
+      prev.forEach(p => mapa.removeLayer(p.marcador));
+      return [];
+    });
+
+    const nuevas = nuevasParadas.map((np, idx) => {
+      const latlng = L.latLng(np.latitud, np.longitud);
+      const marcador = L.marker(latlng, { 
+          draggable: true,
+          icon: crearIconoMarcador(idx, nuevasParadas.length)
+      }).addTo(mapa);
+      
+      marcador.on('dragend', () => {
+        setParadas((actual) => [...actual]);
+      });
+      return { id: idx + 1, marcador, nombre: np.nombre };
+    });
+    
+    setParadas(nuevas);
+    if (nuevas.length > 0) {
+      mapa.setView([nuevas[0].marcador.getLatLng().lat, nuevas[0].marcador.getLatLng().lng], 14);
+    }
+  }, []);
+
   const centrarMapaEn = useCallback((lat: number, lng: number) => {
     if (mapaRef.current) {
        mapaRef.current.setView([lat, lng], 16);
@@ -190,7 +227,9 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
 
   return {
     paradas,
+    geometria,
     agregarParada,
+    cargarParadasManuales,
     cambiarNombreParada,
     eliminarParada,
     centrarMapaEn,

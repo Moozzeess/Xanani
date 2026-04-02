@@ -10,27 +10,43 @@ const conductorSchema = new mongoose.Schema(
     },
     telefono: {
       type: String,
+      required: true,
+      trim: true
+    },
+
+    unidadAsignadaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Unidad',
+      default: null
+    },
+    unidad: {
+      type: String,
       trim: true,
-      default: ''
+      default: 'Por asignar'
+    },
+    rutaAsignadaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ruta',
+      default: null
+    },
+    ruta: {
+      type: String,
+      trim: true,
+      default: 'Sin ruta'
     },
     licencia: {
       type: String,
       trim: true,
       default: ''
     },
-    unidad: {
+
+    estado: {
       type: String,
-      trim: true,
-      default: ''
-    },
-    edad: {
-      type: Number,
-      default: null
+      enum: ['activo', 'inactivo', 'suspendido'],
+      default: 'activo'
     }
   },
   { timestamps: true }
 );
 
-module.exports = {
-  Conductor: mongoose.model('Conductor', conductorSchema),
-};
+module.exports = mongoose.model('Conductor', conductorSchema);
