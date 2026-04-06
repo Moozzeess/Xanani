@@ -1,128 +1,213 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../auth/useAuth";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/useAuth';
+import { useAlertaGlobal } from '../../context/AlertaContext';
 
-// Componentes Comunes
-import Mapa from "../../components/common/Mapa";
-import Navbar from "../../components/common/Navbar";
+// Hooks de dominio
+import { useVehiculos } from '../../hooks/useVehiculos';
+import { useSeguimiento } from '../../hooks/useSeguimiento';
+import { usePreferencias } from '../../hooks/usePreferencias';
 
-// Componentes de Pasajero
-import AlertaFlotante from "../../components/pasajero/AlertaFlotante";
-import ReporteModal from "../../components/pasajero/ReporteModal";
-import TarjetaBus from "../../components/pasajero/TarjetaBus";
-import UbicacionModal from "../../components/common/UbicacionModal";
-import { useAlertaGlobal } from "../../context/AlertaContext";
+// Componentes comunes
+import Mapa from '../../components/common/Mapa';
+import UbicacionModal from '../../components/common/UbicacionModal';
 
+// Componentes del pasajero
+import NavbarPasajero from '../../components/pasajero/NavbarPasajero';
+import PanelDescubrimiento from '../../components/pasajero/PanelDescubrimiento';
+import TarjetaBus from '../../components/pasajero/TarjetaBus';
+import PanelSeguimiento from '../../components/pasajero/PanelSeguimiento';
+import ReporteModal from '../../components/pasajero/ReporteModal';
+import ModalOcupacion from '../../components/pasajero/ModalOcupacion';
+import ModalSuscripcion from '../../components/pasajero/ModalSuscripcion';
+import ModalExperiencia from '../../components/pasajero/ModalExperiencia';
+import PanelPerfil from '../../components/pasajero/PanelPerfil';
+import PanelRutas from '../../components/pasajero/PanelRutas';
+import ModoDemostracion from '../../components/pasajero/ModoDemostracion';
 
+const API_URL = `http://${window.location.hostname}:4000/api`;
 
 /**
  * Página principal del Pasajero.
- * Integra el mapa, navegación, alertas y detalles de vehículos.
+ * Orquesta todos los módulos de interacción: descubrimiento, seguimiento,
+ * crowdsourcing, experiencia post-viaje, perfil y modo demostración.
  */
 const Pasajero = () => {
   const navigate = useNavigate();
   const { cerrarSesion, usuario } = useAuth();
+  const { dispararError } = useAlertaGlobal();
 
-  // Estados de la interfaz
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [centerOnUserTrigger, setCenterOnUserTrigger] = useState(0);
+  // ── Hooks de dominio ──────────────────────────────────────────────────────
+  const { vehiculos, todos, cargando, sinUnidades, filtros, setFiltros, recargar } = useVehiculos();
+  const seguimiento = useSeguimiento();
+  const preferencias = usePreferencias();
 
-  // Estados de permisos de ubicación
+  // ── Estado UI ─────────────────────────────────────────────────────────────
+  const [tabActivo, setTabActivo] = useState('mapa');
+  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState(null);
+  const [centerTrigger, setCenterTrigger] = useState(0);
+  const [routeLine, setRouteLine] = useState([]);
+  const [unidadesDemoMapa, setUnidadesDemoMapa] = useState([]);
+  const [modoDemoActivo, setModoDemoActivo] = useState(false);
+  const [notificacionesActivas, setNotificacionesActivas] = useState(false);
+
+  // Permisos de ubicación
   const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
-  const [ubicacionPermitida, setUbicacionPermitida] = useState(false);
   const [showMapUserLocation, setShowMapUserLocation] = useState(false);
 
+  // Modales
+  const [modalReporte, setModalReporte] = useState(false);
+  const [modalOcupacion, setModalOcupacion] = useState(false);
+  const [modalSuscripcion, setModalSuscripcion] = useState(false);
+  const [modalExperiencia, setModalExperiencia] = useState(false);
+  const [panelPerfil, setPanelPerfil] = useState(false);
 
-  // Obtener inicial e información del usuario autenticado
-  const username = usuario?.username || 'Pasajero';
-  const userInitial = username.charAt(0).toUpperCase();
+  // Rutas cargadas para suscripción
+  const [rutasDisponibles, setRutasDisponibles] = useState([]);
 
-  // Datos simulados (Mock Data) que se actualizarán según la ubicación del usuario
-  const [vehicles, setVehicles] = useState([]);
-
-  // Generar vehículos cerca del usuario cuando se obtiene su ubicación
+  // ── Inicialización de permisos de ubicación ───────────────────────────────
   useEffect(() => {
-    // Verificar si el usuario ya otorgó permiso o si necesitamos mostrar el modal
-    const hasPermission = localStorage.getItem('locationPermissionGranted') === 'true';
-
-    if (hasPermission) {
-      setUbicacionPermitida(true);
+    const tienePermiso = localStorage.getItem('locationPermissionGranted') === 'true';
+    if (tienePermiso) {
       setShowMapUserLocation(true);
-      requestUserLocation();
     } else {
       setIsUbicacionModalOpen(true);
     }
   }, []);
 
-  const { dispararError } = useAlertaGlobal();
+  // ── Detección automática de abordaje ─────────────────────────────────────
+  useEffect(() => {
+    if (seguimiento.abordajeDetectado && !modalExperiencia) {
+      setModalExperiencia(true);
+    }
+  }, [seguimiento.abordajeDetectado]);
 
-  const requestUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
+  // ── Actualizar posición de la unidad seguida en el hook ───────────────────
+  useEffect(() => {
+    if (!seguimiento.unidadSeguida) return;
+    const unidadActual = todos.find((v) => v._id === seguimiento.unidadSeguida._id);
+    if (unidadActual?.posicion) {
+      seguimiento.actualizarPosicionUnidad(unidadActual.posicion, unidadActual.velocidad);
+    }
+  }, [todos, seguimiento.unidadSeguida]);
 
-        // Generar 4 vehículos con pequeños offsets aleatorios para simular cercanía
-        const nearbyVehicles = [
-          { id: 1, plate: 'MX-001', status: 'En ruta', color: 'bg-green-400', text: 'text-green-900', pillBg: 'bg-green-100 text-green-700', eta: '2 min', occ: 'Alta', pos: [latitude + 0.002, longitude + 0.002], driver: 'Juan P.' },
-          { id: 2, plate: 'MX-002', status: 'Terminal', color: 'bg-amber-400', text: 'text-amber-900', pillBg: 'bg-amber-100 text-amber-700', eta: '5 min', occ: 'Baja', pos: [latitude - 0.003, longitude + 0.001], driver: 'Luis G.' },
-          { id: 3, plate: 'MX-003', status: 'En ruta', color: 'bg-blue-400', text: 'text-blue-900', pillBg: 'bg-blue-100 text-blue-700', eta: '8 min', occ: 'Media', pos: [latitude + 0.001, longitude - 0.004], driver: 'Ana R.' },
-          { id: 4, plate: 'MX-004', status: 'Sin señal', color: 'bg-purple-400', text: 'text-purple-900', pillBg: 'bg-purple-100 text-purple-700', eta: 'Desc.', occ: 'Media', pos: [latitude - 0.002, longitude - 0.002], driver: 'Pedro' },
-        ];
+  // ── Cargar rutas para modal de suscripción ────────────────────────────────
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/routes`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) setRutasDisponibles(await res.json());
+      } catch {/* no crítico */}
+    };
+    cargar();
+  }, []);
 
-        setVehicles(nearbyVehicles);
-      }, (error) => {
-        let mensaje = "No se pudo obtener tu ubicación actual.";
-        if (error.code === error.PERMISSION_DENIED) {
-          mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
-        }
-        dispararError(mensaje, error.message, "Error de Ubicación");
-        setIsUbicacionModalOpen(true); // Reabrir el modal en caso de error
-        setDefaultVehicles();
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleAceptarUbicacion = () => {
+    localStorage.setItem('locationPermissionGranted', 'true');
+    setShowMapUserLocation(true);
+    setIsUbicacionModalOpen(false);
+  };
+
+  const handleLogout = () => {
+    cerrarSesion();
+    navigate('/', { replace: true });
+  };
+
+  const handleVehiculoClick = (v) => {
+    if (seguimiento.unidadSeguida) return; // No cambiar si está siguiendo
+    setVehiculoSeleccionado(v);
+    setRouteLine([]);
+  };
+
+  const handleMapClick = useCallback(() => {
+    // Tap en zona vacía limpia la selección
+    if (!seguimiento.unidadSeguida) {
+      setVehiculoSeleccionado(null);
+    }
+  }, [seguimiento.unidadSeguida]);
+
+  const handleMapLongPress = useCallback((_latlng) => {
+    // El círculo visual ya lo dibuja el Mapa; aquí se puede mostrar info adicional
+  }, []);
+
+  const handleVerRuta = async () => {
+    try {
+      setVehiculoSeleccionado(null);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/routes`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-    } else {
-      dispararError("Tu navegador no soporta geolocalización.", "navigator.geolocation is undefined", "Error de Sistema");
-      setDefaultVehicles();
+      const data = await res.json();
+      const rutaConGeometria = data.find((r) => r.geometria?.length > 0);
+
+      if (rutaConGeometria) {
+        const linea = rutaConGeometria.geometria.map((p) => [p.latitud, p.longitud]);
+        setRouteLine(linea);
+        dispararError('Ruta cargada', `Ruta: ${rutaConGeometria.nombre}`, 'Exito');
+      } else {
+        dispararError('Sin trazado', 'La ruta no tiene geometría asignada.', 'Info');
+      }
+    } catch (error) {
+      dispararError('Error de conexión', 'No se pudo cargar la ruta.', 'Error');
     }
   };
 
-  const setDefaultVehicles = () => {
-    // Fallback a ubicación por defecto (Ciudad de México) si falla el permiso
-    const defaultLat = 19.4326;
-    const defaultLon = -99.1332;
-    setVehicles([
-      { id: 1, plate: 'MX-001', status: 'En ruta', color: 'bg-green-400', text: 'text-green-900', pillBg: 'bg-green-100 text-green-700', eta: '2 min', occ: 'Alta', pos: [defaultLat + 0.002, defaultLon + 0.002], driver: 'Juan P.' },
-      { id: 2, plate: 'MX-002', status: 'Terminal', color: 'bg-amber-400', text: 'text-amber-900', pillBg: 'bg-amber-100 text-amber-700', eta: '5 min', occ: 'Baja', pos: [defaultLat - 0.003, defaultLon + 0.001], driver: 'Luis G.' },
-    ]);
+  const handleSeguir = (vehiculo) => {
+    setVehiculoSeleccionado(null);
+    seguimiento.seguir(vehiculo);
+    dispararError('Siguiendo unidad', `Siguiendo a ${vehiculo.placa}`, 'Info');
   };
 
-  const handleAcceptLocation = () => {
-    localStorage.setItem('locationPermissionGranted', 'true');
-    setUbicacionPermitida(true);
-    setIsUbicacionModalOpen(false);
-    setShowMapUserLocation(true);
-    requestUserLocation();
+  const handleDetenerSeguimiento = () => {
+    seguimiento.detener();
+    setModoDemoActivo(false);
   };
 
-
-  const onLogout = () => {
-    cerrarSesion();
-    navigate("/", { replace: true });
+  const handleCalificacion = ({ calificacion, encontroAsiento }) => {
+    const unidad = seguimiento.unidadSeguida;
+    preferencias.agregarViaje({
+      fecha: new Date().toLocaleDateString('es-MX'),
+      placa: unidad?.placa || 'Desconocida',
+      ruta: unidad?.ruta?.nombre,
+      calificacion,
+    });
+    seguimiento.detener();
   };
 
-  const handleVehicleClick = (vehicle) => {
-    setSelectedVehicle(vehicle);
+  const handleVerRutaFavorita = async (ruta) => {
+    setPanelPerfil(false);
+    const rutaCompleta = rutasDisponibles.find((r) => r._id === ruta.id);
+    if (rutaCompleta?.geometria?.length) {
+      setRouteLine(rutaCompleta.geometria.map((p) => [p.latitud, p.longitud]));
+      setTabActivo('mapa');
+    }
   };
 
-  const handleOpenReport = () => {
-    setIsReportModalOpen(true);
+  const handleCentrarParada = (parada) => {
+    setPanelPerfil(false);
+    setCenterTrigger((p) => p + 1);
+    setTabActivo('mapa');
   };
+
+  // Vehículos que se muestran en el mapa: reales o demo
+  const vehiculosEnMapa = modoDemoActivo ? unidadesDemoMapa : vehiculos;
+
+  const idVehiculoSeguido = seguimiento.unidadSeguida?._id || seguimiento.unidadSeguida?.id;
+
+  const username = usuario?.username || 'Pasajero';
+  const userInitial = username.charAt(0).toUpperCase();
 
   return (
     <main className="flex flex-col h-screen w-screen relative bg-slate-200 overflow-hidden">
-      {/* HEADER FLOTANTE (Perfil de Usuario) */}
-      <div className="fixed top-0 left-0 right-0 px-5 top-4 pb-4 flex justify-between items-center z-[500] pointer-events-none">
-        <div className="bg-white/90 backdrop-blur p-2 rounded-full shadow-lg pointer-events-auto flex items-center gap-2 pr-4 mt-2 border border-white/50">
+
+      {/* ── HEADER FLOTANTE ─────────────────────────────────────────────── */}
+      <div className="fixed top-0 left-0 right-0 pt-4 px-5 pb-2 flex justify-between items-center z-[500] pointer-events-none">
+        <div className="bg-white/90 backdrop-blur p-2 rounded-full shadow-lg pointer-events-auto flex items-center gap-2 pr-4 mt-1 border border-white/50">
           <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs">
             {userInitial}
           </div>
@@ -133,46 +218,143 @@ const Pasajero = () => {
         </div>
       </div>
 
-      {/* MAPA PRINCIPAL */}
+      {/* ── MAPA PRINCIPAL ──────────────────────────────────────────────── */}
       <div className="flex-1 relative w-full h-full overflow-hidden">
         <Mapa
-          vehicles={vehicles}
-          onVehicleClick={handleVehicleClick}
+          vehicles={vehiculosEnMapa}
+          onVehicleClick={handleVehiculoClick}
+          onMapClick={handleMapClick}
+          onMapLongPress={handleMapLongPress}
           showUserLocation={showMapUserLocation}
-          centerOnUserTrigger={centerOnUserTrigger}
+          centerOnUserTrigger={centerTrigger}
+          routeLine={routeLine}
+          vehiculoEnSeguimientoId={idVehiculoSeguido}
         />
 
-        {/* BOTÓN DE ALERTA FLOTANTE */}
-        <AlertaFlotante onClick={handleOpenReport} />
+        {/* Panel de descubrimiento (flotante sobre mapa) */}
+        {tabActivo === 'mapa' && (
+          <PanelDescubrimiento
+            totalUnidades={vehiculos.length}
+            sinUnidades={sinUnidades && !modoDemoActivo}
+            filtros={filtros}
+            onCambiarFiltros={setFiltros}
+            onVerDemo={() => setModoDemoActivo(true)}
+            onActivarAlerta={() => setModalSuscripcion(true)}
+          />
+        )}
+
+        {/* Panel de rutas (overlay sobre mapa) */}
+        {tabActivo === 'rutas' && (
+          <PanelRutas
+            rutasFavoritas={preferencias.rutasFavoritas}
+            onToggleFavorita={preferencias.toggleRutaFavorita}
+            esRutaFavorita={preferencias.esRutaFavorita}
+            onVerRuta={(ruta) => {
+              if (ruta.geometria?.length) {
+                setRouteLine(ruta.geometria.map((p) => [p.latitud, p.longitud]));
+                setTabActivo('mapa');
+              }
+            }}
+          />
+        )}
+
+        {/* Modo demostración */}
+        <ModoDemostracion
+          activo={modoDemoActivo}
+          onActivarAlerta={() => { setModoDemoActivo(false); setModalSuscripcion(true); }}
+          onSalir={() => setModoDemoActivo(false)}
+          onUnidadesDemoChange={setUnidadesDemoMapa}
+        />
       </div>
 
-      {/* NAVEGACIÓN INFERIOR */}
-      <Navbar
-        onLogout={onLogout}
-        onCenterLocation={() => setCenterOnUserTrigger(prev => prev + 1)}
+      {/* ── NAVBAR DEL PASAJERO ─────────────────────────────────────────── */}
+      <NavbarPasajero
+        tabActivo={tabActivo}
+        onCambiarTab={(tab) => {
+          if (tab === 'perfil') {
+            setPanelPerfil(true);
+          } else if (tab === 'alertas') {
+            setModalSuscripcion(true);
+          } else {
+            setTabActivo(tab);
+          }
+        }}
+        onCentrarUbicacion={() => setCenterTrigger((p) => p + 1)}
       />
 
-      {/* DETAILS SHEET (Bottom Sheet) */}
-      <TarjetaBus
-        vehicle={selectedVehicle}
-        onClose={() => setSelectedVehicle(null)}
-        onReport={handleOpenReport}
-      />
+      {/* ── TARJETA DE DETALLE DE BUS ────────────────────────────────────── */}
+      {!seguimiento.unidadSeguida && (
+        <TarjetaBus
+          vehicle={vehiculoSeleccionado}
+          onClose={() => setVehiculoSeleccionado(null)}
+          onReport={() => setModalReporte(true)}
+          onVerRuta={handleVerRuta}
+          onSeguir={handleSeguir}
+        />
+      )}
 
-      {/* MODAL DE REPORTE */}
+      {/* ── HUD DE SEGUIMIENTO ACTIVO ───────────────────────────────────── */}
+      {seguimiento.unidadSeguida && (
+        <PanelSeguimiento
+          unidad={seguimiento.unidadSeguida}
+          progreso={seguimiento.progresoRuta}
+          enMovimiento={seguimiento.enMovimiento}
+          onDetener={handleDetenerSeguimiento}
+        />
+      )}
+
+      {/* ── MODALES ───────────────────────────────────────────────────────── */}
       <ReporteModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
+        isOpen={modalReporte}
+        onClose={() => setModalReporte(false)}
+        unidadId={vehiculoSeleccionado?._id}
       />
 
-      {/* MODAL DE UBICACION */}
+      <ModalOcupacion
+        isOpen={modalOcupacion}
+        onClose={() => setModalOcupacion(false)}
+        unidad={vehiculoSeleccionado}
+      />
+
+      <ModalSuscripcion
+        isOpen={modalSuscripcion}
+        onClose={() => setModalSuscripcion(false)}
+        rutas={rutasDisponibles}
+      />
+
+      <ModalExperiencia
+        isOpen={modalExperiencia}
+        unidad={seguimiento.unidadSeguida}
+        onClose={() => {
+          setModalExperiencia(false);
+          seguimiento.resetearAbordaje();
+        }}
+        onCalificar={handleCalificacion}
+      />
+
+      {/* ── PANEL DE PERFIL (DRAWER) ─────────────────────────────────────── */}
+      <PanelPerfil
+        isOpen={panelPerfil}
+        onClose={() => setPanelPerfil(false)}
+        usuario={usuario}
+        historial={preferencias.historial}
+        rutasFavoritas={preferencias.rutasFavoritas}
+        paradasFavoritas={preferencias.paradasFavoritas}
+        notificacionesActivas={notificacionesActivas}
+        onToggleNotificaciones={() => setNotificacionesActivas((p) => !p)}
+        onLimpiarHistorial={preferencias.limpiarHistorial}
+        onVerRutaFavorita={handleVerRutaFavorita}
+        onCentrarParada={handleCentrarParada}
+        onLogout={handleLogout}
+      />
+
+      {/* ── MODAL DE PERMISO DE UBICACIÓN ───────────────────────────────── */}
       <UbicacionModal
         isOpen={isUbicacionModalOpen}
         onClose={() => {
           setIsUbicacionModalOpen(false);
-          setDefaultVehicles();
         }}
-        onAccept={handleAcceptLocation}
+        onAccept={handleAceptarUbicacion}
       />
     </main>
   );
