@@ -1,29 +1,19 @@
 const express = require('express');
 const cors = require('cors');
-const routes = require('./routes');
+const compression = require('compression');
+const rutasPrincipales = require('./src/routes/index');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 const ErrorApp = require('./src/utils/ErrorApp');
-
-const unidadRoutes = require('./src/routes/unidad.routes');
-const rutaRoutes = require('./src/routes/ruta.rooutes');
-const paradaRoutes = require('./src/routes/parada.routes');
-const ubicacionRoutes = require('./src/routes/ubicacion.routes');
-const reporteRoutes = require('./src/routes/reporte.routes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(compression()); // Optimizacion de payload
 
-// Rutas principales: auth (/api/auth) + users (/api/users)
-app.use('/api', routes);
+// Rutas principales centralizadas (Gateway)
+app.use('/api', rutasPrincipales);
 
-// Módulos de recursos
-app.use('/api/units', unidadRoutes);
-app.use('/api/routes', rutaRoutes);
-app.use('/api/stops', paradaRoutes);
-app.use('/api/locations', ubicacionRoutes);
-app.use('/api/reportes', reporteRoutes);
 
 // Captura de rutas no encontradas (404)
 app.all('*', (req, res, next) => {

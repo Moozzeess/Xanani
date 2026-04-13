@@ -28,7 +28,7 @@ function obtenerRutaPorDefecto(rol: Role): string {
     case "PASAJERO":
       return "/pasajero";
     default:
-      return "/";
+      return "/LandingPage";
   }
 }
 
@@ -57,7 +57,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<RutaHome />} />
+        <Route path="/LandingPage" element={<RutaHome />} />
         <Route path="/login" element={<PaginaLogin />} />
 
         <Route
@@ -93,7 +93,7 @@ function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/LandingPage" replace />} />
       </Routes>
     </Router>
   );

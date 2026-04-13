@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const optimizaciones = require('./optimizaciones');
+
 /**
  * Configura y gestiona la conexión a MongoDB con manejo de errores avanzado.
  * @param {string} MONGO_URI - La cadena de conexión de MongoDB.
@@ -8,7 +10,7 @@ module.exports = async (MONGO_URI) => {
   const mongooseOptions = {
     autoIndex: true,
     connectTimeoutMS: 10000,
-    socketTimeoutMS: 45000,
+    ...optimizaciones.db
   };
 
   // Manejo de eventos del ciclo de vida de la conexión

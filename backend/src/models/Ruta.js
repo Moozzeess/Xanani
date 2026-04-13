@@ -7,9 +7,19 @@ const rutaSchema = new mongoose.Schema(
             required: true
         },
 
+        // Actualizado para soportar objetos complejos con coordenadas
         paradas: [
             {
-                type: String
+                nombre: { type: String, required: true },
+                latitud: { type: Number, required: true },
+                longitud: { type: Number, required: true }
+            }
+        ],
+
+        geometria: [
+            {
+                latitud: { type: Number, required: true },
+                longitud: { type: Number, required: true }
             }
         ],
 
@@ -44,7 +54,7 @@ const rutaSchema = new mongoose.Schema(
 
         creadoPor: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'Usuario' // Corregido el ref a Usuario
         }
     },
     { timestamps: true }
