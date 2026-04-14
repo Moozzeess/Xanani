@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
-import { LogOut, LayoutDashboard, Cpu, Server } from "lucide-react";
-import HardwareTest from "./HardwareTest"; // Componente con la página de pruebas
-import ListaDispositivos from "./ListaDispositivos"; // Lista de dispositivos
+import { LogOut, LayoutDashboard, Cpu, Users, Activity, Map } from "lucide-react";
+import HardwareTest from "./HardwareTest";
+import ListaDispositivos from "./ListaDispositivos";
+import GlobalAnalyticsView from './GlobalAnalyticsView';
+import ManageAdminsView from './ManageAdminsView';
+import SystemHealthView from './SystemHealthView';
+import GlobalHeatmapView from './GlobalHeatmapView';
 
 const Superususario = () => {
   const navigate = useNavigate();
   const { cerrarSesion } = useAuth();
 
-  // Estado para manejar qué vista (tab) se está mostrando
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [testDevice, setTestDevice] = useState(null);
 
   const onLogout = () => {
@@ -18,9 +21,25 @@ const Superususario = () => {
     navigate("/", { replace: true });
   };
 
+  const renderTab = (id, icon, label) => {
+    const isActive = activeTab === id;
+    return (
+      <button
+        onClick={() => setActiveTab(id)}
+        className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+          isActive
+            ? 'border-blue-500 text-blue-400'
+            : 'border-transparent text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        {icon} {label}
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* Navegación Superior (Top Navbar) */}
+      {/* Navegación Superior */}
       <nav className="bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -40,45 +59,39 @@ const Superususario = () => {
         </button>
       </nav>
 
-      {/* Menú de Pestañas (Tabs) */}
-      <div className="bg-slate-800 px-6 shrink-0 border-b border-slate-700">
+      {/* Menú de Pestañas */}
+      <div className="bg-slate-800 px-6 shrink-0 border-b border-slate-700 overflow-x-auto">
         <div className="flex gap-4">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'dashboard'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-          >
-            <LayoutDashboard size={18} /> Dashboard Principal
-          </button>
-          <button
-            onClick={() => setActiveTab('hardware_list')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'hardware_list' || activeTab === 'hardware_new'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-          >
-            <Server size={18} /> Inventario Hardware
-          </button>
+          {renderTab('analytics', <LayoutDashboard size={18} />, 'Analítica Global')}
+          {renderTab('admins',    <Users size={18} />,           'Gestión de Administradores')}
+          {renderTab('hardware',  <Cpu size={18} />,             'Pruebas de Hardware')}
+          {renderTab('health',    <Activity size={18} />,        'Estado del Sistema')}
+          {renderTab('heatmap',   <Map size={18} />,             'Mapa de Calor')}
         </div>
       </div>
 
-      {/* Área de Contenido Principal (Scrollable) */}
-      <main className="flex-1 overflow-hidden p-6 relative">
-        {activeTab === 'dashboard' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 h-full">
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Resumen General</h2>
-            <p className="text-slate-500 mb-8">Hola mundo esta esla vista de superusuruario.</p>
-            {/* Aquí iría el contenido original del dashboard del superusuario */}
-            <div className="p-8 border-2 border-dashed border-slate-200 rounded-xl text-center bg-slate-50">
-              <span className="text-slate-400 font-bold uppercase tracking-widest text-xs">Módulos del Sistema</span>
-            </div>
-          </div>
-        )}
+      {/* Área de Contenido Principal */}
+      <main className="flex-1 overflow-hidden p-6 relative bg-slate-100">
+        <div className="h-full overflow-y-auto">
 
-        {activeTab === 'hardware_list' && (
-          <div className="h-full">
+          {activeTab === 'analytics' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Analítica Global del Sistema</h2>
+              <p className="text-slate-500 mb-8">Métricas agregadas de uso, volúmenes de flotillas y demanda general.</p>
+              <GlobalAnalyticsView />
+            </div>
+          )}
+
+          {activeTab === 'admins' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Gestión de Administradores</h2>
+              <p className="text-slate-500 mb-8">Control de cuentas de dueños de flotillas y accesos.</p>
+              <ManageAdminsView />
+            </div>
+          )}
+
+          {activeTab === 'hardware' && (
+            <div className="h-full">
             <ListaDispositivos
               onAddNew={() => {
                 setTestDevice(null);
@@ -90,9 +103,8 @@ const Superususario = () => {
               }}
             />
           </div>
-        )}
-
-        {activeTab === 'hardware_new' && (
+          )}
+          {activeTab === 'hardware_new' && (
           <div className="h-full flex flex-col">
             <button
               onClick={() => setActiveTab('hardware_list')}
@@ -103,10 +115,29 @@ const Superususario = () => {
             <HardwareTest onSaved={() => setActiveTab('hardware_list')} initialDevice={testDevice} />
           </div>
         )}
+
+          {activeTab === 'health' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Estado de Servidores e IoT</h2>
+              <p className="text-slate-500 mb-8">Monitoreo de red, backend y conexiones de base de datos.</p>
+              <SystemHealthView />
+            </div>
+          )}
+
+          {activeTab === 'heatmap' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col" style={{ minHeight: 'calc(100vh - 200px)' }}>
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Mapa de Calor Global</h2>
+              <p className="text-slate-500 mb-6">Concentración de unidades operando en tiempo real mediante la plataforma.</p>
+              <div className="flex-1">
+                <GlobalHeatmapView />
+              </div>
+            </div>
+          )}
+
+        </div>
       </main>
     </div>
   );
-
 };
 
 export default Superususario;

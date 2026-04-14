@@ -77,13 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
   const [estaCargando, setEstaCargando] = useState(true);
 
-  // Efecto para cargar la sesión al iniciar la aplicación
+   // Efecto para cargar la sesión al iniciar la aplicación
   useEffect(() => {
-    const almacenado = obtenerAuthAlmacenado();
+      const almacenado = obtenerAuthAlmacenado();
     setToken(almacenado.token);
     setUsuario(almacenado.usuario);
-    setEstaCargando(false);
-  }, []);
+  setEstaCargando(false);
+}, []);
 
   const estaAutenticado = Boolean(token && usuario);
 
