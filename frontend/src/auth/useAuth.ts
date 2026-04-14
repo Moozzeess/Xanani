@@ -77,13 +77,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
   const [estaCargando, setEstaCargando] = useState(true);
 
-  // Efecto para cargar la sesión al iniciar la aplicación
-  useEffect(() => {
-    const almacenado = obtenerAuthAlmacenado();
-    setToken(almacenado.token);
-    setUsuario(almacenado.usuario);
-    setEstaCargando(false);
-  }, []);
+ useEffect(() => {
+  // Forzamos un token cualquiera y un usuario con rol SUPERUSUARIO
+  setToken("token-falso-de-prueba"); 
+  setUsuario({
+    id: "1",
+    nombre: "Gustavo Superuser",
+    email: "superuser@test.com",
+    role: "SUPERUSUARIO" as any // Usamos 'as any' para evitar quejas de tipos si falta algún campo
+  } as any);
+  
+  setEstaCargando(false);
+}, []);
 
   const estaAutenticado = Boolean(token && usuario);
 
