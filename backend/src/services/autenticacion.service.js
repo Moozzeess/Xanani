@@ -98,7 +98,48 @@ async function iniciarSesion({ nombreUsuarioOCorreo, contrasena }) {
   };
 }
 
+/**
+ * Crea una cuenta de forma interna (ideal para que un admin/superusuario asigne cuentas)
+ * No genera Token de sesión ya que el creador ya está en sesión segura.
+ */
+async function registrarCuentaInterna({ nombreUsuario, correoElectronico, contrasena, rolAsignado }) {
+  const existente = await Usuario.findOne({
+    $or: [
+      { nombreUsuario },
+      { correoElectronico: correoElectronico.toLowerCase() }
+    ]
+  });
+
+  if (existente) {
+    const campo = existente.nombreUsuario === nombreUsuario ? 'nombreUsuario' : 'correoElectronico';
+    const mensaje =
+      campo === 'nombreUsuario'
+        ? 'El nombre de usuario ya existe.'
+        : 'El correo electrónico ya existe.';
+    const error = new Error(mensaje);
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const hashContrasena = await bcrypt.hash(contrasena, 10);
+
+  const usuario = await Usuario.create({
+    nombreUsuario,
+    correoElectronico: correoElectronico.toLowerCase(),
+    hashContrasena,
+    rol: rolAsignado
+  });
+
+  return {
+    id: usuario._id.toString(),
+    nombreUsuario: usuario.nombreUsuario,
+    correoElectronico: usuario.correoElectronico,
+    rol: usuario.rol
+  };
+}
+
 module.exports = {
   registrar,
-  iniciarSesion
+  iniciarSesion,
+  registrarCuentaInterna
 };
