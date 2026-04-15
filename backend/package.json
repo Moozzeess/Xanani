@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "pribate": true,
   "description": "Backend for Xanani project",
-  "main": "/src/c/backend.js",
+  "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js"
@@ -20,10 +20,11 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.20.0",
     "mongoose": "^8.18.0",
+    "mqtt": "^5.15.0",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "nodemon": "^1.0.2"
+    "nodemon": "^1.19.4"
   },
   "overrides": {
     "graceful-fs": "4.2.2"

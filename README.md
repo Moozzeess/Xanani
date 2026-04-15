@@ -31,21 +31,19 @@ Xanani/
 │   ├── server.js            # Punto de entrada del servidor
 │   └── README.md            # Documentación detallada del backend
 │
-├── frontend/                # Aplicación web del cliente
-│   ├── src/                 # Código fuente del frontend
-│   ├── public/              # Archivos estáticos
-│   ├── package.json         # Dependencias del frontend
-│   ├── vite.config.ts       # Configuración de Vite
-│   ├── tsconfig.json        # Configuración TypeScript
-│   └── README.md            # Documentación detallada del frontend
-│
-└── Test/                    # Archivos de prueba
-    ├── README.MD            # Documentación de pruebas
-    ├── admin.html           # Interfaz admin
-    ├── conductor.html       # Interfaz conductor
-    ├── landing pasajero.html # Landing pasajero
-    ├── login.html           # Interfaz login
-    └── pasajero_autenticado.html # Interfaz pasajero autenticado
+└── frontend/                # Aplicación web del cliente
+   ├── src/                 # Código fuente del frontend
+   │   ├── components/      # Componentes reutilizables
+   │   │   ├── common/      # Componentes compartidos (Mapa, Navbar)
+   │   │   └── pasajero/    # Componentes específicos (Alerta, Asientos, TarjetaBus)
+   │   ├── pages/           # Páginas principales
+   │   │   └── pasajero/    # Vista de pasajero (Pasajero.jsx)
+   │   └── ...
+   ├── public/              # Archivos estáticos
+   ├── package.json         # Dependencias del frontend
+   ├── vite.config.ts       # Configuración de Vite
+   ├── tsconfig.json        # Configuración TypeScript
+   └── README.md            # Documentación detallada del frontend
 
 
 ### Requisitos Previos

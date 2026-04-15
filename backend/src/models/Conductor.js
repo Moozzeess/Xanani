@@ -2,14 +2,13 @@ const mongoose = require('mongoose');
 
 const conductorSchema = new mongoose.Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
       unique: true
     },
-
-    numeroLicencia: {
+    telefono: {
       type: String,
       required: true,
       trim: true
@@ -20,15 +19,25 @@ const conductorSchema = new mongoose.Schema(
       ref: 'Unidad',
       default: null
     },
-
-    estaEnLinea: {
-      type: Boolean,
-      default: false
+    unidad: {
+      type: String,
+      trim: true,
+      default: 'Por asignar'
     },
-
-    disponible: {
-      type: Boolean,
-      default: true
+    rutaAsignadaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ruta',
+      default: null
+    },
+    ruta: {
+      type: String,
+      trim: true,
+      default: 'Sin ruta'
+    },
+    licencia: {
+      type: String,
+      trim: true,
+      default: ''
     },
 
     estado: {

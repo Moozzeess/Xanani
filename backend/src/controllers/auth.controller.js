@@ -1,51 +1,28 @@
-const servicioAutenticacion = require('../services/autenticacion.service');
+const authService = require('../services/auth.service');
+const catchAsync = require('../utils/catchAsync');
+const ErrorApp = require('../utils/ErrorApp');
 
-async function register(req, res) {
-  try {
-    const { username, email, password } = req.body;
+const register = catchAsync(async (req, res) => {
+  const { username, email, password } = req.body;
 
-    if (!username || !email || !password) {
-      return res.status(400).json({
-        mensaje: 'username, email y password son requeridos.'
-      });
-    }
-
-    const resultado = await servicioAutenticacion.registrar({
-      username,
-      email,
-      password
-    });
-
-    return res.status(201).json(resultado);
-  } catch (error) {
-    const estado = error.statusCode || 500;
-    return res.status(estado).json({ mensaje: error.message || 'Error interno.' });
+  if (!username || !email || !password) {
+    throw new ErrorApp('Datos incompletos: El nombre de usuario, correo y contraseña son obligatorios.', 400);
   }
-}
 
-async function login(req, res) {
-  try {
-    // Compatible con master (usernameOrEmail) y cambios-estructura (usernameOCorreo)
-    const usernameOCorreo = req.body.usernameOrEmail || req.body.usernameOCorreo;
-    const { password } = req.body;
+  const result = await authService.register({ username, email, password });
+  res.status(201).json(result);
+});
 
-    if (!usernameOCorreo || !password) {
-      return res.status(400).json({
-        mensaje: 'username/email y password son requeridos.'
-      });
-    }
+const login = catchAsync(async (req, res) => {
+  const { usernameOrEmail, password } = req.body;
 
-    const resultado = await servicioAutenticacion.iniciarSesion({
-      usernameOCorreo,
-      password
-    });
-
-    return res.status(200).json(resultado);
-  } catch (error) {
-    const estado = error.statusCode || 500;
-    return res.status(estado).json({ mensaje: error.message || 'Error interno.' });
+  if (!usernameOrEmail || !password) {
+    throw new ErrorApp('Datos incompletos: Se requiere el usuario/correo y la contraseña.', 400);
   }
-}
+
+  const result = await authService.login({ usernameOrEmail, password });
+  res.status(200).json(result);
+});
 
 module.exports = {
   register,

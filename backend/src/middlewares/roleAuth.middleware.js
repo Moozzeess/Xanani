@@ -3,7 +3,7 @@ module.exports = (...rolesPermitidos) => {
         try {
             const user = req.user;
 
-            if (!user || !rolesPermitidos.includes(user.rol)) {
+            if (!user || !rolesPermitidos.includes(user.role)) {
                 return res.status(403).json({
                     mensaje: 'No tienes permisos para realizar esta acción'
                 });

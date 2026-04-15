@@ -6,13 +6,13 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 // Middleware de autorizacion
 const authorizeRoles = require('../middlewares/roleAuth.middleware');
-const { ROLES_USUARIO } = require('../models/User');
+const { USER_ROLES } = require('../models/User');
 
 router.post(
-    '/',
-    authMiddleware,
-    authorizeRoles(ROLES_USUARIO.SUPERUSUARIO),
-    driverController.createDriver
+  '/', 
+  authMiddleware, 
+  authorizeRoles(USER_ROLES.SUPERUSUARIO, USER_ROLES.ADMINISTRADOR), 
+  driverController.createDriver
 );
 
 module.exports = router;

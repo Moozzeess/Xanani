@@ -9,7 +9,16 @@ const rutaSchema = new mongoose.Schema(
 
     paradas: [
       {
-        type: String
+        nombre: { type: String, required: true },
+        latitud: { type: Number, required: true },
+        longitud: { type: Number, required: true }
+      }
+    ],
+
+    geometria: [
+      {
+        latitud: { type: Number, required: true },
+        longitud: { type: Number, required: true }
       }
     ],
 

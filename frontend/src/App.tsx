@@ -1,83 +1,106 @@
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
-import PaginaInicioSesion from './autenticacion/PaginaInicioSesion';
-import PaginaInicioInvitado from './autenticacion/PaginaInicioInvitado';
-import { usarAutenticacion } from './autenticacion/usarAutenticacion';
-import type { Rol } from './types/autenticacion';
-import RutaProtegida from './autenticacion/RutaProtegida';
+// src/App.tsx
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import PaginaLogin from "./auth/LoginPage";
+import LandingPasajero from "./auth/LandingPage";
+import { useAuth } from "./auth/useAuth";
+import type { Role } from "./types/auth";
+import RutaProtegida from "./auth/ProtectedRoute";
 
-import PaginaSuperusuario from './pages/superusuario/superusuario';
-import PanelAdministrador from './pages/administrador/panelAdministrador';
-import PanelConductor from './pages/conductor/panelConductor';
-import PerfilPasajero from './pages/pasajero/perfilPasajero';
+import SuperusuarioPage from "./pages/superuser/superuser";
+import AdminDashboard from "./pages/administrador/adminDasboard";
+import Conductor from "./pages/conductor/Conductor";
+import Pasajero from "./pages/pasajero/Pasajero";
 
-function obtenerRutaPorRol(rol: Rol): string {
+/**
+ * Determina la ruta por defecto según el rol del usuario.
+ * 
+ * @param {Role} rol - El rol del usuario.
+ * @returns {string} La ruta de destino.
+ */
+function obtenerRutaPorDefecto(rol: Role): string {
   switch (rol) {
-    case 'SUPERUSUARIO':
-      return '/superusuario';
-    case 'ADMINISTRADOR':
-      return '/administrador';
-    case 'CONDUCTOR':
-      return '/conductor';
-    case 'PASAJERO':
-      return '/pasajero';
+    case "SUPERUSUARIO":
+      return "/superuser";
+    case "ADMINISTRADOR":
+      return "/admin";
+    case "CONDUCTOR":
+      return "/conductor";
+    case "PASAJERO":
+      return "/pasajero";
     default:
-      return '/';
+      return "/";
   }
 }
 
-function RutaInicio() {
-  // IMPORTANTE: usarAutenticacion() devuelve 'user' (inglés), no 'usuario'
-  const { estaAutenticado, estaCargando, user } = usarAutenticacion();
+/**
+ * Componente que maneja la ruta raíz:
+ * - Si es invitado: muestra LandingPasajero.
+ * - Si está autenticado: redirige según el rol.
+ */
+function RutaHome() {
+  const { estaAutenticado, estaCargando, usuario } = useAuth();
 
   if (estaCargando) return null;
 
-  if (!estaAutenticado || !user) {
-    return <PaginaInicioInvitado />;
+  if (!estaAutenticado || !usuario) {
+    return <LandingPasajero />;
   }
 
-  return <Navigate to={obtenerRutaPorRol(user.role)} replace />;
+  return <Navigate to={obtenerRutaPorDefecto(usuario.role)} replace />;
 }
 
+/**
+ * Componente principal de la aplicación.
+ * Define la estructura de rutas y envuelve las páginas en proveedores y protecciones.
+ */
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<RutaInicio />} />
-        <Route path="/iniciar-sesion" element={<PaginaInicioSesion />} />
+        <Route path="/" element={<RutaHome />} />
+        <Route path="/login" element={<PaginaLogin />} />
 
+        {/* Ruta para Superusuario */}
         <Route
-          path="/superusuario"
+          path="/superuser"
           element={
-            <RutaProtegida rolesPermitidos={['SUPERUSUARIO']}>
-              <PaginaSuperusuario />
+            <RutaProtegida allowedRoles={["SUPERUSUARIO"]}>
+              <SuperusuarioPage />
             </RutaProtegida>
           }
         />
+
+        {/* Ruta para Administrador */}
         <Route
-          path="/administrador"
+          path="/admin"
           element={
-            <RutaProtegida rolesPermitidos={['ADMINISTRADOR']}>
-              <PanelAdministrador />
+            <RutaProtegida allowedRoles={["ADMINISTRADOR"]}>
+              <AdminDashboard />
             </RutaProtegida>
           }
         />
+
+        {/* Ruta para Conductor */}
         <Route
           path="/conductor"
           element={
-            <RutaProtegida rolesPermitidos={['CONDUCTOR']}>
-              <PanelConductor />
-            </RutaProtegida>
-          }
-        />
-        <Route
-          path="/pasajero"
-          element={
-            <RutaProtegida rolesPermitidos={['PASAJERO']}>
-              <PerfilPasajero />
+            <RutaProtegida allowedRoles={["CONDUCTOR"]}>
+              <Conductor />
             </RutaProtegida>
           }
         />
 
+        {/* Ruta para Pasajero */}
+        <Route
+          path="/pasajero"
+          element={
+            <RutaProtegida allowedRoles={["PASAJERO"]}>
+              <Pasajero />
+            </RutaProtegida>
+          }
+        />
+
+        {/* Redirección para cualquier otra ruta no definida */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
