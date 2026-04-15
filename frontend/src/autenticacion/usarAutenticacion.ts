@@ -10,13 +10,13 @@ import * as apiAutenticacion from '../services/autenticacion';
 
 type ValorContextoAutenticacion = {
   token: string | null;
-  usuario: UsuarioAutenticado | null;
+  user: UsuarioAutenticado | null;
   estaAutenticado: boolean;
   estaCargando: boolean;
   iniciarSesion: (payload: SolicitudInicioSesion) => Promise<void>;
   registrar: (payload: SolicitudRegistro) => Promise<void>;
   cerrarSesion: () => void;
-  tieneRol: (rol: Rol) => boolean;
+  tieneRol: (role: Rol) => boolean;
 };
 
 const ContextoAutenticacion = createContext<ValorContextoAutenticacion | null>(null);
@@ -24,25 +24,25 @@ const ContextoAutenticacion = createContext<ValorContextoAutenticacion | null>(n
 const CLAVE_TOKEN = 'xanani_token';
 const CLAVE_USUARIO = 'xanani_usuario';
 
-function leerAutenticacionGuardada(): { token: string | null; usuario: UsuarioAutenticado | null } {
+function leerAutenticacionGuardada(): { token: string | null; user: UsuarioAutenticado | null } {
   const token = localStorage.getItem(CLAVE_TOKEN);
   const usuarioCrudo = localStorage.getItem(CLAVE_USUARIO);
 
   if (!token || !usuarioCrudo) {
-    return { token: null, usuario: null };
+    return { token: null, user: null };
   }
 
   try {
-    const usuario = JSON.parse(usuarioCrudo) as UsuarioAutenticado;
-    return { token, usuario };
+    const user = JSON.parse(usuarioCrudo) as UsuarioAutenticado;
+    return { token, user };
   } catch {
-    return { token: null, usuario: null };
+    return { token: null, user: null };
   }
 }
 
 function guardarAutenticacion(respuesta: RespuestaAutenticacion) {
   localStorage.setItem(CLAVE_TOKEN, respuesta.token);
-  localStorage.setItem(CLAVE_USUARIO, JSON.stringify(respuesta.usuario));
+  localStorage.setItem(CLAVE_USUARIO, JSON.stringify(respuesta.user));
 }
 
 function limpiarAutenticacionGuardada() {
@@ -52,44 +52,44 @@ function limpiarAutenticacionGuardada() {
 
 export function ProveedorAutenticacion({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [usuario, setUsuario] = useState<UsuarioAutenticado | null>(null);
+  const [user, setUsuario] = useState<UsuarioAutenticado | null>(null);
   const [estaCargando, setEstaCargando] = useState(true);
 
   useEffect(() => {
     const almacenada = leerAutenticacionGuardada();
     setToken(almacenada.token);
-    setUsuario(almacenada.usuario);
+    setUsuario(almacenada.user);
     setEstaCargando(false);
   }, []);
 
-  const estaAutenticado = Boolean(token && usuario);
+  const estaAutenticado = Boolean(token && user);
 
   const valor = useMemo<ValorContextoAutenticacion>(
     () => ({
       token,
-      usuario,
+      user,
       estaAutenticado,
       estaCargando,
       iniciarSesion: async (payload) => {
         const respuesta = await apiAutenticacion.iniciarSesion(payload);
         guardarAutenticacion(respuesta);
         setToken(respuesta.token);
-        setUsuario(respuesta.usuario);
+        setUsuario(respuesta.user);
       },
       registrar: async (payload) => {
         const respuesta = await apiAutenticacion.registrar(payload);
         guardarAutenticacion(respuesta);
         setToken(respuesta.token);
-        setUsuario(respuesta.usuario);
+        setUsuario(respuesta.user);
       },
       cerrarSesion: () => {
         limpiarAutenticacionGuardada();
         setToken(null);
         setUsuario(null);
       },
-      tieneRol: (rol) => usuario?.rol === rol
+      tieneRol: (role) => user?.role === role
     }),
-    [token, usuario, estaAutenticado, estaCargando]
+    [token, user, estaAutenticado, estaCargando]
   );
 
   return React.createElement(ContextoAutenticacion.Provider, { value: valor }, children);

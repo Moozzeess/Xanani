@@ -6,8 +6,8 @@ import type { Rol } from '../types/autenticacion';
 
 type TipoFormulario = 'inicio-sesion' | 'registro' | 'recuperacion';
 
-function obtenerRutaPorRol(rol: Rol): string {
-  switch (rol) {
+function obtenerRutaPorRol(role: Rol): string {
+  switch (role) {
     case 'SUPERUSUARIO':
       return '/superusuario';
     case 'ADMINISTRADOR':
@@ -24,46 +24,46 @@ function obtenerRutaPorRol(rol: Rol): string {
 const PaginaInicioSesion = () => {
   const [formularioActivo, setFormularioActivo] = useState<TipoFormulario>('inicio-sesion');
   const navigate = useNavigate();
-  const { iniciarSesion, registrar, estaAutenticado, usuario, estaCargando } = usarAutenticacion();
+  const { iniciarSesion, registrar, estaAutenticado, user, estaCargando } = usarAutenticacion();
 
   useEffect(() => {
     if (estaCargando) return;
-    if (estaAutenticado && usuario) {
-      navigate(obtenerRutaPorRol(usuario.rol), { replace: true });
+    if (estaAutenticado && user) {
+      navigate(obtenerRutaPorRol(user.role), { replace: true });
     }
-  }, [estaAutenticado, usuario, estaCargando, navigate]);
+  }, [estaAutenticado, user, estaCargando, navigate]);
 
-  const [nombreUsuarioOCorreo, setNombreUsuarioOCorreo] = useState('');
-  const [contrasena, setContrasena] = useState('');
+  const [usernameOCorreo, setNombreUsuarioOCorreo] = useState('');
+  const [password, setContrasena] = useState('');
 
   const [correoRegistro, setCorreoRegistro] = useState('');
-  const [nombreUsuarioRegistro, setNombreUsuarioRegistro] = useState('');
-  const [contrasenaRegistro, setContrasenaRegistro] = useState('');
+  const [usernameRegistro, setNombreUsuarioRegistro] = useState('');
+  const [passwordRegistro, setContrasenaRegistro] = useState('');
   const [confirmacionContrasenaRegistro, setConfirmacionContrasenaRegistro] = useState('');
 
   const [enviando, setEnviando] = useState(false);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
 
   const puedeEnviarInicioSesion = useMemo(() => {
-    return nombreUsuarioOCorreo.trim().length > 0 && contrasena.length > 0;
-  }, [nombreUsuarioOCorreo, contrasena]);
+    return usernameOCorreo.trim().length > 0 && password.length > 0;
+  }, [usernameOCorreo, password]);
 
   const puedeEnviarRegistro = useMemo(() => {
     return (
       correoRegistro.trim().length > 0 &&
-      nombreUsuarioRegistro.trim().length > 0 &&
-      contrasenaRegistro.length > 0 &&
+      usernameRegistro.trim().length > 0 &&
+      passwordRegistro.length > 0 &&
       confirmacionContrasenaRegistro.length > 0
     );
-  }, [correoRegistro, nombreUsuarioRegistro, contrasenaRegistro, confirmacionContrasenaRegistro]);
+  }, [correoRegistro, usernameRegistro, passwordRegistro, confirmacionContrasenaRegistro]);
 
   const alEnviarInicioSesion = async () => {
     try {
       setEnviando(true);
       setMensajeError(null);
       await iniciarSesion({
-        nombreUsuarioOCorreo: nombreUsuarioOCorreo.trim(),
-        contrasena
+        usernameOCorreo: usernameOCorreo.trim(),
+        password
       });
       navigate('/', { replace: true });
     } catch (e) {
@@ -79,15 +79,15 @@ const PaginaInicioSesion = () => {
       setEnviando(true);
       setMensajeError(null);
 
-      if (contrasenaRegistro !== confirmacionContrasenaRegistro) {
+      if (passwordRegistro !== confirmacionContrasenaRegistro) {
         setMensajeError('Las contraseñas no coinciden.');
         return;
       }
 
       await registrar({
-        correoElectronico: correoRegistro.trim(),
-        nombreUsuario: nombreUsuarioRegistro.trim(),
-        contrasena: contrasenaRegistro
+        email: correoRegistro.trim(),
+        username: usernameRegistro.trim(),
+        password: passwordRegistro
       });
 
       navigate('/', { replace: true });
@@ -124,14 +124,14 @@ const PaginaInicioSesion = () => {
                 className="input-style"
                 placeholder="Usuario o correo electrónico"
                 type="text"
-                value={nombreUsuarioOCorreo}
+                value={usernameOCorreo}
                 onChange={(e) => setNombreUsuarioOCorreo(e.target.value)}
               />
               <input
                 className="input-style"
                 placeholder="Contraseña"
                 type="password"
-                value={contrasena}
+                value={password}
                 onChange={(e) => setContrasena(e.target.value)}
               />
               <button
@@ -163,16 +163,16 @@ const PaginaInicioSesion = () => {
               />
               <input
                 className="input-style"
-                placeholder="Nombre de usuario"
+                placeholder="Nombre de user"
                 type="text"
-                value={nombreUsuarioRegistro}
+                value={usernameRegistro}
                 onChange={(e) => setNombreUsuarioRegistro(e.target.value)}
               />
               <input
                 className="input-style"
                 placeholder="Contraseña"
                 type="password"
-                value={contrasenaRegistro}
+                value={passwordRegistro}
                 onChange={(e) => setContrasenaRegistro(e.target.value)}
               />
               <input

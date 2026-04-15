@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Usuario, ROLES_USUARIO } = require('../models/Usuario');
+const { Usuario, ROLES_USUARIO } = require('../models/User');
 
 /**
  * Alta de usuarios (solo roles privilegiados).
@@ -9,52 +9,52 @@ const { Usuario, ROLES_USUARIO } = require('../models/Usuario');
  */
 async function createUser(req, res) {
   try {
-    const { nombreUsuario, correoElectronico, contrasena, rol } = req.body;
+    const { username, email, password, role } = req.body;
 
-    if (!nombreUsuario || !correoElectronico || !contrasena || !rol) {
+    if (!username || !email || !password || !role) {
       return res.status(400).json({
-        mensaje: 'nombreUsuario, correoElectronico, contrasena y rol son requeridos.'
+        mensaje: 'username, email, password y role son requeridos.'
       });
     }
 
-    const rolActor = req.user?.rol;
+    const roleActor = req.user?.role;
 
-    if (rolActor === ROLES_USUARIO.ADMINISTRADOR && rol !== ROLES_USUARIO.CONDUCTOR) {
+    if (roleActor === ROLES_USUARIO.ADMINISTRADOR && role !== ROLES_USUARIO.CONDUCTOR) {
       return res.status(403).json({
         mensaje: 'ADMINISTRADOR solo puede dar de alta CONDUCTOR.'
       });
     }
 
-    if (rolActor !== ROLES_USUARIO.SUPERUSUARIO && rolActor !== ROLES_USUARIO.ADMINISTRADOR) {
+    if (roleActor !== ROLES_USUARIO.SUPERUSUARIO && roleActor !== ROLES_USUARIO.ADMINISTRADOR) {
       return res.status(403).json({ mensaje: 'No tienes permisos para esta acción.' });
     }
 
     const existente = await Usuario.findOne({
       $or: [
-        { nombreUsuario },
-        { correoElectronico: correoElectronico.toLowerCase() }
+        { username },
+        { email: email.toLowerCase() }
       ]
     });
 
     if (existente) {
-      return res.status(409).json({ mensaje: 'El usuario o correo ya existe.' });
+      return res.status(409).json({ mensaje: 'El user o correo ya existe.' });
     }
 
-    const hashContrasena = await bcrypt.hash(contrasena, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    const usuario = await Usuario.create({
-      nombreUsuario,
-      correoElectronico: correoElectronico.toLowerCase(),
-      hashContrasena,
-      rol
+    const user = await Usuario.create({
+      username,
+      email: email.toLowerCase(),
+      passwordHash,
+      role
     });
 
     return res.status(201).json({
-      usuario: {
-        id: usuario._id.toString(),
-        nombreUsuario: usuario.nombreUsuario,
-        correoElectronico: usuario.correoElectronico,
-        rol: usuario.rol
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
@@ -63,24 +63,24 @@ async function createUser(req, res) {
 }
 
 /**
- * Actualizar el rol de un usuario existente.
+ * Actualizar el role de un user existente.
  */
 async function updateUserRole(req, res) {
   try {
     const { id } = req.params;
-    const { rol } = req.body;
+    const { role } = req.body;
 
-    if (!rol) {
-      return res.status(400).json({ mensaje: 'El campo "rol" es requerido.' });
+    if (!role) {
+      return res.status(400).json({ mensaje: 'El campo "role" es requerido.' });
     }
 
-    if (!Object.values(ROLES_USUARIO).includes(rol)) {
-      return res.status(400).json({ mensaje: 'El rol propuesto es inválido.' });
+    if (!Object.values(USER_ROLES).includes(role)) {
+      return res.status(400).json({ mensaje: 'El role propuesto es inválido.' });
     }
 
-    const rolActor = req.user?.rol;
+    const roleActor = req.user?.role;
 
-    if (rolActor === ROLES_USUARIO.ADMINISTRADOR && rol !== ROLES_USUARIO.CONDUCTOR) {
+    if (roleActor === ROLES_USUARIO.ADMINISTRADOR && role !== ROLES_USUARIO.CONDUCTOR) {
       return res.status(403).json({
         mensaje: 'ADMINISTRADOR solo puede ascender a CONDUCTOR.'
       });
@@ -88,21 +88,21 @@ async function updateUserRole(req, res) {
 
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
       id,
-      { rol },
+      { role },
       { new: true } // Devuelve el nuevo documento actualizado
     );
 
     if (!usuarioActualizado) {
-      return res.status(404).json({ mensaje: 'Cuenta de usuario no encontrada en el sistema.' });
+      return res.status(404).json({ mensaje: 'Cuenta de user no encontrada en el sistema.' });
     }
 
     return res.status(200).json({
-      mensaje: 'Rol de usuario actualizado con éxito',
-      usuario: {
+      mensaje: 'Rol de user actualizado con éxito',
+      user: {
         id: usuarioActualizado._id.toString(),
-        nombreUsuario: usuarioActualizado.nombreUsuario,
-        correoElectronico: usuarioActualizado.correoElectronico,
-        rol: usuarioActualizado.rol
+        username: usuarioActualizado.username,
+        email: usuarioActualizado.email,
+        role: usuarioActualizado.role
       }
     });
 

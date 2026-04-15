@@ -10,7 +10,7 @@ const unidadSchema = new mongoose.Schema(
 
     conductor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Usuario'
+      ref: 'User'
     },
 
     ruta: {

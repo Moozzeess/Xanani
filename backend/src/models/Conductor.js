@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const conductorSchema = new mongoose.Schema(
   {
-    usuarioId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Usuario',
+      ref: 'User',
       required: true,
       unique: true
     },

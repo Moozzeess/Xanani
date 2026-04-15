@@ -6,12 +6,12 @@ import '../../styles/inicio-sesion.css';
 
 const PaginaSuperusuario = () => {
   const navigate = useNavigate();
-  const { cerrarSesion, token, usuario } = usarAutenticacion();
+  const { cerrarSesion, token, user } = usarAutenticacion();
 
   const [formulario, setFormulario] = useState({
-    nombreUsuario: '',
-    correoElectronico: '',
-    contrasena: '',
+    username: '',
+    email: '',
+    password: '',
     numeroLicencia: ''
   });
   
@@ -39,7 +39,7 @@ const PaginaSuperusuario = () => {
     try {
       await crearConductor(formulario, token);
       setMensaje('¡Conductor registrado correctamente!');
-      setFormulario({ nombreUsuario: '', correoElectronico: '', contrasena: '', numeroLicencia: '' });
+      setFormulario({ username: '', email: '', password: '', numeroLicencia: '' });
     } catch (err) {
        setError(err.message);
     } finally {
@@ -58,7 +58,7 @@ const PaginaSuperusuario = () => {
         </div>
         <h1 className="auth-title">Panel de Superusuario</h1>
         <p className="auth-subtitle">
-          Sesión de <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>{usuario?.nombreUsuario}</span>
+          Sesión de <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>{user?.username}</span>
         </p>
 
         <div className="form-wrapper">
@@ -79,11 +79,11 @@ const PaginaSuperusuario = () => {
             
             <input 
               className="input-style"
-              placeholder="Nombre de usuario del chofer"
+              placeholder="Nombre de user del chofer"
               type="text"
               required
-              value={formulario.nombreUsuario} 
-              onChange={(e) => setFormulario({...formulario, nombreUsuario: e.target.value})} 
+              value={formulario.username} 
+              onChange={(e) => setFormulario({...formulario, username: e.target.value})} 
             />
 
             <input 
@@ -91,8 +91,8 @@ const PaginaSuperusuario = () => {
               placeholder="Correo electrónico"
               type="email"
               required
-              value={formulario.correoElectronico} 
-              onChange={(e) => setFormulario({...formulario, correoElectronico: e.target.value})} 
+              value={formulario.email} 
+              onChange={(e) => setFormulario({...formulario, email: e.target.value})} 
             />
 
             <input 
@@ -100,8 +100,8 @@ const PaginaSuperusuario = () => {
               placeholder="Contraseña inicial"
               type="password"
               required
-              value={formulario.contrasena} 
-              onChange={(e) => setFormulario({...formulario, contrasena: e.target.value})} 
+              value={formulario.password} 
+              onChange={(e) => setFormulario({...formulario, password: e.target.value})} 
             />
 
             <input 

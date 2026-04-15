@@ -26,15 +26,16 @@ function obtenerRutaPorRol(rol: Rol): string {
 }
 
 function RutaInicio() {
-  const { estaAutenticado, estaCargando, usuario } = usarAutenticacion();
+  // IMPORTANTE: usarAutenticacion() devuelve 'user' (inglés), no 'usuario'
+  const { estaAutenticado, estaCargando, user } = usarAutenticacion();
 
   if (estaCargando) return null;
 
-  if (!estaAutenticado || !usuario) {
+  if (!estaAutenticado || !user) {
     return <PaginaInicioInvitado />;
   }
 
-  return <Navigate to={obtenerRutaPorRol(usuario.rol)} replace />;
+  return <Navigate to={obtenerRutaPorRol(user.role)} replace />;
 }
 
 function App() {

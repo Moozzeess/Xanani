@@ -6,7 +6,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 // Middleware de autorizacion
 const authorizeRoles = require('../middlewares/roleAuth.middleware');
-const { ROLES_USUARIO } = require('../models/Usuario');
+const { ROLES_USUARIO } = require('../models/User');
 
 router.post(
     '/',

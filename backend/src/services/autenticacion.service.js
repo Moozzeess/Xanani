@@ -1,79 +1,76 @@
 const bcrypt = require('bcryptjs');
-const { Usuario, ROLES_USUARIO } = require('../models/Usuario');
+const { Usuario, ROLES_USUARIO } = require('../models/User');
 const { firmarTokenAcceso } = require('../utils/jwt');
 
 /**
- * Crea un usuario con rol PASAJERO por defecto (registro público).
+ * Registro público. El primer usuario del sistema se convierte en SUPERUSUARIO.
  */
-async function registrar({ nombreUsuario, correoElectronico, contrasena }) {
-  const cantidadUsuarios = await Usuario.countDocuments();
+async function registrar({ username, email, password }) {
+  const total = await Usuario.countDocuments();
 
   const existente = await Usuario.findOne({
     $or: [
-      { nombreUsuario },
-      { correoElectronico: correoElectronico.toLowerCase() }
+      { nombreUsuario: username },
+      { correoElectronico: email.toLowerCase() }
     ]
   });
 
   if (existente) {
-    const campo = existente.nombreUsuario === nombreUsuario ? 'nombreUsuario' : 'correoElectronico';
-    const mensaje =
-      campo === 'nombreUsuario'
+    const error = new Error(
+      existente.nombreUsuario === username
         ? 'El nombre de usuario ya existe.'
-        : 'El correo electrónico ya existe.';
-    const error = new Error(mensaje);
+        : 'El correo electrónico ya existe.'
+    );
     error.statusCode = 409;
     throw error;
   }
 
-  const hashContrasena = await bcrypt.hash(contrasena, 10);
+  const hashContrasena = await bcrypt.hash(password, 10);
+  const rol = total === 0 ? ROLES_USUARIO.SUPERUSUARIO : ROLES_USUARIO.PASAJERO;
 
-  const usuario = await Usuario.create({
-    nombreUsuario,
-    correoElectronico: correoElectronico.toLowerCase(),
+  const user = await Usuario.create({
+    nombreUsuario: username,
+    correoElectronico: email.toLowerCase(),
     hashContrasena,
-    rol: cantidadUsuarios === 0 ? ROLES_USUARIO.SUPERUSUARIO : ROLES_USUARIO.PASAJERO
+    rol
   });
 
   const token = firmarTokenAcceso({
-    id: usuario._id.toString(),
-    rol: usuario.rol,
-    nombreUsuario: usuario.nombreUsuario,
-    correoElectronico: usuario.correoElectronico
+    id: user._id.toString(),
+    rol: user.rol,
+    nombreUsuario: user.nombreUsuario,
+    correoElectronico: user.correoElectronico
   });
 
   return {
     token,
-    usuario: {
-      id: usuario._id.toString(),
-      nombreUsuario: usuario.nombreUsuario,
-      correoElectronico: usuario.correoElectronico,
-      rol: usuario.rol
+    user: {
+      id: user._id.toString(),
+      username: user.nombreUsuario,
+      email: user.correoElectronico,
+      role: user.rol        // <-- inglés para el frontend React
     }
   };
 }
 
 /**
- * Inicio de sesión por nombre de usuario o correo electrónico.
+ * Inicio de sesión con nombre de usuario o correo.
  */
-async function iniciarSesion({ nombreUsuarioOCorreo, contrasena }) {
-  const consulta = {
+async function iniciarSesion({ usernameOCorreo, password }) {
+  const user = await Usuario.findOne({
     $or: [
-      { nombreUsuario: nombreUsuarioOCorreo },
-      { correoElectronico: nombreUsuarioOCorreo.toLowerCase() }
+      { nombreUsuario: usernameOCorreo },
+      { correoElectronico: usernameOCorreo.toLowerCase() }
     ]
-  };
+  });
 
-  const usuario = await Usuario.findOne(consulta);
-
-  if (!usuario || !usuario.estaActivo) {
+  if (!user || !user.estaActivo) {
     const error = new Error('Credenciales inválidas.');
     error.statusCode = 401;
     throw error;
   }
 
-  const esValida = await bcrypt.compare(contrasena, usuario.hashContrasena);
-
+  const esValida = await bcrypt.compare(password, user.hashContrasena);
   if (!esValida) {
     const error = new Error('Credenciales inválidas.');
     error.statusCode = 401;
@@ -81,65 +78,55 @@ async function iniciarSesion({ nombreUsuarioOCorreo, contrasena }) {
   }
 
   const token = firmarTokenAcceso({
-    id: usuario._id.toString(),
-    rol: usuario.rol,
-    nombreUsuario: usuario.nombreUsuario,
-    correoElectronico: usuario.correoElectronico
+    id: user._id.toString(),
+    rol: user.rol,
+    nombreUsuario: user.nombreUsuario,
+    correoElectronico: user.correoElectronico
   });
 
   return {
     token,
-    usuario: {
-      id: usuario._id.toString(),
-      nombreUsuario: usuario.nombreUsuario,
-      correoElectronico: usuario.correoElectronico,
-      rol: usuario.rol
+    user: {
+      id: user._id.toString(),
+      username: user.nombreUsuario,
+      email: user.correoElectronico,
+      role: user.rol        // <-- inglés para el frontend React
     }
   };
 }
 
 /**
- * Crea una cuenta de forma interna (ideal para que un admin/superusuario asigne cuentas)
- * No genera Token de sesión ya que el creador ya está en sesión segura.
+ * Crear cuenta interna (sin token de sesión).
  */
-async function registrarCuentaInterna({ nombreUsuario, correoElectronico, contrasena, rolAsignado }) {
+async function registrarCuentaInterna({ username, email, password, roleAsignado }) {
   const existente = await Usuario.findOne({
     $or: [
-      { nombreUsuario },
-      { correoElectronico: correoElectronico.toLowerCase() }
+      { nombreUsuario: username },
+      { correoElectronico: email.toLowerCase() }
     ]
   });
 
   if (existente) {
-    const campo = existente.nombreUsuario === nombreUsuario ? 'nombreUsuario' : 'correoElectronico';
-    const mensaje =
-      campo === 'nombreUsuario'
-        ? 'El nombre de usuario ya existe.'
-        : 'El correo electrónico ya existe.';
-    const error = new Error(mensaje);
+    const error = new Error('El usuario o correo ya existe.');
     error.statusCode = 409;
     throw error;
   }
 
-  const hashContrasena = await bcrypt.hash(contrasena, 10);
+  const hashContrasena = await bcrypt.hash(password, 10);
 
-  const usuario = await Usuario.create({
-    nombreUsuario,
-    correoElectronico: correoElectronico.toLowerCase(),
+  const user = await Usuario.create({
+    nombreUsuario: username,
+    correoElectronico: email.toLowerCase(),
     hashContrasena,
-    rol: rolAsignado
+    rol: roleAsignado
   });
 
   return {
-    id: usuario._id.toString(),
-    nombreUsuario: usuario.nombreUsuario,
-    correoElectronico: usuario.correoElectronico,
-    rol: usuario.rol
+    id: user._id.toString(),
+    username: user.nombreUsuario,
+    email: user.correoElectronico,
+    role: user.rol
   };
 }
 
-module.exports = {
-  registrar,
-  iniciarSesion,
-  registrarCuentaInterna
-};
+module.exports = { registrar, iniciarSesion, registrarCuentaInterna };

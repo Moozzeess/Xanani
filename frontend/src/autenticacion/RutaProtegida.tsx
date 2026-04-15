@@ -13,15 +13,16 @@ export default function RutaProtegida({
   rolesPermitidos
 }: PropiedadesRutaProtegida) {
   const ubicacion = useLocation();
-  const { estaAutenticado, estaCargando, usuario } = usarAutenticacion();
+  // IMPORTANTE: usarAutenticacion() devuelve 'user' (inglés), no 'usuario'
+  const { estaAutenticado, estaCargando, user } = usarAutenticacion();
 
   if (estaCargando) return null;
 
-  if (!estaAutenticado || !usuario) {
+  if (!estaAutenticado || !user) {
     return <Navigate to="/iniciar-sesion" replace state={{ from: ubicacion.pathname }} />;
   }
 
-  if (rolesPermitidos && !rolesPermitidos.includes(usuario.rol)) {
+  if (rolesPermitidos && !rolesPermitidos.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 
