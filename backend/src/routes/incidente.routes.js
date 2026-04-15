@@ -6,7 +6,7 @@
  */
 const express = require('express');
 const router = express.Router();
-const incidenteController = require('../controllers/incidente.controller');
+const incidenteController = require('../controllers/incidencia.controller');
 
 // Endpoints para conductores
 router.post('/sos', incidenteController.crearSOS);

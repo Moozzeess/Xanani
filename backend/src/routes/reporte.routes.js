@@ -9,6 +9,9 @@ router.post('/', requireAuth, reporteController.crearReporte);
 router.get('/', requireAuth, reporteController.obtenerReportes);
 
 /** Obtener reportes propios del usuario autenticado */
-router.get('/mios', requireAuth, reporteController.misReportes);
+router.get('/usuario', requireAuth, reporteController.misReportes);
+
+/** Actualizar estado de un reporte (administrativo) */
+router.patch('/:id', requireAuth, reporteController.actualizarEstadoReporte);
 
 module.exports = router;

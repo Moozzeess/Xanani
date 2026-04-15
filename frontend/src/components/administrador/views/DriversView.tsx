@@ -15,7 +15,10 @@ interface Conductor {
   telefono: string;
   correo: string;
   rol: string;
+  fechaNacimiento: string;
   edad: number | '';
+  ruta: string;
+  rutaAsignadaId: string;
   estado: string;
   rating: number;
   iniciales: string;
@@ -45,8 +48,11 @@ const DriversView: React.FC = () => {
     unidad: '',
     telefono: '',
     correo: '',
-    edad: '' as number | ''
+    fechaNacimiento: '',
+    rutaAsignadaId: ''
   });
+
+  const [rutasDisponibles, setRutasDisponibles] = useState<any[]>([]);
 
   // Mock de viajes recientes según requerimiento (hasta que se conecte API)
   const [viajesRecientes] = useState([
@@ -54,7 +60,7 @@ const DriversView: React.FC = () => {
     { id: 'v2', unidad: 'MX7-001', estado: 'Cancelado', horaInicio: 'Hoy, 08:15 AM', duracion: '--', stamp: 2 },
     { id: 'v3', unidad: 'MX7-992', estado: 'En ruta', horaInicio: 'Hoy, 10:45 AM', duracion: '45m', stamp: 0 }
   ]);
-  
+
   // Ordenado por el más reciente (stamp 0 es el último)
   const viajesOrdenados = [...viajesRecientes].sort((a, b) => a.stamp - b.stamp);
 
@@ -70,16 +76,18 @@ const DriversView: React.FC = () => {
   };
 
   React.useEffect(() => {
-    const fetchConductores = async () => {
+    const fetchDatos = async () => {
       try {
         if (!token) return;
-        const res = await api.get('/users/conductores', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
+
+        const [resCond, resRutas] = await Promise.all([
+          api.get('/conductores', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/rutas', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+
         // Mapear los usuarios del backend a la interfaz Conductor del frontend
-        const conductoresMapeados = res.data.data.conductores.map((cData: any) => ({
-          id: cData.user?._id || cData._id,
+        const conductoresMapeados = resCond.data.data.conductores.map((cData: any) => ({
+          id: cData._id,
           nombre: cData.user?.username || cData.username || 'Sin Nombre',
           apPaterno: '',
           apMaterno: '',
@@ -88,25 +96,29 @@ const DriversView: React.FC = () => {
           telefono: cData.telefono || 'Pendiente',
           correo: cData.user?.email || cData.email || '',
           rol: cData.user?.role || cData.role || 'CONDUCTOR',
+          fechaNacimiento: cData.fechaNacimiento ? cData.fechaNacimiento.split('T')[0] : '',
           edad: cData.edad || '',
+          ruta: cData.rutaAsignadaId?.nombre || cData.ruta || 'Sin ruta',
+          rutaAsignadaId: cData.rutaAsignadaId?._id || '',
           estado: (cData.user?.isActive ?? cData.isActive) ? 'Activo' : 'Inactivo',
           rating: calcularRating(),
           iniciales: obtenerIniciales(cData.user?.username || cData.username)
         }));
 
         setConductores(conductoresMapeados);
+        setRutasDisponibles(resRutas.data || []);
       } catch (error) {
-        console.error('Error al obtener conductores', error);
-        alerta.dispararError('Error de carga', 'No se pudo obtener la lista de conductores desde el servidor.');
+        console.error('Error al obtener datos', error);
+        alerta.dispararError('Error de carga', 'No se pudo sincronizar la información del servidor.');
       } finally {
         setCargando(false);
       }
     };
 
-    fetchConductores();
+    fetchDatos();
   }, [token]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({
       ...form,
       [e.target.name]: e.target.value
@@ -115,7 +127,7 @@ const DriversView: React.FC = () => {
 
   const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nombre.trim() || !form.unidad.trim() || !form.licencia.trim() || !form.telefono.trim() || !form.correo.trim() || form.edad === '') {
+    if (!form.nombre.trim() || !form.unidad.trim() || !form.licencia.trim() || !form.telefono.trim() || !form.correo.trim() || !form.fechaNacimiento) {
       alerta.dispararError('Campos incompletos', 'Asegúrese de llenar todos los campos obligatorios del formulario.', 'Validación fallida');
       return;
     }
@@ -132,31 +144,35 @@ const DriversView: React.FC = () => {
           email: form.correo,
           telefono: form.telefono,
           licencia: form.licencia,
-          unidad: form.unidad,
-          edad: Number(form.edad)
+          unidad: form.unidad.toUpperCase(),
+          fechaNacimiento: form.fechaNacimiento,
+          rutaAsignadaId: form.rutaAsignadaId || null
         };
 
-        const res = await api.put(`/users/${conductorEditando}`, payload, {
+        const res = await api.put(`/conductores/${conductorEditando}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const actualizado = res.data.data;
+        const actualizado = res.data.data.conductor;
         const index = conductores.findIndex(c => c.id === conductorEditando);
         if (index !== -1) {
           const nuevos = [...conductores];
           nuevos[index] = {
             ...nuevos[index],
-            nombre: actualizado.user.username,
-            correo: actualizado.user.email,
-            telefono: actualizado.conductor.telefono,
-            licencia: actualizado.conductor.licencia,
-            unidad: actualizado.conductor.unidad,
-            edad: actualizado.conductor.edad,
-            iniciales: obtenerIniciales(actualizado.user.username)
+            nombre: actualizado.user?.username || nombreBase,
+            correo: actualizado.user?.email || form.correo,
+            telefono: actualizado.telefono,
+            licencia: actualizado.licencia,
+            unidad: actualizado.unidad,
+            fechaNacimiento: actualizado.fechaNacimiento ? actualizado.fechaNacimiento.split('T')[0] : '',
+            edad: actualizado.edad,
+            ruta: rutasDisponibles.find(r => r._id === actualizado.rutaAsignadaId)?.nombre || 'Sin ruta',
+            rutaAsignadaId: actualizado.rutaAsignadaId,
+            iniciales: obtenerIniciales(actualizado.user?.username || nombreBase)
           };
           setConductores(nuevos);
         }
-        
+
         cerrarModal();
         alerta.disparar({
           tipo: 'exito',
@@ -164,7 +180,7 @@ const DriversView: React.FC = () => {
           mensaje: `Los datos del conductor han sido actualizados.`
         });
       } else {
-        // Modo Creación: Contraseña = NombreUnidad* (sin espacios)
+        // Modo Creación
         const pureName = form.nombre.replace(/\s+/g, '');
         const pureUnit = form.unidad.replace(/\s+/g, '');
         const defaultPassword = `${pureName}${pureUnit}*`;
@@ -172,34 +188,38 @@ const DriversView: React.FC = () => {
         const payload = {
           username: nombreBase,
           email: form.correo,
-          password: defaultPassword, 
-          role: 'CONDUCTOR',
+          password: defaultPassword,
           telefono: form.telefono,
           licencia: form.licencia,
-          unidad: form.unidad,
-          edad: Number(form.edad)
+          unidad: form.unidad.toUpperCase(),
+          fechaNacimiento: form.fechaNacimiento,
+          rutaAsignadaId: form.rutaAsignadaId || null
         };
 
-        const res = await api.post('/users', payload, {
+        const res = await api.post('/conductores', payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const nuevoConductorBase = res.data.user;
+        const nuevoConductorBase = res.data.data.conductor;
+        const userBase = res.data.data.user;
 
         const nuevoConductor: Conductor = {
-          id: nuevoConductorBase.id,
-          nombre: nuevoConductorBase.username,
+          id: nuevoConductorBase._id,
+          nombre: userBase.username,
           apPaterno: '',
           apMaterno: '',
-          licencia: form.licencia,
-          unidad: form.unidad,
-          telefono: form.telefono,
-          correo: nuevoConductorBase.email,
-          rol: nuevoConductorBase.role,
-          edad: Number(form.edad),
+          licencia: nuevoConductorBase.licencia,
+          unidad: nuevoConductorBase.unidad,
+          telefono: nuevoConductorBase.telefono,
+          correo: userBase.email,
+          rol: userBase.role,
+          fechaNacimiento: nuevoConductorBase.fechaNacimiento ? nuevoConductorBase.fechaNacimiento.split('T')[0] : '',
+          edad: res.data.data.edad || '', // Podría no venir calculado en el create directo
+          ruta: rutasDisponibles.find(r => r._id === nuevoConductorBase.rutaAsignadaId)?.nombre || 'Sin ruta',
+          rutaAsignadaId: nuevoConductorBase.rutaAsignadaId || '',
           estado: 'Activo',
           rating: calcularRating(),
-          iniciales: obtenerIniciales(nombreBase)
+          iniciales: obtenerIniciales(userBase.username)
         };
 
         setConductores([nuevoConductor, ...conductores]);
@@ -232,7 +252,8 @@ const DriversView: React.FC = () => {
       unidad: conductor.unidad,
       telefono: conductor.telefono,
       correo: conductor.correo,
-      edad: conductor.edad
+      fechaNacimiento: conductor.fechaNacimiento,
+      rutaAsignadaId: conductor.rutaAsignadaId
     });
     setConductorEditando(conductor.id);
     setMostrarFormulario(true);
@@ -243,7 +264,8 @@ const DriversView: React.FC = () => {
     setConductorEditando(null);
     setForm({
       nombre: '', apPaterno: '', apMaterno: '', licencia: '',
-      unidad: '', telefono: '', correo: '', edad: ''
+      unidad: '', telefono: '', correo: '', fechaNacimiento: '',
+      rutaAsignadaId: ''
     });
   };
 
@@ -275,17 +297,17 @@ const DriversView: React.FC = () => {
     .sort((a, b) => {
       let valorA = a[ordenCriterio];
       let valorB = b[ordenCriterio];
-      
+
       if (typeof valorA === 'string' && typeof valorB === 'string') {
-        return ordenDireccion === 'asc' 
+        return ordenDireccion === 'asc'
           ? valorA.localeCompare(valorB)
           : valorB.localeCompare(valorA);
       }
-      
+
       if (typeof valorA === 'number' && typeof valorB === 'number') {
         return ordenDireccion === 'asc' ? valorA - valorB : valorB - valorA;
       }
-      
+
       return 0;
     });
 
@@ -337,7 +359,9 @@ const DriversView: React.FC = () => {
                 <th className="px-6 py-4 cursor-pointer hover:bg-slate-50 transition-colors select-none" onClick={() => alternarOrden('unidad')}>
                   <div className="flex items-center gap-2">Unidad <ArrowUpDown className={`w-3 h-3 ${ordenCriterio === 'unidad' ? 'text-blue-600' : 'text-slate-400'}`} /></div>
                 </th>
+                <th className="px-6 py-4">Ruta Asignada</th>
                 <th className="px-6 py-4">Estado</th>
+
                 <th className="px-6 py-4 cursor-pointer hover:bg-slate-50 transition-colors select-none" onClick={() => alternarOrden('rating')}>
                   <div className="flex items-center gap-2">Rating <ArrowUpDown className={`w-3 h-3 ${ordenCriterio === 'rating' ? 'text-blue-600' : 'text-slate-400'}`} /></div>
                 </th>
@@ -380,6 +404,13 @@ const DriversView: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 font-mono select-all">{conductor.unidad}</td>
                     <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-slate-700 font-medium">
+                        <ArrowRight className="w-3.5 h-3.5 text-blue-500" />
+                        {conductor.ruta}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse"></span>
                         {conductor.estado}
@@ -409,7 +440,7 @@ const DriversView: React.FC = () => {
               )}
             </tbody>
           </table>
-          
+
           {/* Controles de Paginación */}
           {!cargando && conductoresFiltradosYRondeados.length > 0 && (
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
@@ -477,11 +508,10 @@ const DriversView: React.FC = () => {
                   <tr key={viaje.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 font-medium">{viaje.unidad}</td>
                     <td className="px-6 py-4">
-                      <span className={`font-bold ${
-                        viaje.estado === 'Completado' ? 'text-green-600' :
+                      <span className={`font-bold ${viaje.estado === 'Completado' ? 'text-green-600' :
                         viaje.estado === 'Cancelado' ? 'text-slate-400' :
-                        'text-blue-500 animate-pulse'
-                      }`}>
+                          'text-blue-500 animate-pulse'
+                        }`}>
                         {viaje.estado}
                       </span>
                     </td>
@@ -544,12 +574,13 @@ const DriversView: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Edad *</label>
-                      <input type="number" name="edad" value={form.edad} onChange={handleChange} required min="18" max="99"
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Fecha Nacimiento *</label>
+                      <input type="date" name="fechaNacimiento" value={form.fechaNacimiento} onChange={handleChange} required
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
                     </div>
                   </div>
                 </div>
+
 
                 <div className="space-y-4">
                   <h5 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-2 flex items-center gap-2">
@@ -572,12 +603,24 @@ const DriversView: React.FC = () => {
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unidad Asignada *</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unidad Asignada * (Placa)</label>
                       <input type="text" name="unidad" value={form.unidad} onChange={handleChange} required placeholder="Ej. MX7-105"
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono uppercase" />
                     </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Asignar Ruta *</label>
+                      <select name="rutaAsignadaId" value={form.rutaAsignadaId} onChange={handleChange} required
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all bg-white"
+                      >
+                        <option value="">-- Seleccionar Ruta --</option>
+                        {rutasDisponibles.map(r => (
+                          <option key={r._id} value={r._id}>{r.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
+
 
               </form>
             </div>

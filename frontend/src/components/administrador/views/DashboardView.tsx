@@ -1,11 +1,42 @@
-import React from 'react';
-import { Activity, AlertOctagon, Bus, Users, Zap, Wrench, Cone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Activity, AlertOctagon, Bus, Users, Zap, Wrench, Cone, Send } from 'lucide-react';
+import { useSocket } from '../../../hooks/useSocket';
 
 export interface DashboardViewProps {
   onGoToIncidents: () => void;
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
+  const { socket } = useSocket();
+  const [avisoTexto, setAvisoTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [alertasRecientes, setAlertasRecientes] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleIncidencia = (incidencia: any) => {
+      setAlertasRecientes(prev => [incidencia, ...prev].slice(0, 5)); // Mostrar sólo últimas 5
+    };
+    socket.on('reporte_incidencia', handleIncidencia);
+    return () => {
+      socket.off('reporte_incidencia', handleIncidencia);
+    };
+  }, [socket]);
+
+  const enviarAvisoGlobal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!avisoTexto.trim() || !socket) return;
+    setEnviando(true);
+    socket.emit('aviso_conductor', {
+      mensaje: avisoTexto,
+      severidad: 'warning' // o info dependiendo
+    });
+    setTimeout(() => {
+      setAvisoTexto('');
+      setEnviando(false);
+    }, 500);
+  };
+
   return (
     <div id="view-dashboard" className="space-y-6 fade-in">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -115,37 +146,57 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[300px]">
-            <div className="flex gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group">
-              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5" />
+            {alertasRecientes.length > 0 ? (
+              alertasRecientes.map((alerta, idx) => {
+                const isSOS = alerta.tipo === 'SOS';
+                const isMech = alerta.tipo === 'FALLA_MECANICA';
+                return (
+                  <div key={idx} className="flex gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group fade-in">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isSOS ? 'bg-red-100 text-red-600' : isMech ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                      {isSOS ? <Zap className="w-5 h-5" /> : isMech ? <Wrench className="w-5 h-5" /> : <Cone className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">{alerta.tipo}: Unidad {alerta.unidadId || 'Desconocida'}</p>
+                      <p className="text-xs text-slate-500">Recién Recibido • Pendiente</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-wider block mb-2">Sin Alertas Críticas</span>
+                <span className="text-sm">El sistema está operando con normalidad</span>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">SOS Activo: Unidad 814</p>
-                <p className="text-xs text-slate-500">Hace 2 min • Ruta Centro</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group">
-              <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-                <Wrench className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Falla Mecánica: Unidad 992</p>
-                <p className="text-xs text-slate-500">Hace 15 min • Taller Central</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group">
-              <div className="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
-                <Cone className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Tráfico Pesado: Av. Sur</p>
-                <p className="text-xs text-slate-500">Hace 40 min • Reporte Automático</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* --- NUEVA CAPA: ENVIAR AVISO --- */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 w-full mt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex-1">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <Send className="w-5 h-5 text-blue-500" />
+            Emisión de Aviso a Flotilla
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">Envía una notificación que aparecerá en las pantallas de todos los conductores activos.</p>
+        </div>
+        <form onSubmit={enviarAvisoGlobal} className="w-full md:w-1/2 flex gap-3">
+          <input
+            type="text"
+            placeholder="Ej. Tráfico pesado en Av. Central. Tomar precauciones..."
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-shadow text-slate-700 font-medium"
+            value={avisoTexto}
+            onChange={(e) => setAvisoTexto(e.target.value)}
+          />
+          <button
+            type="submit"
+            disabled={enviando || !avisoTexto.trim()}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            {enviando ? 'Enviando...' : 'Enviar Aviso'}
+          </button>
+        </form>
       </div>
     </div>
   );

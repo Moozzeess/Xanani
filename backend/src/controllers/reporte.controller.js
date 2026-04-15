@@ -1,4 +1,5 @@
 const Reporte = require('../models/Reporte');
+const socketService = require('../services/socketService');
 
 /**
  * Crea un reporte enviado por un pasajero.
@@ -20,9 +21,18 @@ exports.crearReporte = async (req, res) => {
 
     await nuevoReporte.save();
 
+    // Poblar para enviar datos completos por socket
+    const reportePoblado = await Reporte.findById(nuevoReporte._id)
+      .populate('usuario', 'username email')
+      .populate('unidad', 'placa')
+      .populate('ruta', 'nombre');
+
+    // Emitir evento para el panel de administración
+    socketService.emitirEvento('nuevo_reporte_pasajero', reportePoblado);
+
     res.status(201).json({
       mensaje: 'Reporte registrado correctamente',
-      reporte: nuevoReporte
+      reporte: reportePoblado
     });
   } catch (error) {
     const esTipoInvalido = error.name === 'ValidationError';
@@ -71,6 +81,50 @@ exports.misReportes = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       mensaje: 'Error al obtener tus reportes',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Actualiza el estado de un reporte (uso administrativo).
+ * @param {string} req.params.id - ID del reporte.
+ * @param {string} req.body.estado - Nuevo estado ('REVISADO', 'RESUELTO').
+ */
+exports.actualizarEstadoReporte = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+
+    // Validar estado permitido
+    const estadosPermitidos = ['PENDIENTE', 'REVISADO', 'RESUELTO'];
+    if (!estadosPermitidos.includes(estado)) {
+      return res.status(400).json({
+        mensaje: 'Estado no válido'
+      });
+    }
+
+    const reporteActualizado = await Reporte.findByIdAndUpdate(
+      id,
+      { estado },
+      { new: true }
+    ).populate('usuario', 'username email')
+     .populate('unidad', 'placa')
+     .populate('ruta', 'nombre');
+
+    if (!reporteActualizado) {
+      return res.status(404).json({
+        mensaje: 'Reporte no encontrado'
+      });
+    }
+
+    res.json({
+      mensaje: 'Estado del reporte actualizado correctamente',
+      reporte: reporteActualizado
+    });
+  } catch (error) {
+    res.status(500).json({
+      mensaje: 'Error al actualizar el estado del reporte',
       error: error.message
     });
   }
