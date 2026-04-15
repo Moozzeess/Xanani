@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
-import { LogOut, LayoutDashboard, Cpu } from "lucide-react";
+import { LogOut, LayoutDashboard, Cpu, Server } from "lucide-react";
 import HardwareTest from "./HardwareTest"; // Componente con la página de pruebas
+import ListaDispositivos from "./ListaDispositivos"; // Lista de dispositivos
 
 const Superususario = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const Superususario = () => {
 
   // Estado para manejar qué vista (tab) se está mostrando
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [testDevice, setTestDevice] = useState(null);
 
   const onLogout = () => {
     cerrarSesion();
@@ -44,20 +46,20 @@ const Superususario = () => {
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'dashboard'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
           >
             <LayoutDashboard size={18} /> Dashboard Principal
           </button>
           <button
-            onClick={() => setActiveTab('hardware')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'hardware'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+            onClick={() => setActiveTab('hardware_list')}
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'hardware_list' || activeTab === 'hardware_new'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
           >
-            <Cpu size={18} /> Pruebas de Hardware
+            <Server size={18} /> Inventario Hardware
           </button>
         </div>
       </div>
@@ -75,9 +77,30 @@ const Superususario = () => {
           </div>
         )}
 
-        {activeTab === 'hardware' && (
+        {activeTab === 'hardware_list' && (
           <div className="h-full">
-            <HardwareTest />
+            <ListaDispositivos
+              onAddNew={() => {
+                setTestDevice(null);
+                setActiveTab('hardware_new');
+              }}
+              onTestDevice={(disp) => {
+                setTestDevice(disp);
+                setActiveTab('hardware_new');
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'hardware_new' && (
+          <div className="h-full flex flex-col">
+            <button
+              onClick={() => setActiveTab('hardware_list')}
+              className="mb-4 text-blue-600 font-bold hover:underline self-start"
+            >
+              &larr; Volver al Invetario
+            </button>
+            <HardwareTest onSaved={() => setActiveTab('hardware_list')} initialDevice={testDevice} />
           </div>
         )}
       </main>

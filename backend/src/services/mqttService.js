@@ -1,6 +1,7 @@
 const mqtt = require('mqtt');
 const { MQTT_BROKER_URL, MQTT_TOPIC } = require('../config/env');
 const { emitirEvento } = require('./socketService');
+const DispositivoHardware = require('../models/DispositivoHardware');
 
 // Mantener la instancia del cliente para poder desconectarlo al reconfigurar
 let clienteActual = null;
@@ -51,10 +52,19 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
       }
     });
 
-    cliente.on('message', (topic, message) => {
+    cliente.on('message', async (topic, message) => {
       const mensajeTexto = message.toString();
       try {
         const datos = JSON.parse(mensajeTexto);
+
+        // Si el mensaje incluye un ID de hardware, actualizar su última conexión
+        const idHardware = datos.id_hardware || datos.Id_Dispositivo_Hardware;
+        if (idHardware) {
+          await DispositivoHardware.findOneAndUpdate(
+            { Id_Dispositivo_Hardware: idHardware },
+            { ultimaConexion: new Date() }
+          );
+        }
 
         if (datos.xanani_ping_request) {
           const tiempoMs = Date.now() - datos.xanani_ping_request;

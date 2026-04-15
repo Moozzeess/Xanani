@@ -74,15 +74,25 @@ exports.getAllHardware = async (req, res, next) => {
             .limit(limit)
             .lean();
 
+        // Calcular estado dinámico basado en la última conexión (30 segundos de umbral)
+        const dispositivosConEstado = dispositivos.map(disp => {
+            const esReciente = disp.ultimaConexion && 
+                (Date.now() - new Date(disp.ultimaConexion).getTime()) < 30000;
+            return {
+                ...disp,
+                estado: esReciente ? 'activo' : 'inactivo'
+            };
+        });
+
         const total = await DispositivoHardware.countDocuments();
 
         res.status(200).json({
             status: 'success',
-            results: dispositivos.length,
+            results: dispositivosConEstado.length,
             total,
             page,
             totalPages: Math.ceil(total / limit),
-            data: dispositivos
+            data: dispositivosConEstado
         });
     } catch (error) {
         next(error);
@@ -107,12 +117,22 @@ exports.getAdminHardware = async (req, res, next) => {
         // Asumiendo que req.user tiene el ID del admin autenticado
         const adminId = req.user.id;
 
-        const dispositivos = await DispositivoHardware.find({ administrador: adminId });
+        const dispositivos = await DispositivoHardware.find({ administrador: adminId }).lean();
+
+        // Calcular estado dinámico basado en la última conexión
+        const dispositivosConEstado = dispositivos.map(disp => {
+            const esReciente = disp.ultimaConexion && 
+                (Date.now() - new Date(disp.ultimaConexion).getTime()) < 30000;
+            return {
+                ...disp,
+                estado: esReciente ? 'activo' : 'inactivo'
+            };
+        });
 
         res.status(200).json({
             status: 'success',
-            results: dispositivos.length,
-            data: dispositivos
+            results: dispositivosConEstado.length,
+            data: dispositivosConEstado
         });
     } catch (error) {
         next(error);

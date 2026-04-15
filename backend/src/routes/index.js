@@ -19,7 +19,7 @@ const unidadRoutes = require('./unidad.routes');
 const hardwareRoutes = require('./hardware.routes');
 const recorridoRoutes = require('./recorrido.routes');
 const reporteRoutes = require('./reporte.routes');
-//const incidenteRoutes = require('./incidente.routes');
+const incidenteRoutes = require('./incidente.routes');
 const adminRoutes = require('./admin.routes');
 const estadisticasRoutes = require('./estadisticas.routes');
 
@@ -37,7 +37,7 @@ router.use('/unidades', unidadRoutes);
 router.use('/hardware', hardwareRoutes);
 router.use('/recorridos', recorridoRoutes);
 router.use('/reportes', reporteRoutes);
-//router.use('/incidentes', incidenteRoutes);
+router.use('/incidentes', incidenteRoutes);
 router.use('/admin', adminRoutes);
 router.use('/estadisticas', estadisticasRoutes);
 

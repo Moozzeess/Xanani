@@ -12,14 +12,14 @@ import { SensorDataPanel } from '../../components/superuser/hardware/PanelSensor
 import { ConfigSummaryPanel } from '../../components/superuser/hardware/ConfiguracionIot';
 import { DeviceIdentificationPanel } from '../../components/superuser/hardware/IdHardware';
 
-const HardwareTest = () => {
+const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initialDevice?: any }) => {
   // Estado para la configuración MQTT
   const [mqttConfig, setMqttConfig] = useState({
-    broker: 'mqtt://[IP_ADDRESS]',
-    port: '1883',
-    username: '',
-    password: '',
-    topic: 'xanani/hardware/test'
+    broker: initialDevice?.broker || 'mqtt://[IP_ADDRESS]',
+    port: initialDevice?.puerto || '1883',
+    username: initialDevice?.usuario_mqtt || '',
+    password: initialDevice?.password_mqtt || '',
+    topic: initialDevice?.topico || 'xanani/hardware/test'
   });
 
   // Estado de conexión del WebSocket
@@ -43,7 +43,7 @@ const HardwareTest = () => {
 
   // Memoria de Sensores Físicos
   const [sensorData, setSensorData] = useState({
-    hardwareId: null as string | null,
+    hardwareId: initialDevice?.Id_Dispositivo_Hardware || null as string | null,
     celdasCarga: Array(16).fill(false),
     pasajeros: {
       entradas: 0,
@@ -54,9 +54,9 @@ const HardwareTest = () => {
 
   // Estado Operativo y Restricciones de Hardware
   const [hardwareSettings, setHardwareSettings] = useState({
-    capacidadMaxima: 15,
-    umbralPeso: 10,
-    powerOn: true
+    capacidadMaxima: initialDevice?.capacidadMaxima || 15,
+    umbralPeso: initialDevice?.umbralPeso || 10,
+    powerOn: initialDevice?.estado ? initialDevice.estado === 'activo' : true
   });
 
   // Alertas Globales del Frontend
@@ -93,16 +93,14 @@ const HardwareTest = () => {
     newSocket.on('estado_mqtt', (estado) => {
       setIsConnecting(false);
       if (estado.conectado) {
-        setIsConnected((prev) => {
-          if (!prev) {
-            disparar({
-              tipo: 'exito',
-              titulo: 'Conexión Establecida',
-              mensaje: `El servidor está escuchando la telemetría en ${estado.broker}`
-            });
-          }
-          return true;
-        });
+        if (!isConnected) {
+          disparar({
+            tipo: 'exito',
+            titulo: 'Conexión Establecida',
+            mensaje: `El servidor está escuchando la telemetría en ${estado.broker}`
+          });
+        }
+        setIsConnected(true);
       } else {
         if (estado.error) {
           dispararError('Fallo de conexión MQTT', estado.error);
@@ -143,26 +141,25 @@ const HardwareTest = () => {
         });
       }, 30000);
 
-      setDeviceStatus(prev => {
-        if (!prev.esp32) {
-          disparar({
-            tipo: 'info',
-            titulo: 'ESP32 Detectado',
-            mensaje: `Se reestableció el flujo de telemetría desde el microcontrolador ${data.payload?.id ? `(${data.payload.id})` : ''}.`
-          });
+      if (!deviceStatus.esp32) {
+        disparar({
+          tipo: 'info',
+          titulo: 'ESP32 Detectado',
+          mensaje: `Se reestableció el flujo de telemetría desde el microcontrolador ${data.payload?.id ? `(${data.payload.id})` : ''}.`
+        });
+      }
+
+      setDeviceStatus(prev => ({
+        ...prev,
+        esp32: true,
+        macAddress: data.payload?.id || prev.macAddress,
+        statusCode: data.payload?.st !== undefined ? data.payload.st : prev.statusCode,
+        sim800l: {
+          connected: true,
+          signalStrength: data.payload?.sim_signal || 85,
+          dataPlanActive: true
         }
-        return {
-          ...prev,
-          esp32: true,
-          macAddress: data.payload?.id || prev.macAddress,
-          statusCode: data.payload?.st !== undefined ? data.payload.st : prev.statusCode,
-          sim800l: {
-            connected: true,
-            signalStrength: data.payload?.sim_signal || 85,
-            dataPlanActive: true
-          }
-        };
-      });
+      }));
 
       if (data.payload) {
         // Se leen "in", "out", "act" para alinear con el payload estructurado stringificado de Arduino `mosqitto.ino`,
@@ -170,7 +167,7 @@ const HardwareTest = () => {
         const vEntradas = data.payload.in !== undefined ? data.payload.in : data.payload.entradas;
         const vSalidas = data.payload.out !== undefined ? data.payload.out : data.payload.salidas;
         const vActuales = data.payload.act !== undefined ? data.payload.act : data.payload.actuales;
-        
+
         const paramEntradas = vEntradas !== undefined ? vEntradas : sensorData.pasajeros.entradas;
         const paramSalidas = vSalidas !== undefined ? vSalidas : sensorData.pasajeros.salidas;
         const paramActuales = vActuales !== undefined ? vActuales : sensorData.pasajeros.actuales;
@@ -343,6 +340,10 @@ const HardwareTest = () => {
               isConnected={isConnected}
               esp32Online={deviceStatus.esp32}
               hardwareId={sensorData.hardwareId}
+              onSaved={onSaved}
+              mqttConfig={mqttConfig}
+              hardwareSettings={hardwareSettings}
+              initialDevice={initialDevice}
             />
           </div>
 
