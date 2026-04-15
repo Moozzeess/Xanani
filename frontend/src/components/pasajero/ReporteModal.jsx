@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { TriangleAlert, X, OctagonAlert, Clock, Trash2, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAlertaGlobal } from '../../context/AlertaContext';
-
-const API_URL = `http://${window.location.hostname}:4000/api`;
+import api from '../../services/api';
 
 const TIPOS_INCIDENCIA = [
   { tipo: 'CONDUCCION_PELIGROSA', icono: OctagonAlert, etiqueta: 'Conducción peligrosa', color: 'hover:bg-red-50 hover:border-red-200 text-red-500' },
@@ -32,20 +31,13 @@ const ReporteModal = ({ isOpen, onClose, unidadId }) => {
     setEstado('enviando');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/reportes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tipo: tipoSeleccionado,
-          unidadId: unidadId || null,
-          descripcion: descripcion.trim() || null
-        })
+      await api.post('/reportes', {
+        tipo: tipoSeleccionado,
+        unidadId: unidadId || null,
+        descripcion: descripcion.trim() || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       setEstado('exito');
       setTimeout(() => {
@@ -56,7 +48,8 @@ const ReporteModal = ({ isOpen, onClose, unidadId }) => {
       }, 2000);
     } catch (error) {
       setEstado('error');
-      dispararError('No se pudo enviar el reporte', error.message, 'Error de red');
+      const mensajeError = error.response?.data?.mensaje || error.message;
+      dispararError('No se pudo enviar el reporte', mensajeError, 'Error de red');
       setTimeout(() => setEstado('idle'), 2000);
     }
   };

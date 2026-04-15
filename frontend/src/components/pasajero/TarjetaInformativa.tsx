@@ -20,15 +20,17 @@ const TarjetaInformativa: React.FC<TarjetaInformativaProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Mapeo de estado a texto y color para la badge
-  const estadoInfo = {
-    [EstadoBus.ACTIVO]: { texto: 'EN RUTA', color: '#22c55e' },
-    [EstadoBus.DESCONECTADO]: { texto: 'DESCONECTADO', color: '#a855f7' },
-    [EstadoBus.EMERGENCIA]: { texto: 'EMERGENCIA', color: '#ef4444' },
-    [EstadoBus.EN_BASE]: { texto: 'EN BASE', color: '#eab308' }
+  // Mapeo de estado a texto y color para la badge (Sincronizado con EstadoBus de MarcadorBus.ts)
+  const estadoInfo: Record<string, { texto: string; color: string }> = {
+    [EstadoBus.BAJA]: { texto: 'BAJA AFLUENCIA', color: '#22c55e' },
+    [EstadoBus.MEDIA]: { texto: 'MEDIA AFLUENCIA', color: '#eab308' },
+    [EstadoBus.ALTA]: { texto: 'ALTA AFLUENCIA', color: '#ef4444' },
+    [EstadoBus.SIN_SENAL]: { texto: 'SIN SEÑAL', color: '#a855f7' },
+    [EstadoBus.SIMULADO]: { texto: 'MODO PRUEBA', color: '#3b82f6' }
   };
 
-  const estadoActual = estadoInfo[estado];
+  // Fallback de seguridad para evitar "Cannot read properties of undefined (reading 'color')"
+  const estadoActual = estadoInfo[estado] || { texto: 'DESCONOCIDO', color: '#64748b' };
 // Botón de ojo que redirige al login
   const handleEyeClick = () => {
     navigate('/login');
@@ -51,11 +53,11 @@ const TarjetaInformativa: React.FC<TarjetaInformativaProps> = ({
             <span 
               className="status-badge" 
               style={{ 
-                backgroundColor: estadoActual.color,
+                backgroundColor: estadoActual?.color || '#64748b',
                 color: 'white'
               }}
             >
-              {estadoActual.texto}
+              {estadoActual?.texto || 'DESCONOCIDO'}
             </span>
             <button 
               className="eye-icon-bg" 
