@@ -4,18 +4,24 @@ import { Map, Clock, Navigation, User, LogOut } from 'lucide-react';
  * Componente de navegación inferior (Bottom Navigation Bar).
  * Proporciona acceso rápido a las secciones principales de la app.
  */
-const Navbar = ({ onLogout, onCenterLocation }) => {
+const Navbar = ({ onCenterLocation, onNotificationsClick, onMapClick, onProfileClick, onAfluenciaClick, activeTab }) => {
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-[1000] shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
             <div className="flex justify-between items-center h-16 px-4 max-w-md mx-auto">
-                <button className="text-slate-900 flex flex-col items-center gap-1 w-14 transition-colors">
+                <button 
+                  onClick={onMapClick}
+                  className={`${activeTab === 'map' ? 'text-blue-600' : 'text-slate-400'} flex flex-col items-center gap-1 w-12 transition-colors`}
+                >
                     <Map className="w-6 h-6 stroke-[2.5]" />
                     <span className="text-[10px] font-bold">Mapa</span>
                 </button>
 
-                <button className="text-slate-400 hover:text-slate-600 flex flex-col items-center gap-1 w-14 transition-colors">
+                <button 
+                  onClick={onAfluenciaClick}
+                  className={`${activeTab === 'afluencia' ? 'text-blue-600' : 'text-slate-400'} flex flex-col items-center gap-1 w-12 transition-colors`}
+                >
                     <Clock className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Historial</span>
+                    <span className="text-[10px] font-medium">Afluencia</span>
                 </button>
 
                 <div className="relative -top-5">
@@ -27,17 +33,23 @@ const Navbar = ({ onLogout, onCenterLocation }) => {
                     </button>
                 </div>
 
-                <button className="text-slate-400 hover:text-slate-600 flex flex-col items-center gap-1 w-14 transition-colors">
-                    <User className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Perfil</span>
+                <button 
+                  onClick={onNotificationsClick}
+                  className={`${activeTab === 'notifications' ? 'text-blue-600' : 'text-slate-400'} flex flex-col items-center gap-1 w-12 transition-colors`}
+                >
+                    <div className="relative">
+                        <User className="w-6 h-6" />
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </div>
+                    <span className="text-[10px] font-medium">Alertas</span>
                 </button>
 
-                <button
-                    onClick={onLogout}
-                    className="text-slate-400 hover:text-red-500 flex flex-col items-center gap-1 w-14 transition-colors"
+                <button 
+                    onClick={onProfileClick}
+                    className="text-slate-400 hover:text-slate-600 flex flex-col items-center gap-1 w-12 transition-colors"
                 >
-                    <LogOut className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Salir</span>
+                    <User className="w-6 h-6" />
+                    <span className="text-[10px] font-medium">Perfil</span>
                 </button>
             </div>
 

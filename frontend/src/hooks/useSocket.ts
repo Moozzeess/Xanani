@@ -1,44 +1,45 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// Ajustar la URL según el puerto del backend y el host actual (por defecto 4000)
 const host = window.location.hostname;
 const SOCKET_URL = `http://${host}:4000`;
 
-/**
- * Hook personalizado para gestionar la conexión con el servidor de Socket.io.
- * @returns {Object} Un objeto que contiene los últimos datos recibidos y el estado de conexión.
- */
+// Singleton de socket
+let globalSocket: Socket | null = null;
+
 export const useSocket = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(globalSocket);
   const [datosRecibidos, setDatosRecibidos] = useState<any>(null);
-  const [conectado, setConectado] = useState<boolean>(false);
+  const [conectado, setConectado] = useState<boolean>(globalSocket ? globalSocket.connected : false);
 
   useEffect(() => {
-    // Inicializar conexión
-    const nuevaConexion = io(SOCKET_URL);
+    if (!globalSocket) {
+      globalSocket = io(SOCKET_URL);
+    }
 
-    nuevaConexion.on('connect', () => {
-      console.log('Conectado al servidor de WebSockets');
-      setConectado(true);
-    });
+    const currentSocket = globalSocket;
+    setSocket(currentSocket);
 
-    nuevaConexion.on('disconnect', () => {
-      console.log('Desconectado del servidor de WebSockets');
-      setConectado(false);
-    });
-
-    // Escuchar datos del ESP32 retransmitidos por el backend
-    nuevaConexion.on('datos_esp32', (datos) => {
+    // Escuchar conexiones
+    const onConnect = () => setConectado(true);
+    const onDisconnect = () => setConectado(false);
+    const onDatosEsp32 = (datos: any) => {
       console.log('Datos recibidos del ESP32:', datos);
       setDatosRecibidos(datos);
-    });
+    };
 
-    setSocket(nuevaConexion);
+    currentSocket.on('connect', onConnect);
+    currentSocket.on('disconnect', onDisconnect);
+    currentSocket.on('datos_esp32', onDatosEsp32);
 
-    // Limpiar al desmontar
+    if (currentSocket.connected) {
+      setConectado(true);
+    }
+
     return () => {
-      nuevaConexion.close();
+      currentSocket.off('connect', onConnect);
+      currentSocket.off('disconnect', onDisconnect);
+      currentSocket.off('datos_esp32', onDatosEsp32);
     };
   }, []);
 
