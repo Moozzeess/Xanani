@@ -18,45 +18,45 @@ const Reportes = ({ isOpen, onClose, onSubmit }) => {
     if (!isOpen && !isVisible) return null;
 
     return (
-        <div className={`absolute inset-0 z-50 flex items-end justify-center bg-slate-900/90 backdrop-blur-sm transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-            <div
-                className={`bg-white w-full rounded-t-[2rem] shadow-2xl overflow-hidden transform transition-transform duration-300 pb-8 ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
-            >
+        <div className={`absolute left-4 right-4 bottom-32 z-[100] transition-all duration-500 transform ${isOpen ? 'translate-y-0 opacity-100 scale-100 pointer-events-auto' : 'translate-y-10 opacity-0 scale-95 pointer-events-none'}`}>
+            <div className="glass-card rounded-[2.5rem] shadow-2xl overflow-hidden border-white/20 max-w-lg mx-auto">
                 <div className="p-6">
-                    <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
-                    <h3 className="text-xl font-bold text-slate-800 mb-6 text-center">Reporte Rápido</h3>
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-black text-white px-2">¿Qué sucede en el camino?</h3>
+                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <X className="w-6 h-6 text-white/50" />
+                        </button>
+                    </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="grid grid-cols-3 gap-3">
                         <button
                             onClick={() => onSubmit('Accidente')}
-                            className="aspect-square bg-red-50 border-2 border-red-100 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-red-100"
+                            className="bg-red-500/20 border border-red-500/40 rounded-3xl p-4 flex flex-col items-center justify-center gap-2 active:scale-90 transition-all hover:bg-red-500/30 group"
                         >
-                            <CarFront className="w-8 h-8 text-red-600" />
-                            <span className="font-bold text-red-800">Accidente</span>
+                            <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <CarFront className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="font-bold text-xs text-red-200">Accidente</span>
                         </button>
 
                         <button
                             onClick={() => onSubmit('Tráfico')}
-                            className="aspect-square bg-yellow-50 border-2 border-yellow-100 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-yellow-100"
+                            className="bg-yellow-500/20 border border-yellow-500/40 rounded-3xl p-4 flex flex-col items-center justify-center gap-2 active:scale-90 transition-all hover:bg-yellow-500/30 group"
                         >
-                            <Cone className="w-8 h-8 text-yellow-600" />
-                            <span className="font-bold text-yellow-800">Tráfico</span>
+                            <div className="w-12 h-12 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <Cone className="w-6 h-6 text-black" />
+                            </div>
+                            <span className="font-bold text-xs text-yellow-200">Tráfico</span>
                         </button>
 
                         <button
                             onClick={() => onSubmit('Falla Mecánica')}
-                            className="aspect-square bg-orange-50 border-2 border-orange-100 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-orange-100"
+                            className="bg-orange-500/20 border border-orange-500/40 rounded-3xl p-4 flex flex-col items-center justify-center gap-2 active:scale-90 transition-all hover:bg-orange-500/30 group"
                         >
-                            <Wrench className="w-8 h-8 text-orange-600" />
-                            <span className="font-bold text-orange-800">Mecánico</span>
-                        </button>
-
-                        <button
-                            onClick={onClose}
-                            className="aspect-square bg-slate-100 border-2 border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
-                        >
-                            <X className="w-8 h-8 text-slate-500" />
-                            <span className="font-bold text-slate-600">Cancelar</span>
+                            <div className="w-12 h-12 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <Wrench className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="font-bold text-xs text-orange-200">Avería</span>
                         </button>
                     </div>
                 </div>

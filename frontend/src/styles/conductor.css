@@ -1,10 +1,18 @@
 /* Estilos específicos para la vista del Conductor - Xanani */
 
 .hud-panel {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background-color: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+.glass-card {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    background-color: rgba(15, 23, 42, 0.9);
-    /* slate-900/90 */
+    background-color: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Contenedor de Notificaciones (Toasts) */
@@ -79,6 +87,27 @@
 
 /* Modal de Incidencias */
 .incident-modal-blur {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
+
+/* Ajustes para el mapa inmersivo */
+.map-container-immersive {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+/* Efectos de pulsación para el marcador del bus */
+@keyframes pulse-emerald {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.bus-marker-active {
+    animation: pulse-emerald 2s infinite;
+}
