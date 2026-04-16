@@ -15,9 +15,16 @@ const crearIconoMarcador = (indice: number, total: number) => {
   
   return L.divIcon({
     className: 'marcador-parada-custom',
-    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; font-family: sans-serif;">${indice + 1}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
+    html: `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+         <img src="/parada_bus.svg" style="width: 32px; height: 32px; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));" />
+         <div style="position: absolute; top: -8px; right: -8px; background-color: ${color}; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 11px; font-family: sans-serif;">
+           ${indice + 1}
+         </div>
+      </div>
+    `,
+    iconSize: [32, 40],
+    iconAnchor: [16, 32]
   });
 };
 
@@ -26,9 +33,10 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
   const lineaRutaRef = useRef<L.Polyline | null>(null);
   
   const [paradas, setParadas] = useState<ItemParada[]>([]);
+  const [geometria, setGeometria] = useState<[number, number][]>([]);
   const paradasRef = useRef<ItemParada[]>([]);
 
-  // Efecto para inicializar el mapa
+  // Inicialización del mapa
   useEffect(() => {
     if (!activo) return;
 
@@ -44,37 +52,20 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
 
     mapaRef.current.on('click', (e: L.LeafletMouseEvent) => agregarParada(e.latlng));
 
-    if (paradas.length > 0) {
-        paradas.forEach(p => {
-           p.marcador.addTo(mapaRef.current!);
-        });
-        setParadas([...paradas]);
-    }
-
-    const temporizadorRedimension = window.setTimeout(() => {
-      mapaRef.current?.invalidateSize();
-    }, 100);
-
     return () => {
-      window.clearTimeout(temporizadorRedimension);
-      if (lineaRutaRef.current && mapaRef.current) {
-        mapaRef.current.removeLayer(lineaRutaRef.current);
-        lineaRutaRef.current = null;
-      }
       if (mapaRef.current) {
         mapaRef.current.remove();
         mapaRef.current = null;
       }
     };
-  }, [activo, idContenedorMapa]); // agregarParada no está en dependencias para evitar ciclos, o lo definimos con refs
+  }, [activo, idContenedorMapa]);
 
-  // Efecto para actualizar iconos de marcadores y trazar línea OSRM
+  // Actualizar iconos y trazar línea OSRM
   useEffect(() => {
     let montado = true;
     paradasRef.current = paradas;
     const mapa = mapaRef.current;
     
-    // Actualizar dinámicamente iconos
     paradas.forEach((p, idx) => {
       p.marcador.setIcon(crearIconoMarcador(idx, paradas.length));
     });
@@ -84,6 +75,7 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
         mapa.removeLayer(lineaRutaRef.current);
         lineaRutaRef.current = null;
       }
+      setGeometria([]);
       return;
     }
 
@@ -96,13 +88,15 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
         const data = await res.json();
         if (!montado) return;
 
-        let latlngs: L.LatLngTuple[] = [];
+        let latlngs: [number, number][] = [];
 
         if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
           latlngs = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
         } else {
-          latlngs = paradas.map((p) => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as L.LatLngTuple);
+          latlngs = paradas.map((p) => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as [number, number]);
         }
+
+        setGeometria(latlngs);
 
         if (lineaRutaRef.current) {
           mapa.removeLayer(lineaRutaRef.current);
@@ -115,10 +109,12 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
 
       } catch (err) {
         if (!montado) return;
+        const coordsRespaldo = paradas.map((p) => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as [number, number]);
+        setGeometria(coordsRespaldo);
+        
         if (lineaRutaRef.current) {
           mapa.removeLayer(lineaRutaRef.current);
         }
-        const coordsRespaldo = paradas.map((p) => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as L.LatLngTuple);
         lineaRutaRef.current = L.polyline(coordsRespaldo, {
           color: '#3b82f6',
           weight: 4,
@@ -140,13 +136,8 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
 
     setParadas((prev) => {
       const siguienteId = prev.length > 0 ? Math.max(...prev.map(p => p.id)) + 1 : 1;
-      
       let nombreAsignado = nombreDefecto || `Parada ${prev.length + 1}`;
-      if (!nombreDefecto) {
-          if (prev.length === 0) nombreAsignado = 'Parada de Salida (Inicio)';
-          else if (prev.length === 1) nombreAsignado = 'Parada de Llegada (Destino)';
-      }
-
+      
       const marcador = L.marker(latlng, { 
           draggable: true,
           icon: crearIconoMarcador(prev.length, prev.length + 1)
@@ -158,6 +149,42 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
 
       return [...prev, { id: siguienteId, marcador, nombre: nombreAsignado }];
     });
+  }, []);
+
+  const cargarParadasManuales = useCallback((paradasBackend: any[]) => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
+
+    // Limpiar paradas actuales
+    setParadas((prev) => {
+        prev.forEach(p => mapa.removeLayer(p.marcador));
+        return [];
+    });
+
+    const nuevasParadas: ItemParada[] = paradasBackend.map((p, index) => {
+      const pos = L.latLng(p.latitud, p.longitud);
+      const marcador = L.marker(pos, {
+        draggable: true,
+        icon: crearIconoMarcador(index, paradasBackend.length)
+      }).addTo(mapa);
+
+      marcador.on('dragend', () => {
+        setParadas((actual) => [...actual]);
+      });
+
+      return {
+        id: index + 1,
+        nombre: p.nombre,
+        marcador
+      };
+    });
+
+    setParadas(nuevasParadas);
+
+    if (nuevasParadas.length > 0) {
+        const bounds = L.latLngBounds(nuevasParadas.map(p => p.marcador.getLatLng()));
+        mapa.fitBounds(bounds, { padding: [50, 50] });
+    }
   }, []);
 
   const centrarMapaEn = useCallback((lat: number, lng: number) => {
@@ -184,13 +211,17 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
   const limpiarMapa = useCallback(() => {
     if (mapaRef.current) {
       paradas.forEach(p => mapaRef.current?.removeLayer(p.marcador));
+      if (lineaRutaRef.current) mapaRef.current.removeLayer(lineaRutaRef.current);
     }
     setParadas([]);
+    setGeometria([]);
   }, [paradas]);
 
   return {
     paradas,
+    geometria,
     agregarParada,
+    cargarParadasManuales,
     cambiarNombreParada,
     eliminarParada,
     centrarMapaEn,

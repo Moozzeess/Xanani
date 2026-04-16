@@ -146,3 +146,5 @@ export const ModalAlerta: React.FC<ModalAlertaProps> = ({
     </div>
   );
 };
+
+export default ModalAlerta;

@@ -2,7 +2,16 @@ const Ubicacion = require('../models/Ubicacion');
 const Unidad = require('../models/Unidad');
 
 /**
- * Registrar ubicación de una unidad
+ * Intención: Almacenar un punto GPS (histórico o en vivo) de una unidad en un instante dado.
+ * Parámetros:
+ *  - {Object} req - Body (unidadId, conductorId, rutaId, recorridoId, ubicacion, velocidad, etc.).
+ *  - {Object} res - Express Response.
+ * Retorno:
+ *  - {Object} JSON confirmando el registro HTTP 201.
+ * Reglas de negocio:
+ *  - Este método es clave para generar el "breadcrumb" o historial geográfico del vehículo.
+ * Casos límite (edge cases):
+ *  - Si fallan los campos requeridos en el Schema de Ubicacion, lanza 500 con error nativo.
  */
 exports.registrarUbicacion = async (req, res) => {
 

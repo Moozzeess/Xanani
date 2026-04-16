@@ -10,7 +10,7 @@ const unidadSchema = new mongoose.Schema(
 
         conductor: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'Usuario'
         },
 
         ruta: {
@@ -43,6 +43,10 @@ const unidadSchema = new mongoose.Schema(
         activa: {
             type: Boolean,
             default: true
+        },
+        dispositivoHardware: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'DispositivoHardware'
         }
 
 

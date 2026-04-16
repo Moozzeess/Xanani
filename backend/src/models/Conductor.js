@@ -4,7 +4,7 @@ const conductorSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Usuario',
       required: true,
       unique: true
     },
@@ -23,14 +23,21 @@ const conductorSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
-    edad: {
-      type: Number,
+    fechaNacimiento: {
+      type: Date,
+      default: null
+    },
+    ruta: {
+      type: String,
+      default: ''
+    },
+    rutaAsignadaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ruta',
       default: null
     }
   },
   { timestamps: true }
 );
 
-module.exports = {
-  Conductor: mongoose.model('Conductor', conductorSchema),
-};
+module.exports = mongoose.model('Conductor', conductorSchema);

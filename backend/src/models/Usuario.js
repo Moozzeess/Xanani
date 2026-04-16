@@ -39,12 +39,36 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
-    }
+    },
+    // Campos opcionales para perfil del pasajero (Fines estadísticos)
+    foto: {
+      type: String, // Base64 o URL (por ahora no se implementa subida)
+      default: null
+    },
+    fechaNacimiento: {
+      type: Date,
+      default: null
+    },
+    genero: {
+      type: String,
+      enum: ['Hombre', 'Mujer', 'Otro', 'Prefiero no decirlo', null],
+      default: null
+    },
+    nacionalidad: {
+      type: String,
+      default: null
+    },
+    rutasFavoritas: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Ruta'
+      }
+    ]
   },
   { timestamps: true }
 );
 
 module.exports = {
-  User: mongoose.model('User', userSchema),
+  Usuario: mongoose.model('Usuario', userSchema),
   USER_ROLES
 };

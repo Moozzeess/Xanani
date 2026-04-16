@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { LogOut, LayoutDashboard, Cpu, Users, Activity, Map } from "lucide-react";
 import HardwareTest from "./HardwareTest";
+<<<<<<< HEAD
+=======
+import ListaDispositivos from "./ListaDispositivos";
+>>>>>>> a21ece8e6770875c36d1335197dfe0efe758389e
 import GlobalAnalyticsView from './GlobalAnalyticsView';
 import ManageAdminsView from './ManageAdminsView';
 import SystemHealthView from './SystemHealthView';
@@ -13,6 +17,10 @@ const Superususario = () => {
   const { cerrarSesion } = useAuth();
 
   const [activeTab, setActiveTab] = useState('analytics');
+<<<<<<< HEAD
+=======
+  const [testDevice, setTestDevice] = useState(null);
+>>>>>>> a21ece8e6770875c36d1335197dfe0efe758389e
 
   const onLogout = () => {
     cerrarSesion();
@@ -71,6 +79,7 @@ const Superususario = () => {
       {/* Área de Contenido Principal */}
       <main className="flex-1 overflow-hidden p-6 relative bg-slate-100">
         <div className="h-full overflow-y-auto">
+<<<<<<< HEAD
 
           {activeTab === 'analytics' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -94,6 +103,51 @@ const Superususario = () => {
             </div>
           )}
 
+=======
+
+          {activeTab === 'analytics' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Analítica Global del Sistema</h2>
+              <p className="text-slate-500 mb-8">Métricas agregadas de uso, volúmenes de flotillas y demanda general.</p>
+              <GlobalAnalyticsView />
+            </div>
+          )}
+
+          {activeTab === 'admins' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Gestión de Administradores</h2>
+              <p className="text-slate-500 mb-8">Control de cuentas de dueños de flotillas y accesos.</p>
+              <ManageAdminsView />
+            </div>
+          )}
+
+          {activeTab === 'hardware' && (
+            <div className="h-full">
+            <ListaDispositivos
+              onAddNew={() => {
+                setTestDevice(null);
+                setActiveTab('hardware_new');
+              }}
+              onTestDevice={(disp) => {
+                setTestDevice(disp);
+                setActiveTab('hardware_new');
+              }}
+            />
+          </div>
+          )}
+          {activeTab === 'hardware_new' && (
+          <div className="h-full flex flex-col">
+            <button
+              onClick={() => setActiveTab('hardware_list')}
+              className="mb-4 text-blue-600 font-bold hover:underline self-start"
+            >
+              &larr; Volver al Invetario
+            </button>
+            <HardwareTest onSaved={() => setActiveTab('hardware_list')} initialDevice={testDevice} />
+          </div>
+        )}
+
+>>>>>>> a21ece8e6770875c36d1335197dfe0efe758389e
           {activeTab === 'health' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
               <h2 className="text-2xl font-black text-slate-800 mb-2">Estado de Servidores e IoT</h2>

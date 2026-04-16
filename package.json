@@ -22,12 +22,20 @@
     "leaflet": "^1.9.4",
     "leaflet-defaulticon-compatibility": "^0.1.2",
     "leaflet.heat": "^0.2.0",
+<<<<<<< HEAD
+=======
+    "leaflet.markercluster": "^1.5.3",
+>>>>>>> a21ece8e6770875c36d1335197dfe0efe758389e
     "lucide-react": "^0.563.0",
     "mqtt": "^5.15.0",
     "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.21",
+<<<<<<< HEAD
+=======
+    "@types/leaflet.markercluster": "^1.5.6",
+>>>>>>> a21ece8e6770875c36d1335197dfe0efe758389e
     "autoprefixer": "^10.4.24",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18"

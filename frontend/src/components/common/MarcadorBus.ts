@@ -1,10 +1,11 @@
 import L from 'leaflet';
 
 export enum EstadoBus {
-  ACTIVO = 'activo',
-  DESCONECTADO = 'desconectado',
-  EMERGENCIA = 'emergencia',
-  EN_BASE = 'en_base'
+  BAJA = 'baja',
+  MEDIA = 'media',
+  ALTA = 'alta',
+  SIN_SENAL = 'sin_senal',
+  SIMULADO = 'simulado'
 }
 
 interface ColoresEstado {
@@ -14,25 +15,30 @@ interface ColoresEstado {
 }
 
 const COLORES_ESTADO: Record<EstadoBus, ColoresEstado> = {
-  [EstadoBus.ACTIVO]: {
-    background: '#4ade80',
+  [EstadoBus.BAJA]: {
+    background: '#4ade80', // Verde
     opacity: '0.4',
     textColor: '#064e3b'
   },
-  [EstadoBus.DESCONECTADO]: {
-    background: '#a855f7',
+  [EstadoBus.MEDIA]: {
+    background: '#facc15', // Amarillo
     opacity: '0.4',
-    textColor: '#581c87'
+    textColor: '#854d0e'
   },
-  [EstadoBus.EMERGENCIA]: {
-    background: '#ef4444',
+  [EstadoBus.ALTA]: {
+    background: '#ef4444', // Rojo
     opacity: '0.4',
     textColor: '#7f1d1d'
   },
-  [EstadoBus.EN_BASE]: {
-    background: '#eab308',
+  [EstadoBus.SIN_SENAL]: {
+    background: '#a855f7', // Morado
     opacity: '0.4',
-    textColor: '#713f12'
+    textColor: '#581c87'
+  },
+  [EstadoBus.SIMULADO]: {
+    background: '#3b82f6', // Azul
+    opacity: '0.4',
+    textColor: '#1e3a8a'
   }
 };
 

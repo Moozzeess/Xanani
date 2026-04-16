@@ -1,13 +1,15 @@
-import { SlidersHorizontal, Send, RefreshCw } from 'lucide-react';
+import { SlidersHorizontal, Send, RefreshCw, Power } from 'lucide-react';
 
 interface InteractiveSettingsPanelProps {
   hardwareSettings: {
     capacidadMaxima: number;
     umbralPeso: number;
+    powerOn: boolean;
   };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSendConfig: () => void;
   onResetCounters: () => void;
+  onTogglePower: () => void;
   isConnected: boolean;
 }
 
@@ -16,6 +18,7 @@ export const InteractiveSettingsPanel = ({
   onChange,
   onSendConfig,
   onResetCounters,
+  onTogglePower,
   isConnected
 }: InteractiveSettingsPanelProps) => {
   return (
@@ -54,7 +57,14 @@ export const InteractiveSettingsPanel = ({
           </div>
         </div>
         
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 pt-2 flex-wrap">
+          <button 
+            onClick={onTogglePower}
+            disabled={!isConnected}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors flex justify-center items-center gap-2 disabled:opacity-50 ${hardwareSettings.powerOn ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+          >
+            <Power size={14} /> {hardwareSettings.powerOn ? 'Apagar Equipo' : 'Encender Equipo'}
+          </button>
           <button 
             onClick={onSendConfig}
             disabled={!isConnected}

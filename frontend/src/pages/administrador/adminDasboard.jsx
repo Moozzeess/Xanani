@@ -6,6 +6,8 @@ import '../../styles/admin.css';
 import AdminSidebar from '../../components/administrador/AdminSidebar';
 import AdminHeader from '../../components/administrador/AdminHeader';
 import SOSModal from '../../components/administrador/SOSModal';
+import { useSocket } from '../../hooks/useSocket';
+import { useEffect } from 'react';
 
 import DashboardView from '../../components/administrador/views/DashboardView';
 import LiveMapView from '../../components/administrador/views/LiveMapView';
@@ -23,10 +25,30 @@ import ReportsView from '../../components/administrador/views/ReportsView';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { cerrarSesion } = useAuth();
+  const { socket } = useSocket();
 
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSOSOpen, setIsSOSOpen] = useState(false);
+  const [activeSOS, setActiveSOS] = useState(null);
+
+  // Escuchar incidencias globales (especialmente SOS)
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleGlobalIncidencia = (incidencia) => {
+      console.log('Nueva incidencia recibida en Dashboard:', incidencia);
+      if (incidencia.tipo === 'SOS') {
+        setActiveSOS(incidencia);
+        setIsSOSOpen(true);
+      }
+    };
+
+    socket.on('reporte_incidencia', handleGlobalIncidencia);
+    return () => {
+      socket.off('reporte_incidencia', handleGlobalIncidencia);
+    };
+  }, [socket]);
 
   const TITULOS = useMemo(
     () => ({
@@ -45,7 +67,7 @@ const AdminDashboard = () => {
 
   const onLogout = useCallback(() => {
     cerrarSesion();
-    navigate("/", { replace: true });
+    navigate("/LandingPage", { replace: true });
   }, [cerrarSesion, navigate]);
 
   const toggleSidebar = useCallback(() => {
@@ -92,7 +114,11 @@ const AdminDashboard = () => {
         </main>
       </div>
 
-      <SOSModal isOpen={isSOSOpen} onClose={() => setIsSOSOpen(false)} />
+      <SOSModal 
+        isOpen={isSOSOpen} 
+        onClose={() => setIsSOSOpen(false)} 
+        incidencia={activeSOS} 
+      />
     </div>
   );
 };

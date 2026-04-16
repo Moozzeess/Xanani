@@ -1,7 +1,16 @@
 const Ruta = require('../models/Ruta');
 
 /**
- * Crear una nueva ruta
+ * Intención: Crea una nueva ruta geométrica de transporte y la almacena.
+ * Parámetros:
+ *  - {Object} req - Body (nombre de ruta, coordenadas/geometría).
+ *  - {Object} res - Respuesta de Express.
+ * Retorno:
+ *  - {Object} Confirma la alta en la flotilla (HTTP 201).
+ * Reglas de negocio:
+ *  - Su estructura será el molde por donde se guían las Paradas.
+ * Casos límite (edge cases):
+ *  - Reporta HTTP 500 en fallas de parseo geográfico en Mongoose.
  */
 exports.crearRuta = async (req, res) => {
     try {
@@ -22,7 +31,16 @@ exports.crearRuta = async (req, res) => {
 };
 
 /**
- * Obtener todas las rutas
+ * Intención: Cargar todas las rutas existentes en el sistema para la super-administración.
+ * Parámetros:
+ *  - {Object} req - Petición vacía.
+ *  - {Object} res - Objeto de respuesta.
+ * Retorno:
+ *  - {Array} Un arreglo de objetos Ruta.
+ * Reglas de negocio:
+ *  - Listado público (protegido por middleware global) apto para combos selectores.
+ * Casos límite (edge cases):
+ *  - Devuelve `[]` si no existen documentos.
  */
 exports.obtenerRutas = async (req, res) => {
     try {
@@ -38,7 +56,16 @@ exports.obtenerRutas = async (req, res) => {
 };
 
 /**
- * Obtener una ruta por ID
+ * Intención: Lee un documento específico de la ruta en la base de datos a base de UUID/MongoID.
+ * Parámetros:
+ *  - {Object} req - Parámetro `id`.
+ *  - {Object} res - Objeto Respuesta.
+ * Retorno:
+ *  - {Object} El detalle completo de la ruta solicitada.
+ * Reglas de negocio:
+ *  - Extraer información de trazado para ser renderizada en Leaflet.
+ * Casos límite (edge cases):
+ *  - Arroja HTTP 404 explícito si es que fue borrada o no se encontró el `id`.
  */
 exports.obtenerRutaPorId = async (req, res) => {
     try {
@@ -60,7 +87,16 @@ exports.obtenerRutaPorId = async (req, res) => {
 };
 
 /**
- * Actualizar una ruta
+ * Intención: Actualiza los detalles, nombre o trazado geográfico de la ruta en caliente.
+ * Parámetros:
+ *  - {Object} req - Params `id` y Body con atributos actualizables.
+ *  - {Object} res - Objeto Respuesta.
+ * Retorno:
+ *  - {Object} Confirmación de actualización.
+ * Reglas de negocio:
+ *  - Utiliza `findByIdAndUpdate` con opción `new: true` para pre-visualizar cómo queda.
+ * Casos límite (edge cases):
+ *  - Dispara 500 si la estructura geométrica cargada choca con validadores.
  */
 exports.actualizarRuta = async (req, res) => {
     try {
@@ -83,7 +119,16 @@ exports.actualizarRuta = async (req, res) => {
 };
 
 /**
- * Eliminar una ruta
+ * Intención: Deshabilita o elimina contundentemente un trazo obsoleto del sistema.
+ * Parámetros:
+ *  - {Object} req - Params: `id`.
+ *  - {Object} res - Objeto de respuesta.
+ * Retorno:
+ *  - {Object} Respuesta vacía con confirmación general.
+ * Reglas de negocio:
+ *  - OJO: Destrucción permanente, puede des-referenciar Paradas asociadas.
+ * Casos límite (edge cases):
+ *  - Retorna HTTP 500 ante errores de restricción de base de datos.
  */
 exports.eliminarRuta = async (req, res) => {
     try {
@@ -98,4 +143,4 @@ exports.eliminarRuta = async (req, res) => {
             error: error.message
         });
     }
-};
+};

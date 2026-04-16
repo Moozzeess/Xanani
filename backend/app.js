@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const routes = require('./routes');
+const compression = require('compression');
+const rutasPrincipales = require('./src/routes/index');
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 const ErrorApp = require('./src/utils/ErrorApp');
 
@@ -8,9 +9,11 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(compression()); // Optimizacion de payload
 
-// Rutas principales
-app.use('/api', routes);
+// Rutas principales centralizadas (Gateway)
+app.use('/api', rutasPrincipales);
+
 
 // Captura de rutas no encontradas (404)
 app.all('*', (req, res, next) => {

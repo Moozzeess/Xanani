@@ -1,159 +1,114 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/pasajero.css';
-import { MarcadorBus, EstadoBus, crearMarcadorBus } from '../components/common/MarcadorBus';
+import { EstadoBus } from '../components/common/MarcadorBus';
 import TarjetaInformativa from '../components/pasajero/TarjetaInformativa';
 import UbicacionModal from '../components/common/UbicacionModal';
-import { obtenerRutaPorCalles } from '../services/osrmService';
 import { useAlertaGlobal } from '../context/AlertaContext';
+import { io, Socket } from 'socket.io-client';
+import Mapa from '../components/common/Mapa';
+
+const SOCKET_URL = 'http://localhost:4000'; 
 
 /**
  * Página de aterrizaje (Landing) para pasajeros en modo invitado.
- * Muestra un mapa con la ubicación del usuario y el vehículo más cercano,
- * permitiendo la visualización de rutas en tiempo real.
  */
 const LandingPasajero: React.FC = () => {
   const { dispararError } = useAlertaGlobal();
   const navegar = useNavigate();
-  const mapaRef = useRef<L.Map | null>(null);
-  const contenedorRef = useRef<HTMLDivElement | null>(null);
-  const [estadoBusActual] = useState<EstadoBus>(EstadoBus.ACTIVO);
-  const marcadorBusRef = useRef<MarcadorBus | null>(null);
-  const marcadorUsuarioRef = useRef<L.Marker | null>(null);
-  const polilineaRef = useRef<L.Polyline | null>(null);
   const [estaAbiertoModalUbicacion, setEstaAbiertoModalUbicacion] = useState(false);
   const [ubicacionUsuario, setUbicacionUsuario] = useState<[number, number]>([19.4326, -99.1332]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const socketRef = useRef<Socket | null>(null);
+  const [centerOnUserTrigger, setCenterOnUserTrigger] = useState(0);
 
-  // Efecto para inicializar el mapa y gestionar permisos de ubicación
+  // Efecto para gestionar WebSockets y ubicación inicial
   useEffect(() => {
-    // 1. Inicializar Mapa (sin vista aún para evitar parpadeo en CDMX)
-    if (contenedorRef.current && !mapaRef.current) {
-      mapaRef.current = L.map('map', {
-        zoomControl: false,
-        attributionControl: false,
-        minZoom: 13, // Restricción de alejamiento
-        maxZoom: 18,
+    socketRef.current = io(SOCKET_URL);
+
+    const handleUbicacion = (datos: any) => {
+      let estado = EstadoBus.SIN_SENAL;
+      if (datos.isSimulated) {
+        estado = EstadoBus.SIMULADO;
+      } else {
+        const pct = (datos.ocupacionActual / datos.capacidadMaxima) * 100;
+        if (pct < 33) estado = EstadoBus.BAJA;
+        else if (pct < 66) estado = EstadoBus.MEDIA;
+        else estado = EstadoBus.ALTA;
+      }
+
+      setVehicles(prev => {
+        const id = datos.id || datos.placa;
+        const index = prev.findIndex(v => v.id === id);
+        
+        // Determinar colores para el componente Mapa
+        let colorClass = 'bg-blue-400';
+        if (!datos.isSimulated) {
+            if (estado === EstadoBus.BAJA) colorClass = 'bg-green-400';
+            else if (estado === EstadoBus.MEDIA) colorClass = 'bg-yellow-400';
+            else if (estado === EstadoBus.ALTA) colorClass = 'bg-red-400';
+        }
+
+        const newVehicle = {
+          ...datos,
+          id,
+          color: colorClass,
+          pos: datos.pos
+        };
+
+        if (index === -1) return [...prev, newVehicle];
+        const newVehicles = [...prev];
+        newVehicles[index] = newVehicle;
+        return newVehicles;
       });
+    };
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mapaRef.current);
-    }
+    socketRef.current.on('ubicacion_conductor', handleUbicacion);
+    socketRef.current.on('ubicacion_simulada', handleUbicacion);
+    socketRef.current.emit('solicitar_simulacion');
 
-    // 2. Priorizar Geolocalización Inmediata
     const permisoConcedido = localStorage.getItem('locationPermissionGranted') === 'true';
     if (permisoConcedido) {
       solicitarUbicacionUsuario();
     } else {
-      // Si no hay permiso manual previo, centrar en lo que tengamos y abrir modal
-      mapaRef.current?.setView(ubicacionUsuario, 15);
-      actualizarElementosMapa(ubicacionUsuario[0], ubicacionUsuario[1]);
       setEstaAbiertoModalUbicacion(true);
     }
 
     return () => {
-      if (mapaRef.current) {
-        mapaRef.current.remove();
-        mapaRef.current = null;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
       }
     };
   }, []);
 
   /**
-   * Actualiza los elementos visuales del mapa (marcadores y rutas).
-   * 
-   * @param {number} latitud - Latitud de la ubicación.
-   * @param {number} longitud - Longitud de la ubicación.
-   */
-  const actualizarElementosMapa = async (latitud: number, longitud: number) => {
-    if (!mapaRef.current) return;
-
-    const posUsuario: [number, number] = [latitud, longitud];
-    const posBus: [number, number] = [latitud + 0.003, longitud + 0.003];
-
-    // Restringir el mapa a un rango de 1.5km alrededor del usuario (Geofence)
-    const suroeste = L.latLng(latitud - 0.015, longitud - 0.015);
-    const noreste = L.latLng(latitud + 0.015, longitud + 0.015);
-    const limites = L.latLngBounds(suroeste, noreste);
-    mapaRef.current.setMaxBounds(limites);
-
-    // 1. Marcador Usuario
-    const iconoUsuario = L.divIcon({
-      className: '',
-      html: `<div style="display:flex;align-items:center;justify-content:center;"><div class="user-pulse"></div><div class="user-dot"></div></div>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
-    });
-
-    if (marcadorUsuarioRef.current) {
-      marcadorUsuarioRef.current.setLatLng(posUsuario);
-    } else {
-      marcadorUsuarioRef.current = L.marker(posUsuario, { icon: iconoUsuario }).addTo(mapaRef.current);
-    }
-
-    // 2. Marcador Bus
-    if (marcadorBusRef.current) {
-      marcadorBusRef.current.removerDelMapa();
-    }
-    marcadorBusRef.current = crearMarcadorBus(posBus, estadoBusActual, mapaRef.current);
-
-    // 3. Polilínea por calles (Utilizando servicio común)
-    const coordenadas = await obtenerRutaPorCalles(posUsuario, posBus);
-    if (polilineaRef.current) {
-      polilineaRef.current.setLatLngs(coordenadas);
-    } else {
-      polilineaRef.current = L.polyline(coordenadas, {
-        color: '#3b82f6',
-        weight: 5,
-        opacity: 0.7,
-        lineCap: 'round',
-        lineJoin: 'round',
-        dashArray: '8, 12'
-      }).addTo(mapaRef.current);
-    }
-
-    mapaRef.current.setView(posUsuario, 16, { animate: true });
-  };
-
-  /**
-   * Solicita la ubicación actual del usuario a través de la API del navegador.
+   * Solicita la ubicación actual del usuario.
    */
   const solicitarUbicacionUsuario = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((posicion) => {
         const { latitude, longitude } = posicion.coords;
         setUbicacionUsuario([latitude, longitude]);
-        actualizarElementosMapa(latitude, longitude);
       }, (error) => {
         let mensaje = "No se pudo obtener tu ubicación actual.";
         if (error.code === error.PERMISSION_DENIED) {
-          mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
+          mensaje = "Geolocalización denegada. Usando ubicación predeterminada.";
         }
         dispararError(mensaje, error.message, "Error de Ubicación");
-        setEstaAbiertoModalUbicacion(true); // Reabrir el modal en caso de error
       });
     }
   };
 
-  /**
-   * Manejador para cuando el usuario acepta compartir su ubicación.
-   */
   const manejarAceptarUbicacion = () => {
     localStorage.setItem('locationPermissionGranted', 'true');
     setEstaAbiertoModalUbicacion(false);
     solicitarUbicacionUsuario();
+    setCenterOnUserTrigger(prev => prev + 1);
   };
 
-
-  // Efecto para sincronizar cambios de estado del autobús
-  useEffect(() => {
-    if (marcadorBusRef.current) {
-      marcadorBusRef.current.actualizarEstado(estadoBusActual);
-    }
-  }, [estadoBusActual]);
-
   return (
-    <div className="passenger-body" ref={contenedorRef}>
+    <div className="passenger-body">
       {/* CABECERA (HEADER) */}
       <header className="fixed-header">
         <div>
@@ -165,16 +120,46 @@ const LandingPasajero: React.FC = () => {
         </button>
       </header>
 
-      {/* MAPA */}
-      <div id="map"></div>
+      {/* MAPA REFACTORIZADO */}
+      <Mapa 
+        vehicles={vehicles as any}
+        center={ubicacionUsuario}
+        centerOnUserTrigger={centerOnUserTrigger}
+        onLocationUpdate={(lat: number, lng: number) => setUbicacionUsuario([lat, lng])}
+      />
+
+      {/* LEYENDA DE COLORES */}
+      <div className="absolute bottom-24 left-4 z-[1000] bg-white/90 backdrop-blur p-3 rounded-xl shadow-lg border border-slate-200 text-[10px] space-y-2">
+        <p className="font-bold text-slate-700 border-b pb-1 mb-1">Capacidad / Estado</p>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#4ade80]"></div>
+          <span className="text-slate-600">Baja (Libre)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#facc15]"></div>
+          <span className="text-slate-600">Media</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#ef4444]"></div>
+          <span className="text-slate-600">Alta (Lleno)</span>
+        </div>
+        <div className="flex items-center gap-2 border-t pt-1">
+          <div className="w-3 h-3 rounded-full bg-[#a855f7]"></div>
+          <span className="text-slate-600">Sin Señal</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+          <span className="text-slate-600">Simulación</span>
+        </div>
+      </div>
 
       {/* TARJETA INFORMATIVA */}
       <TarjetaInformativa
-        unidad="001"
-        ocupabilidad="Alta"
-        estado={estadoBusActual}
-        distancia="250 metros"
-        ultimaActualizacion="ahora"
+        unidad="Selecciona una unidad"
+        ocupabilidad="..."
+        estado={EstadoBus.BAJA}
+        distancia="..."
+        ultimaActualizacion="..."
       />
 
       {/* MODAL DE UBICACIÓN */}
