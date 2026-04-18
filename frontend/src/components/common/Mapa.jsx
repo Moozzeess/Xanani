@@ -10,6 +10,7 @@ import { MapaProvider } from './mapa/MapaContext';
 const Mapa = ({
   center = [19.4326, -99.1332],
   zoom = 15,
+  bounds = null,
   tileTheme = 'standard', // 'standard' (color) o 'light' (claro/gris)
   children,
   onMapClick = (latlng) => {},
@@ -62,16 +63,32 @@ const Mapa = ({
     };
   }, [tileTheme]);
 
-  // 2. Reactividad del centro (Especial para seguimientos o saltos del Admin)
+  // 2. Reactividad del centro
   useEffect(() => {
-    if (mapInstance && center) {
-        // Desactivamos animate: true para evitar colas de animación en actualizaciones rápidas (simulación)
-        // lo que previene que las capas como la geometría parpadeen o desaparezcan.
-        mapInstance.setView(center, mapInstance.getZoom(), { animate: false });
-    }
-  }, [center, mapInstance]);
+    if (mapInstance && center && !bounds) {
+        const currentCenter = mapInstance.getCenter();
+        const dist = Math.sqrt(
+            Math.pow(currentCenter.lat - center[0], 2) + 
+            Math.pow(currentCenter.lng - center[1], 2)
+        );
 
-  // 3. Reactividad del zoom
+        if (dist > 0.0001) {
+            mapInstance.flyTo(center, mapInstance.getZoom(), {
+                animate: true,
+                duration: 1.5
+            });
+        }
+    }
+  }, [center, mapInstance, bounds]);
+
+  // 3. Reactividad de los límites (Bounds)
+  useEffect(() => {
+    if (mapInstance && bounds && bounds.length > 0) {
+        mapInstance.fitBounds(bounds, { padding: autoFitPadding });
+    }
+  }, [bounds, mapInstance, autoFitPadding]);
+
+  // 4. Reactividad del zoom
   useEffect(() => {
     if (mapInstance && zoom) {
         mapInstance.setZoom(zoom);

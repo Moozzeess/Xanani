@@ -22,6 +22,7 @@ const reporteRoutes = require('./reporte.routes');
 const incidenteRoutes = require('./incidente.routes');
 const adminRoutes = require('./admin.routes');
 const estadisticasRoutes = require('./estadisticas.routes');
+const notificacionRoutes = require('./notificacion.routes');
 
 router.get('/salud', (_, res) => {
   res.json({ status: 'ok', mensaje: 'Servidor operativo' });
@@ -40,5 +41,6 @@ router.use('/reportes', reporteRoutes);
 router.use('/incidentes', incidenteRoutes);
 router.use('/admin', adminRoutes);
 router.use('/estadisticas', estadisticasRoutes);
+router.use('/notificaciones', notificacionRoutes);
 
 module.exports = router;

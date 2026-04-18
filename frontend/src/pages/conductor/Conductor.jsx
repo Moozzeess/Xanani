@@ -18,6 +18,8 @@ import HistorialGeneral from '../../components/common/HistorialGeneral';
 import PanelPerfil from '../../components/common/PanelPerfil';
 import { NoRouteOverlay } from '../../components/conductor/IniciarFinalizar';
 import { useConductorSimulation } from '../../simulations/conductorSimulation';
+import { Bell, CheckCircle, MessageSquare } from 'lucide-react';
+import ModalAlerta from '../../components/common/ModalAlerta';
 
 
 const Conductor = () => {
@@ -49,6 +51,8 @@ const Conductor = () => {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [showSimModal, setShowSimModal] = useState(false);
+  const [isHardwareActive, setIsHardwareActive] = useState(false); // Simulación de estado de hardware
   const [profileData, setProfileData] = useState(null);
   const [ubicacionReal, setUbicacionReal] = useState(null);
 
@@ -61,9 +65,12 @@ const Conductor = () => {
           setUbicacionReal([pos.coords.latitude, pos.coords.longitude]);
         },
         (error) => {
-          console.error("Error al rastrear ubicación real del conductor:", error);
+          // No loguear error de permisos repetidamente, solo si es algo crítico
+          if (error.code !== 1) { // 1 = PERMISSION_DENIED
+             console.warn("Señal GPS no disponible actualmente.");
+          }
         },
-        { enableHighAccuracy: true, maximumAge: 1000 }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
       );
     }
     return () => {
@@ -90,11 +97,15 @@ const Conductor = () => {
         const { conductor } = res.data.data;
         if (conductor && conductor.rutaAsignadaId) {
           setProfileData(conductor);
-          setUnidadActual(conductor.unidadAsignadaId?.placa || "Unidad Asignada");
+          
+          // Configurar datos de la unidad asignada desde el objeto unidadAsignada
+          const unidadInfo = conductor.unidadAsignada;
+          setUnidadActual(unidadInfo?.placa || conductor.unidad || "Sin Unidad");
+          setCapacity(unidadInfo?.capacidad || 15);
+          
           setRutaActual(conductor.rutaAsignadaId?.nombre || "Sin Ruta");
-          setCapacity(15);
           setRawIds({
-            unidadId: conductor.unidadAsignadaId?._id || null,
+            unidadId: unidadInfo?._id || null,
             rutaId: conductor.rutaAsignadaId?._id || null,
             conductorProfileId: conductor._id
           });
@@ -184,7 +195,6 @@ const Conductor = () => {
     setViewMode('espera');
     setPassengerCount(0);
     setNotificaciones([]);
-    setWasSimulated(false);
     resetSimulation();
   };
 
@@ -226,6 +236,15 @@ const Conductor = () => {
   };
 
   const handleStartRoute = () => {
+    if (!isHardwareActive) {
+      setShowSimModal(true);
+      return;
+    }
+    ejecutarInicioRuta(false);
+  };
+
+  const ejecutarInicioRuta = (simular) => {
+    setIsTesting(simular);
     setViewMode('conduccion');
     setPassengerCount(0);
     setTripStats({
@@ -235,6 +254,7 @@ const Conductor = () => {
       kmRecorridos: 0,
       calificacion: parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1))
     });
+    setShowSimModal(false);
   };
 
   const handleStopRoute = async () => {
@@ -284,23 +304,7 @@ const Conductor = () => {
         </Mapa>
       </div>
 
-      {/* BOTÓN FLOTANTE MODO PRUEBA */}
-      {viewMode === 'conduccion' && (
-        <button
-          onClick={() => setIsTesting(!isTesting)}
-          className={`fixed top-6 right-6 z-[60] w-14 h-14 rounded-2xl shadow-2xl transition-all active:scale-90 flex items-center justify-center border border-white/20 backdrop-blur-md ${isTesting
-            ? 'bg-red-500/90 text-white animate-pulse'
-            : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          title={isTesting ? 'Detener Prueba' : 'Iniciar Simulación de Ruta'}
-        >
-          <img
-            src="/bus_icon_126644.svg"
-            alt="Simulación"
-            className={`w-8 h-8 ${isTesting ? 'invert animate-bounce' : 'grayscale-0'}`}
-          />
-        </button>
-      )}
+      {/* BOTÓN FLOTANTE MODO PRUEBA ELIMINADO SEGÚN REQUERIMIENTO */}
 
       {/* CAPAS DE UI (Sobre el mapa) */}
       <div className="relative z-10 h-full w-full pointer-events-none">
@@ -313,6 +317,7 @@ const Conductor = () => {
               onLogout={onLogout}
               unidadAsignada={unidadActual}
               rutaDefecto={rutaActual}
+              isHardwareActive={isHardwareActive}
             />
           </div>
         )}
@@ -343,6 +348,70 @@ const Conductor = () => {
           </div>
         )}
 
+        {/* VISTA DE AVISOS / NOTIFICACIONES */}
+        {viewMode === 'avisos' && (
+          <div className="pointer-events-auto h-full w-full bg-[#0f172a] p-6 overflow-y-auto">
+             <header className="mb-6 flex items-center justify-between">
+                <div>
+                   <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                      <Bell className="w-6 h-6 text-blue-400" />
+                      Avisos y Reportes
+                   </h1>
+                   <p className="text-slate-400 text-sm">Mensajes del administrador y estado de incidencias.</p>
+                </div>
+             </header>
+
+             <div className="space-y-4 max-w-2xl mx-auto">
+                {/* Mensaje de Bienvenida / Estado */}
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-4">
+                   <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 text-blue-400">
+                      <CheckCircle className="w-5 h-5" />
+                   </div>
+                   <div>
+                      <h4 className="font-bold text-blue-100 text-sm">Sistema Operativo</h4>
+                      <p className="text-blue-200/70 text-xs">No hay incidencias críticas reportadas en tu ruta actual. ¡Buen viaje!</p>
+                      <span className="text-[10px] text-blue-400 mt-1 block">Ahora</span>
+                   </div>
+                </div>
+
+                <div className="border-b border-white/10 my-6"></div>
+
+                <h3 className="font-bold text-white/80 mb-2 flex items-center gap-2">
+                   <MessageSquare className="w-4 h-4" />
+                   Historial de Avisos
+                </h3>
+
+                {notificaciones.length === 0 ? (
+                   <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                      <Bell className="w-12 h-12 text-white/10 mx-auto mb-3" />
+                      <p className="text-slate-500 text-sm">No tienes avisos o notificaciones pendientes.</p>
+                   </div>
+                ) : (
+                   <div className="space-y-3">
+                      {notificaciones.map((n) => (
+                         <div key={n.id} className="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-start">
+                            <div className="flex-1">
+                               <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${n.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{n.title}</span>
+                               </div>
+                               <p className="text-sm text-slate-200 mt-1">{n.message}</p>
+                            </div>
+                         </div>
+                      ))}
+                   </div>
+                )}
+             </div>
+
+             <button 
+                onClick={() => setViewMode('espera')}
+                className="fixed bottom-24 right-6 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl z-[100] font-bold active:scale-95 transition-transform"
+             >
+                Volver al Inicio
+             </button>
+          </div>
+        )}
+
         {/* VISTA DE HISTORIAL */}
         {viewMode === 'historial' && (
           <div className="pointer-events-auto h-full w-full bg-[#0f172a]">
@@ -368,12 +437,18 @@ const Conductor = () => {
       {(viewMode === 'espera' || viewMode === 'historial') && (
         <div className="pointer-events-auto">
           <Navbar
-            onLogout={onLogout}
-            onCenterLocation={() => { }}
-            onHistoryClick={() => setViewMode('historial')}
+            rol="CONDUCTOR"
+            onCenterLocation={handleStartRoute}
+            onAfluenciaClick={() => setViewMode('historial')}
+            onNotificationsClick={() => setViewMode('avisos')}
             onMapClick={() => setViewMode('espera')}
             onProfileClick={() => setIsProfileOpen(true)}
-            activeTab={viewMode === 'espera' ? 'map' : viewMode === 'historial' ? 'afluencia' : ''}
+            activeTab={
+              viewMode === 'espera' ? 'map' : 
+              viewMode === 'historial' ? 'afluencia' : 
+              viewMode === 'avisos' ? 'notifications' :
+              isProfileOpen ? 'profile' : ''
+            }
           />
         </div>
       )}
@@ -385,6 +460,15 @@ const Conductor = () => {
         usuario={usuario}
         conductorData={profileData}
         onLogout={onLogout}
+      />
+
+      {/* MODAL DE SIMULACIÓN AUTOMÁTICA */}
+      <ModalAlerta 
+        mostrar={showSimModal}
+        tipo="advertencia"
+        titulo="Hardware no detectado"
+        mensaje={`La unidad ${unidadActual} se encuentra offline. Se iniciará el recorrido en modo de simulación para mantener el servicio activo.`}
+        alCerrar={() => ejecutarInicioRuta(true)}
       />
     </div>
   );

@@ -12,10 +12,12 @@ const PanelPerfil = ({
     conductorData = null, // Datos técnicos si el rol es CONDUCTOR
     historial = [],
     rutasFavoritas = [],
+    rutasDisponibles = [],
     paradasFavoritas = [],
     notificacionesActivas = false,
     onToggleNotificaciones,
     onLimpiarHistorial,
+    onToggleSuscripcion, // Cambiado de onQuitarFavorito
     onVerRutaFavorita,
     onCentrarParada,
     onLogout,
@@ -150,16 +152,64 @@ const PanelPerfil = ({
                                 <Heart className="w-3 h-3" /> Rutas guardadas
                             </p>
                             {rutasFavoritas.map((ruta) => (
-                                <button
-                                    key={ruta.id}
-                                    onClick={() => onVerRutaFavorita?.(ruta)}
-                                    className="w-full flex items-center gap-3 py-2.5 hover:bg-slate-50 rounded-xl px-2 transition-colors"
+                                <div
+                                    key={ruta._id || ruta.id}
+                                    className="w-full flex items-center gap-3 py-2 hover:bg-slate-50 rounded-xl px-2 group transition-colors"
                                 >
-                                    <Route className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                    <span className="text-sm text-slate-700 font-medium flex-1 text-left truncate">{ruta.nombre}</span>
-                                    <ChevronRight className="w-4 h-4 text-slate-300" />
-                                </button>
+                                    <button
+                                        onClick={() => onVerRutaFavorita?.(ruta)}
+                                        className="flex-1 flex items-center gap-3 text-left min-w-0"
+                                    >
+                                        <Route className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                        <span className="text-sm text-slate-700 font-medium truncate">{ruta.nombre}</span>
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onToggleSuscripcion?.(ruta._id || ruta.id);
+                                        }}
+                                        className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-400 transition-all"
+                                        title="Quitar suscripción"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:hidden" />
+                                </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Descubrir Rutas (Si no hay o para agregar más) */}
+                    {!isConductor && (
+                        <div className="px-5 py-4 border-b border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 flex items-center gap-1.5">
+                                <Route className="w-3 h-3" /> {rutasFavoritas.length === 0 ? 'Descubrir Rutas' : 'Explorar más'}
+                            </p>
+                            <div className="space-y-2">
+                                {rutasDisponibles
+                                    .filter(r => !rutasFavoritas.some(f => (f._id || f.id) === (r._id || r.id)))
+                                    .slice(0, 3) 
+                                    .map((ruta) => (
+                                        <div
+                                            key={ruta._id || ruta.id}
+                                            className="w-full flex items-center gap-3 py-2 hover:bg-slate-50 rounded-xl px-2 transition-colors border border-dashed border-transparent hover:border-slate-200"
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm text-slate-700 font-medium truncate">{ruta.nombre}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => onToggleSuscripcion?.(ruta._id || ruta.id)}
+                                                className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg hover:bg-blue-600 hover:text-white transition-all"
+                                            >
+                                                Suscribirse
+                                            </button>
+                                        </div>
+                                    ))
+                                }
+                                {rutasDisponibles.filter(r => !rutasFavoritas.some(f => (f._id || f.id) === (r._id || r.id))).length === 0 && (
+                                    <p className="text-[10px] text-slate-400 italic text-center py-2">No hay más rutas disponibles por ahora.</p>
+                                )}
+                            </div>
                         </div>
                     )}
 

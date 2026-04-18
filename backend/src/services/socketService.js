@@ -6,6 +6,7 @@ const Incidencia = require('../models/Incidencia');
  * Gestiona la conexión con los clientes (frontend) y la emisión de datos en tiempo real.
  */
 let io;
+const rutasNotificadas = new Set(); // Cache para evitar spam de notificaciones
 
 /**
  * Intención: Instanciar y encender el motor de Socket.io emparejado al puerto del backend.
@@ -79,9 +80,32 @@ const inicializarSocket = (server) => {
     // --- NUEVA LÓGICA DE GESTIÓN DE FLOTILLA ---
 
     // 1. Ubicación en tiempo real de los conductores
-    socket.on('ubicacion_conductor', (datos) => {
-      // Retransmitir al panel de administración (y a otros interesados si aplica)
+    socket.on('ubicacion_conductor', async (datos) => {
+      // Retransmitir al panel de administración y pasajeros
       socket.broadcast.emit('ubicacion_conductor', datos);
+
+      // Si es una ruta que no hemos marcado como activa en esta sesión
+      const { rutaId, rutaNombre } = datos;
+      if (rutaId && !rutasNotificadas.has(rutaId.toString())) {
+        rutasNotificadas.add(rutaId.toString());
+
+        const notificacionController = require('../controllers/notificacion.controller');
+        await notificacionController.crearNotificacionInterna({
+          titulo: '¡Ruta en Movimiento!',
+          mensaje: `Unidades reales han comenzado a circular en la ruta "${rutaNombre || 'Suscrita'}".`,
+          tipo: 'INFO',
+          rolDestino: 'PASAJERO',
+          data: { rutaId }
+        });
+
+        // Opcional: Avisar por socket de forma inmediata incluyendo la posición inicial
+        io.emit('ruta_activa', { 
+          rutaId, 
+          rutaNombre, 
+          pos: datos.pos, 
+          unidadId: datos.id 
+        });
+      }
     });
 
     // 2. Avisos globales o específicos desde Admin hacia Conductores

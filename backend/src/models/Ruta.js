@@ -54,7 +54,7 @@ const rutaSchema = new mongoose.Schema(
 
         creadoPor: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Usuario' // Corregido el ref a Usuario
+            ref: 'Usuario'
         }
     },
     { timestamps: true }

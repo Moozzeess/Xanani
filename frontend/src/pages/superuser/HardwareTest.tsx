@@ -38,7 +38,12 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       connected: false,
       signalStrength: 0,
       dataPlanActive: false
-    }
+    },
+   /* gps: {
+      latitud: 0,
+      longitud: 0,
+      conectado: false
+    }*/
   });
 
   // Memoria de Sensores Físicos

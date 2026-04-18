@@ -23,7 +23,7 @@ function obtenerRutaPorDefecto(rol: Role): string {
     case "PASAJERO":
       return "/pasajero";
     default:
-      return "/";
+      return "/LandingPage";
   }
 }
 

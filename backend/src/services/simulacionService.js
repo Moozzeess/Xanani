@@ -47,8 +47,8 @@ const iniciarSimulacionPasajeros = async () => {
     }
 
     if (unidadesSimuladas.length === 0) {
-        console.warn('Ninguna ruta tiene geometría válida para simular.');
-        return;
+      console.warn('Ninguna ruta tiene geometría válida para simular.');
+      return;
     }
 
     intervaloSimulacion = setInterval(() => {
@@ -56,11 +56,11 @@ const iniciarSimulacionPasajeros = async () => {
         // Avanzar índice circular
         unidad.currentIndex = (unidad.currentIndex + 1) % unidad.geometria.length;
         const puntoActual = unidad.geometria[unidad.currentIndex];
-        
+
         // Simular cambio de ocupación ocasional
         if (Math.random() > 0.85) {
-            const cambio = Math.random() > 0.5 ? 1 : -1;
-            unidad.ocupacionActual = Math.max(0, Math.min(unidad.capacidadMaxima, unidad.ocupacionActual + cambio));
+          const cambio = Math.random() > 0.5 ? 1 : -1;
+          unidad.ocupacionActual = Math.max(0, Math.min(unidad.capacidadMaxima, unidad.ocupacionActual + cambio));
         }
 
         // Emitir ubicación al canal de sockets
@@ -72,13 +72,13 @@ const iniciarSimulacionPasajeros = async () => {
           ocupacionActual: unidad.ocupacionActual,
           capacidadMaxima: unidad.capacidadMaxima,
           isSimulated: true,
+          rutaId: unidad.rutaId,
           rutaNombre: unidad.rutaNombre,
           estado: unidad.estado
         });
       });
     }, 3000); // Frecuencia de actualización
 
-    console.log('>>> Motor de simulación activado para Pasajeros.');
   } catch (error) {
     console.error('Error al iniciar simulación:', error);
   }
@@ -88,11 +88,10 @@ const iniciarSimulacionPasajeros = async () => {
  * Detiene la simulacion.
  */
 const detenerSimulacion = () => {
-    if (intervaloSimulacion) {
-        clearInterval(intervaloSimulacion);
-        intervaloSimulacion = null;
-        console.log('>>> Motor de simulación detenido.');
-    }
+  if (intervaloSimulacion) {
+    clearInterval(intervaloSimulacion);
+    intervaloSimulacion = null;
+  }
 };
 
 module.exports = {

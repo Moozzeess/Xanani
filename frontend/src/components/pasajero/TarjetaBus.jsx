@@ -36,7 +36,12 @@ const TarjetaBus = ({ vehicle, onClose, onReport, onVerRuta }) => {
                     </div>
 
                     {/* Componente de Asientos */}
-                    <MapaAsientos ocupabilidad={vehicle.occ} />
+                    <MapaAsientos 
+                        ocupacionActual={vehicle.ocupacionActual} 
+                        capacidadMaxima={vehicle.capacidadMaxima} 
+                        vehicleId={vehicle.id || vehicle.placa}
+                        ocupabilidad={vehicle.occ} 
+                    />
 
                     <div className="grid grid-cols-2 gap-3">
                         <button 

@@ -1,4 +1,4 @@
-import { Signal, Cpu, CheckCircle2, XCircle, Wifi, WifiOff } from 'lucide-react';
+import { Signal, Cpu, CheckCircle2, XCircle, Wifi, WifiOff, MapPin } from 'lucide-react';
 
 interface DeviceStatusPanelProps {
   deviceStatus: {
@@ -10,6 +10,11 @@ interface DeviceStatusPanelProps {
       signalStrength: number;
       dataPlanActive: boolean;
     };
+  /*  gps: {
+      latitud: number;
+      longitud: number;
+      conectado: boolean;
+    };*/
   };
 }
 
@@ -65,6 +70,41 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
           </div>
         </div>
 
+        {/* GPS Module 
+        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${deviceStatus.gps.conectado ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-400'}`}>
+                <MapPin size={16} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-700">Módulo GPS</p>
+              </div>
+            </div>
+            <div>
+              {deviceStatus.gps.conectado ? 
+                <CheckCircle2 size={20} className="text-green-500" /> : 
+                <XCircle size={20} className="text-slate-300" />
+              }
+            </div>
+          </div>
+          
+          {deviceStatus.gps.conectado && (
+            <div className="mt-2 pt-2 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="bg-white p-1.5 rounded border border-slate-100">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Latitud</p>
+                  <p className="text-[11px] font-mono font-bold text-slate-700">{deviceStatus.gps.latitud.toFixed(6)}</p>
+                </div>
+                <div className="bg-white p-1.5 rounded border border-slate-100">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Longitud</p>
+                  <p className="text-[11px] font-mono font-bold text-slate-700">{deviceStatus.gps.longitud.toFixed(6)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>*/}
+
         {/* SIM800L */}
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
           <div className="flex items-center justify-between mb-2">
@@ -103,11 +143,11 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
               <div className="mt-1">
                 {deviceStatus.sim800l.dataPlanActive ? (
                   <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded flex items-center w-max gap-1">
-                    <Wifi size={10} /> Activo / Disponible
+                    <Wifi size={10} /> Activo
                   </span>
                 ) : (
                   <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded flex items-center w-max gap-1">
-                    <WifiOff size={10} /> Inactivo / Sin saldo
+                    <WifiOff size={10} /> Inactivo
                   </span>
                 )}
               </div>

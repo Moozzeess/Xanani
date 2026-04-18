@@ -141,9 +141,25 @@ const gestionarFavorito = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * Intención: Obtener el perfil completo del usuario autenticado.
+ */
+const obtenerPerfil = catchAsync(async (req, res, next) => {
+  const userId = req.auth?.userId;
+  const user = await Usuario.findById(userId, '-passwordHash').populate('rutasFavoritas');
+  
+  if (!user) throw new ErrorApp('Usuario no encontrado', 404);
+
+  res.status(200).json({
+    status: 'exito',
+    data: user
+  });
+});
+
 module.exports = {
   crearUsuario,
   obtenerAdministradores,
   actualizarPerfil,
-  gestionarFavorito
+  gestionarFavorito,
+  obtenerPerfil
 };

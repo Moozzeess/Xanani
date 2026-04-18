@@ -7,9 +7,9 @@ interface MapaProps {
 
 const MapaAsientosHardware = ({ celdasCarga, totalAsientos }: MapaProps) => {
   const asientos = Array.from({ length: totalAsientos }, (_, i) => ({
-    id: i + 1,
-    ocupado: celdasCarga ? celdasCarga[i] : false
-  }));
+        id: i + 1,
+        ocupado: celdasCarga ? celdasCarga[i] : false
+      }));
 
   const numOcupados = asientos.filter(a => a.ocupado).length;
 
@@ -96,13 +96,13 @@ export const SensorDataPanel = ({ sensorData, capacidadMaxima }: SensorDataPanel
             <div className={`absolute inset-0 opacity-10 ${sensorData.pasajeros.actuales > capacidadMaxima ? 'bg-red-500' : 'bg-transparent'}`}></div>
             <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1 relative z-10">
               Pasajeros a Bordo
-            </p>
+               </p>
             <p className={`text-3xl font-black relative z-10 ${sensorData.pasajeros.actuales > capacidadMaxima ? 'text-red-600' : 'text-blue-700'}`}>
               {sensorData.pasajeros.actuales}
-            </p>
+               </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
   );
 };

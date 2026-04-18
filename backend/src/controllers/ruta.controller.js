@@ -1,4 +1,5 @@
 const Ruta = require('../models/Ruta');
+const notificacionController = require('./notificacion.controller');
 
 /**
  * Intención: Crea una nueva ruta geométrica de transporte y la almacena.
@@ -9,6 +10,7 @@ const Ruta = require('../models/Ruta');
  *  - {Object} Confirma la alta en la flotilla (HTTP 201).
  * Reglas de negocio:
  *  - Su estructura será el molde por donde se guían las Paradas.
+ *  - Dispara una notificación global de RUTA_NUEVA.
  * Casos límite (edge cases):
  *  - Reporta HTTP 500 en fallas de parseo geográfico en Mongoose.
  */
@@ -17,6 +19,15 @@ exports.crearRuta = async (req, res) => {
         const nuevaRuta = new Ruta(req.body);
 
         const rutaGuardada = await nuevaRuta.save();
+
+        // Disparar notificación de nueva ruta
+        await notificacionController.crearNotificacionInterna({
+            titulo: '¡Nueva Ruta Disponible!',
+            mensaje: `Se ha habilitado la ruta "${rutaGuardada.nombre}". Suscríbete para recibir actualizaciones.`,
+            tipo: 'RUTA_NUEVA',
+            rolDestino: 'PASAJERO',
+            data: { rutaId: rutaGuardada._id }
+        });
 
         res.status(201).json({
             mensaje: 'Ruta creada correctamente',

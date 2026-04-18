@@ -69,7 +69,7 @@ const HistorialGeneral = ({ rol }) => {
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto pb-24">
       {/* Header con estadísticas resumidas */}
-      <div className="bg-slate-900 text-white p-6 pt-12 pb-10 rounded-b-[40px] shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-900 text-white p-6 pt-8 pb-6 rounded-b-[40px] shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full -mr-16 -mt-16 blur-3xl"></div>
         
         <h2 className="text-2xl font-bold mb-6">Tu Historial</h2>
@@ -104,7 +104,7 @@ const HistorialGeneral = ({ rol }) => {
       </div>
 
       {/* Lista de Viajes */}
-      <div className="px-6 -mt-6">
+      <div className="px-6 mt-4">
         <div className="flex flex-col gap-4">
           {viajes.length === 0 ? (
             <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center text-center gap-4">

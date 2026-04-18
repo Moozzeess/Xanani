@@ -50,9 +50,10 @@ const obtenerConductores = catchAsync(async (req, res, next) => {
 const crearConductor = catchAsync(async (req, res, next) => {
   const { username, email, password, telefono, licencia, unidad, fechaNacimiento, rutaAsignadaId } = req.body;
 
+  let unidadDocumento = null;
   if (unidad) {
-    const unidadExistente = await Unidad.findOne({ placa: unidad });
-    if (!unidadExistente) {
+    unidadDocumento = await Unidad.findOne({ placa: unidad });
+    if (!unidadDocumento) {
       throw new ErrorApp(`La unidad ${unidad} no existe.`, 404);
     }
   }
@@ -74,6 +75,12 @@ const crearConductor = catchAsync(async (req, res, next) => {
     rutaAsignadaId
   });
 
+  // Si se asignó una unidad, actualizar el documento de la unidad para que apunte a este usuario
+  if (unidadDocumento) {
+    // Primero desvincular al conductor anterior de esta unidad si existe
+    await Unidad.findByIdAndUpdate(unidadDocumento._id, { conductor: user._id });
+  }
+
   res.status(201).json({
     status: 'exito',
     mensaje: 'Conductor creado correctamente.',
@@ -88,10 +95,30 @@ const actualizarConductor = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { telefono, licencia, unidad, fechaNacimiento, rutaAsignadaId } = req.body;
 
-  if (unidad) {
-    const unidadExistente = await Unidad.findOne({ placa: unidad });
-    if (!unidadExistente) {
-      throw new ErrorApp(`La unidad con placa ${unidad} no está registrada.`, 404);
+  const conductorAnterior = await Conductor.findById(id);
+  if (!conductorAnterior) {
+    throw new ErrorApp('Ficha de conductor no encontrada.', 404);
+  }
+
+  // Si la unidad cambió, manejar la sincronización
+  if (unidad !== undefined && unidad !== conductorAnterior.unidad) {
+    // Si tenía una unidad anterior, quitar el conductor de esa unidad
+    if (conductorAnterior.unidad) {
+      await Unidad.findOneAndUpdate(
+        { placa: conductorAnterior.unidad },
+        { $unset: { conductor: 1 } }
+      );
+    }
+
+    // Si se asignó una nueva unidad, vincular al conductor
+    if (unidad) {
+      const nuevaUnidad = await Unidad.findOneAndUpdate(
+        { placa: unidad },
+        { conductor: conductorAnterior.user }
+      );
+      if (!nuevaUnidad) {
+        throw new ErrorApp(`La unidad con placa ${unidad} no está registrada.`, 404);
+      }
     }
   }
 
@@ -100,10 +127,6 @@ const actualizarConductor = catchAsync(async (req, res, next) => {
     { telefono, licencia, unidad, fechaNacimiento, rutaAsignadaId },
     { new: true, runValidators: true }
   ).populate('user', '-passwordHash').populate('rutaAsignadaId');
-
-  if (!conductor) {
-    throw new ErrorApp('Ficha de conductor no encontrada.', 404);
-  }
 
   res.status(200).json({
     status: 'exito',
@@ -120,12 +143,17 @@ const actualizarConductor = catchAsync(async (req, res, next) => {
  * Intención: Permite a un conductor ver su propio perfil y asignaciones.
  */
 const obtenerMiPerfil = catchAsync(async (req, res, next) => {
-  const userId = req.auth?.userId; // Corregido: usando userId del middleware
+  const userId = req.auth?.userId;
 
   const user = await Usuario.findById(userId).select('-passwordHash').lean();
   const conductor = await Conductor.findOne({ user: userId }).populate('rutaAsignadaId').lean();
 
   if (!user) throw new ErrorApp('Usuario no encontrado.', 404);
+
+  // Buscar la unidad asignada a este usuario
+  const unidad = await Unidad.findOne({ conductor: userId })
+    .populate('dispositivoHardware')
+    .lean();
 
   res.status(200).json({
     status: 'exito',
@@ -133,7 +161,8 @@ const obtenerMiPerfil = catchAsync(async (req, res, next) => {
       user,
       conductor: conductor ? {
         ...conductor,
-        edad: calcularEdad(conductor.fechaNacimiento)
+        edad: calcularEdad(conductor.fechaNacimiento),
+        unidadAsignada: unidad // Incluimos el objeto completo de la unidad
       } : null
     }
   });

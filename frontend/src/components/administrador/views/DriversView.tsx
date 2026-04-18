@@ -53,6 +53,7 @@ const DriversView: React.FC = () => {
   });
 
   const [rutasDisponibles, setRutasDisponibles] = useState<any[]>([]);
+  const [unidadesDisponibles, setUnidadesDisponibles] = useState<any[]>([]);
 
   // Mock de viajes recientes según requerimiento (hasta que se conecte API)
   const [viajesRecientes] = useState([
@@ -80,9 +81,10 @@ const DriversView: React.FC = () => {
       try {
         if (!token) return;
 
-        const [resCond, resRutas] = await Promise.all([
+        const [resCond, resRutas, resUnidades] = await Promise.all([
           api.get('/conductores', { headers: { Authorization: `Bearer ${token}` } }),
-          api.get('/rutas', { headers: { Authorization: `Bearer ${token}` } })
+          api.get('/rutas', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/unidades', { headers: { Authorization: `Bearer ${token}` } })
         ]);
 
         // Mapear los usuarios del backend a la interfaz Conductor del frontend
@@ -107,6 +109,7 @@ const DriversView: React.FC = () => {
 
         setConductores(conductoresMapeados);
         setRutasDisponibles(resRutas.data || []);
+        setUnidadesDisponibles(Array.isArray(resUnidades.data) ? resUnidades.data : resUnidades.data?.data || []);
       } catch (error) {
         console.error('Error al obtener datos', error);
         alerta.dispararError('Error de carga', 'No se pudo sincronizar la información del servidor.');
@@ -604,8 +607,14 @@ const DriversView: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unidad Asignada * (Placa)</label>
-                      <input type="text" name="unidad" value={form.unidad} onChange={handleChange} required placeholder="Ej. MX7-105"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono uppercase" />
+                      <select name="unitSelect" value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })} required
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono uppercase bg-white"
+                      >
+                        <option value="">-- Seleccionar Unidad --</option>
+                        {unidadesDisponibles.map(u => (
+                          <option key={u._id} value={u.placa}>{u.placa}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Asignar Ruta *</label>
