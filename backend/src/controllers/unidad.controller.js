@@ -148,6 +148,44 @@ exports.asignarHardware = async (req, res) => {
 exports.actualizarUnidad = async (req, res) => {
   try {
     const { id } = req.params;
+    const { placa, conductor } = req.body;
+
+    const unidadAnterior = await Unidad.findById(id);
+    if (!unidadAnterior) {
+      return res.status(404).json({ mensaje: 'Unidad no encontrada' });
+    }
+
+    // Si cambió la placa o el conductor, sincronizar
+    const placaCambio = placa && placa !== unidadAnterior.placa;
+    const conductorCambio = conductor !== undefined && String(conductor) !== String(unidadAnterior.conductor || '');
+
+    if (placaCambio || conductorCambio) {
+      // 1. Desvincular conductor anterior si existía
+      if (unidadAnterior.conductor) {
+        await Conductor.findOneAndUpdate(
+          { user: unidadAnterior.conductor },
+          { unidad: '' }
+        );
+      }
+
+      // 2. Vincular nuevo conductor si existe
+      if (conductor) {
+        await Conductor.findOneAndUpdate(
+          { user: conductor },
+          { unidad: placa || unidadAnterior.placa },
+          { upsert: true }
+        );
+      }
+      
+      // 3. Si cambió la placa pero el conductor es el mismo, actualizar la placa en su perfil
+      if (placaCambio && !conductorCambio && unidadAnterior.conductor) {
+         await Conductor.findOneAndUpdate(
+          { user: unidadAnterior.conductor },
+          { unidad: placa }
+        );
+      }
+    }
+
     const unidad = await Unidad.findByIdAndUpdate(id, req.body, { new: true });
     res.json({ mensaje: 'Unidad actualizada', unidad });
   } catch (error) {

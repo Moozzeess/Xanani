@@ -20,7 +20,7 @@ exports.createHardware = async (req, res, next) => {
         const { 
             Direccion_Mac, Id_Dispositivo_Hardware, 
             broker, puerto, usuario_mqtt, password_mqtt, 
-            capacidadMaxima, umbralPeso, topico, estado 
+            capacidadMaxima, factorCalibracion, topico, estado 
         } = req.body;
 
         if (!Direccion_Mac || !Id_Dispositivo_Hardware) {
@@ -35,7 +35,7 @@ exports.createHardware = async (req, res, next) => {
         const nuevoDispositivo = await DispositivoHardware.create({
             Direccion_Mac,
             Id_Dispositivo_Hardware,
-            broker, puerto, usuario_mqtt, password_mqtt, capacidadMaxima, umbralPeso, topico,
+            broker, puerto, usuario_mqtt, password_mqtt, capacidadMaxima, factorCalibracion, topico,
             estado: estado || 'activo'
         });
 
@@ -155,7 +155,7 @@ exports.getAdminHardware = async (req, res, next) => {
 exports.assignAdmin = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { adminId, topico, broker, puerto, usuario_mqtt, password_mqtt, capacidadMaxima, umbralPeso, estado, Id_Dispositivo_Hardware } = req.body;
+        const { adminId, topico, broker, puerto, usuario_mqtt, password_mqtt, capacidadMaxima, factorCalibracion, estado, Id_Dispositivo_Hardware } = req.body;
 
         const dispositivo = await DispositivoHardware.findById(id);
 
@@ -170,7 +170,7 @@ exports.assignAdmin = async (req, res, next) => {
         if (usuario_mqtt !== undefined) dispositivo.usuario_mqtt = usuario_mqtt;
         if (password_mqtt !== undefined) dispositivo.password_mqtt = password_mqtt;
         if (capacidadMaxima !== undefined) dispositivo.capacidadMaxima = capacidadMaxima;
-        if (umbralPeso !== undefined) dispositivo.umbralPeso = umbralPeso;
+        if (factorCalibracion !== undefined) dispositivo.factorCalibracion = factorCalibracion;
         if (estado !== undefined) dispositivo.estado = estado;
         if (Id_Dispositivo_Hardware !== undefined) dispositivo.Id_Dispositivo_Hardware = Id_Dispositivo_Hardware;
         

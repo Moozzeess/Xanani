@@ -7,10 +7,11 @@ export interface SOSModalProps {
   isOpen: boolean;
   onClose: () => void;
   incidencia?: {
-    conductor?: { nombre: string; apellido: string; username: string };
+    conductor?: { nombre: string; apellido: string; username: string; foto?: string };
     unidadId?: string;
     ubicacion?: { latitud: number; longitud: number };
     descripcion?: string;
+    timestamp?: string;
   };
 }
 
@@ -70,21 +71,32 @@ const SOSModal: React.FC<SOSModalProps> = ({ isOpen, onClose, incidencia }) => {
 
         <div className="p-8">
           <div className="flex items-center gap-5 mb-8">
-            <div
-              className="w-20 h-20 bg-slate-200 rounded-2xl bg-cover bg-center border-2 border-slate-300 shadow-inner"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&q=80')"
-              }}
-            />
+            {incidencia?.conductor?.foto ? (
+              <img
+                src={incidencia.conductor.foto}
+                alt={incidencia.conductor.nombre}
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-300 shadow-inner"
+              />
+            ) : (
+              <div className="w-20 h-20 bg-slate-200 rounded-2xl flex items-center justify-center border-2 border-slate-300 shadow-inner">
+                <span className="text-slate-400 font-bold text-2xl">
+                  {incidencia?.conductor?.nombre?.[0] || '?'}
+                </span>
+              </div>
+            )}
             <div>
               <h4 className="text-2xl font-black text-slate-900 leading-tight">
                 {incidencia?.conductor ? `${incidencia.conductor.nombre} ${incidencia.conductor.apellido}` : incidencia?.conductor?.username || 'Conductor Desconocido'}
               </h4>
               <p className="text-slate-500 font-black text-lg">Unidad: {incidencia?.unidadId || 'N/A'}</p>
-              <p className="text-red-600 font-bold mt-2 flex items-center gap-2 text-sm">
+              <p className="text-red-600 font-bold mt-1 flex items-center gap-2 text-sm">
                 <MapPin className="w-5 h-5" /> {incidencia?.descripcion || 'Solicitud de ayuda inmediata'}
               </p>
+              {incidencia?.timestamp && (
+                <p className="text-slate-400 text-xs mt-1">
+                  Reportado: {new Date(incidencia.timestamp).toLocaleString()}
+                </p>
+              )}
             </div>
           </div>
 

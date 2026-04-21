@@ -18,7 +18,7 @@ const Superususario = () => {
 
   const onLogout = () => {
     cerrarSesion();
-    navigate("/", { replace: true });
+    navigate("/LandingPage", { replace: true });
   };
 
   const renderTab = (id, icon, label) => {
@@ -26,11 +26,10 @@ const Superususario = () => {
     return (
       <button
         onClick={() => setActiveTab(id)}
-        className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
-          isActive
+        className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${isActive
             ? 'border-blue-500 text-blue-400'
             : 'border-transparent text-slate-400 hover:text-slate-200'
-        }`}
+          }`}
       >
         {icon} {label}
       </button>
@@ -63,10 +62,10 @@ const Superususario = () => {
       <div className="bg-slate-800 px-6 shrink-0 border-b border-slate-700 overflow-x-auto">
         <div className="flex gap-4">
           {renderTab('analytics', <LayoutDashboard size={18} />, 'Analítica Global')}
-          {renderTab('admins',    <Users size={18} />,           'Gestión de Administradores')}
-          {renderTab('hardware',  <Cpu size={18} />,             'Pruebas de Hardware')}
-          {renderTab('health',    <Activity size={18} />,        'Estado del Sistema')}
-          {renderTab('heatmap',   <Map size={18} />,             'Mapa de Calor')}
+          {renderTab('admins', <Users size={18} />, 'Gestión de Administradores')}
+          {renderTab('hardware', <Cpu size={18} />, 'Pruebas de Hardware')}
+          {renderTab('health', <Activity size={18} />, 'Estado del Sistema')}
+          {renderTab('heatmap', <Map size={18} />, 'Mapa de Calor')}
         </div>
       </div>
 
@@ -92,29 +91,29 @@ const Superususario = () => {
 
           {activeTab === 'hardware' && (
             <div className="h-full">
-            <ListaDispositivos
-              onAddNew={() => {
-                setTestDevice(null);
-                setActiveTab('hardware_new');
-              }}
-              onTestDevice={(disp) => {
-                setTestDevice(disp);
-                setActiveTab('hardware_new');
-              }}
-            />
-          </div>
+              <ListaDispositivos
+                onAddNew={() => {
+                  setTestDevice(null);
+                  setActiveTab('hardware_new');
+                }}
+                onTestDevice={(disp) => {
+                  setTestDevice(disp);
+                  setActiveTab('hardware_new');
+                }}
+              />
+            </div>
           )}
           {activeTab === 'hardware_new' && (
-          <div className="h-full flex flex-col">
-            <button
-              onClick={() => setActiveTab('hardware_list')}
-              className="mb-4 text-blue-600 font-bold hover:underline self-start"
-            >
-              &larr; Volver al Invetario
-            </button>
-            <HardwareTest onSaved={() => setActiveTab('hardware_list')} initialDevice={testDevice} />
-          </div>
-        )}
+            <div className="h-full flex flex-col">
+              <button
+                onClick={() => setActiveTab('hardware')}
+                className="mb-4 text-blue-600 font-bold hover:underline self-start"
+              >
+                &larr; Volver al Invetario
+              </button>
+              <HardwareTest onSaved={() => setActiveTab('hardware')} initialDevice={testDevice} />
+            </div>
+          )}
 
           {activeTab === 'health' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">

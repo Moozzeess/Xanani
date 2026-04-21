@@ -10,398 +10,292 @@ import Navbar from "../../components/common/Navbar";
 // Componentes de Pasajero
 import AlertaFlotante from "../../components/pasajero/AlertaFlotante";
 import ReporteModal from "../../components/pasajero/ReporteModal";
-import TarjetaBus from "../../components/pasajero/TarjetaBus";
 import UbicacionModal from "../../components/common/UbicacionModal";
 import { useAlertaGlobal } from "../../context/AlertaContext";
 import { useSocket } from "../../hooks/useSocket";
 import ModalAlerta from "../../components/common/ModalAlerta";
 import PanelPerfil from "../../components/common/PanelPerfil";
+import ModalPerfilPasajero from "../../components/pasajero/ModalPerfilPasajero";
 
-// Capas de Mapa (Modular)
+// Capas de Mapa (Modular Premium)
 import CapaGeometria from "../../components/common/mapa/CapaGeometria";
 import CapaVehiculos from "../../components/common/mapa/CapaVehiculos";
 import CapaParadas from "../../components/common/mapa/CapaParadas";
 
+import PanelRutaInteractiva from "../../components/pasajero/PanelRutaInteractiva";
 import ListaNotificaciones from "../../components/pasajero/ListaNotificaciones";
 import PanelAfluencia from "../../components/common/estadisticas/PanelAfluencia";
-
-
+import SimPasajero from "../../simulations/SimPasajero";
+import { X } from 'lucide-react';
 
 /**
- * Página principal del Pasajero.
- * Integra el mapa, navegación, alertas y detalles de vehículos.
+ * Pasajero (Versión Premium Optimizada)
  */
 const Pasajero = () => {
-  const navigate = useNavigate();
-  const { cerrarSesion, usuario, token } = useAuth();
-  const { disparar, dispararError } = useAlertaGlobal();
+    const navigate = useNavigate();
+    const { cerrarSesion, usuario, token } = useAuth();
+    const { disparar, dispararError } = useAlertaGlobal();
+    const { socket } = useSocket();
 
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [centerOnUserTrigger, setCenterOnUserTrigger] = useState(0);
-  const [routeLine, setRouteLine] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
-  const [paradas, setParadas] = useState([]);
-  const { socket } = useSocket();
+    const [activeTab, setActiveTab] = useState('map');
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [vehicles, setVehicles] = useState([]);
+    const [selectedVehicle, setSelectedVehicle] = useState(null);
+    const [rutasDisponibles, setRutasDisponibles] = useState([]);
+    const [rutasFavoritas, setRutasFavoritas] = useState([]);
+    const [perfilCompleto, setPerfilCompleto] = useState(null);
+    const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
+    const [routeLine, setRouteLine] = useState([]);
+    const [paradas, setParadas] = useState([]);
+    const [mapCenter, setMapCenter] = useState([19.4326, -99.1332]);
+    const [mapBounds, setMapBounds] = useState(null);
+    const [hasNewNotifications, setHasNewNotifications] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Estados de simulación y tracking
-  const [showSimAlert, setShowSimAlert] = useState(false);
-  const [isSimulatedMode, setIsSimulatedMode] = useState(false);
-  const [onboardedVehicle, setOnboardedVehicle] = useState(null);
+    const username = usuario?.username || 'Pasajero';
+    const userInitial = username.charAt(0).toUpperCase();
 
-  // Estados de permisos de ubicación
-  const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
-  const [showMapUserLocation, setShowMapUserLocation] = useState(false);
-  const [isUbicacionPermitida, setUbicacionPermitida] = useState(false);
-  const [rutasDisponibles, setRutasDisponibles] = useState([]);
+    // Función Unificada para Actualizar Unidades (Real o Sim)
+    const actualizarVehiculo = (datos) => {
+        setVehicles(prev => {
+            const id = datos.id || datos.placa;
+            const index = prev.findIndex(v => v.id === id);
+            
+            // Si es una actualización de una unidad real recibida por el socket principal
+            let finalData = { ...datos };
+            if (!datos.isSimulated) {
+                let colorClass = 'bg-blue-400';
+                let occLabel = 'Baja';
+                const pct = (datos.ocupacionActual / datos.capacidadMaxima) * 100;
+                if (pct < 33) colorClass = 'bg-green-400';
+                else if (pct < 66) { colorClass = 'bg-yellow-400'; occLabel = 'Media'; }
+                else { colorClass = 'bg-red-400'; occLabel = 'Alta'; }
 
+                finalData = {
+                    ...datos,
+                    id,
+                    color: colorClass,
+                    occ: occLabel,
+                    nombreUnidad: datos.nombreUnidad || `Unidad ${id.slice(-4).toUpperCase()}`,
+                    conductorNombre: datos.conductor || datos.conductorNombre || 'Operador en Ruta'
+                };
+            }
 
-  // Obtener inicial e información del usuario autenticado
-  const username = usuario?.username || 'Pasajero';
-  const userInitial = username.charAt(0).toUpperCase();
-
-  // Conexión Socket - Manejo de ubicaciones
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleUbicacion = (datos) => {
-      setVehicles(prev => {
-        const id = datos.id || datos.placa;
-        const index = prev.findIndex(v => v.id === id);
-
-        let colorClass = 'bg-blue-400';
-        let occLabel = 'Simulado';
-
-        if (!datos.isSimulated) {
-          const pct = (datos.ocupacionActual / datos.capacidadMaxima) * 100;
-          if (pct < 33) { colorClass = 'bg-green-400'; occLabel = 'Baja'; }
-          else if (pct < 66) { colorClass = 'bg-yellow-400'; occLabel = 'Media'; }
-          else { colorClass = 'bg-red-400'; occLabel = 'Alta'; }
-        }
-
-        const newVehicle = {
-          ...datos,
-          id,
-          color: colorClass,
-          occ: occLabel,
-          pos: datos.pos
-        };
-
-        if (index === -1) return [...prev, newVehicle];
-        const newVehicles = [...prev];
-        newVehicles[index] = newVehicle;
-        return newVehicles;
-      });
-    };
-
-    socket.on('ubicacion_conductor', (datos) => {
-      setIsSimulatedMode(false);
-      handleUbicacion(datos);
-    });
-
-    socket.on('ubicacion_simulada', (datos) => {
-      handleUbicacion(datos);
-    });
-
-    return () => {
-      socket.off('ubicacion_conductor');
-      socket.off('ubicacion_simulada');
-    };
-  }, [socket]);
-
-  // Cargar lista de rutas al iniciar para vinculación rápida
-  useEffect(() => {
-    const fetchRutas = async () => {
-      try {
-        const res = await api.get('/rutas', {
-          headers: { Authorization: `Bearer ${token}` }
+            if (index === -1) return [...prev, finalData];
+            const newVehicles = [...prev];
+            newVehicles[index] = finalData;
+            
+            if (selectedVehicle?.id === id) setSelectedVehicle(finalData);
+            return newVehicles;
         });
-        console.log("Rutas cargadas exitosamente:", res.data?.length);
-        setRutasDisponibles(res.data || []);
-      } catch (e) {
-        console.error("Error cargando diccionario de rutas:", e.message, e.response?.data);
-      }
     };
-    if (token) fetchRutas();
-  }, [token]);
 
-  // Verificar si hay unidades reales, si no, avisar simulación
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const hasReal = vehicles.some(v => !v.isSimulated);
-      if (!hasReal && !isSimulatedMode) {
-        setShowSimAlert(true);
-        setIsSimulatedMode(true);
-        if (socket) socket.emit('solicitar_simulacion');
-      }
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [vehicles, isSimulatedMode, socket]);
+    // Listeners de Avisos del Administrador
+    useEffect(() => {
+        if (!socket) return;
+        
+        socket.on('aviso_pasajero', (datos) => {
+            disparar({
+                tipo: 'info',
+                titulo: 'Aviso Oficial',
+                mensaje: datos.mensaje
+            });
+            setHasNewNotifications(true);
+        });
 
-  // Generar vehículos cerca del usuario cuando se obtiene su ubicación
-  useEffect(() => {
-    // Verificar si el usuario ya otorgó permiso o si necesitamos mostrar el modal
-    const hasPermission = localStorage.getItem('locationPermissionGranted') === 'true';
+        return () => socket.off('aviso_pasajero');
+    }, [socket, disparar]);
 
-    if (hasPermission) {
-      setUbicacionPermitida(true);
-      setShowMapUserLocation(true);
-      requestUserLocation();
-    } else {
-      setIsUbicacionModalOpen(true);
-    }
-  }, []);
+    // Listeners de Unidades Reales
+    useEffect(() => {
+        if (!socket) return;
+        socket.on('ubicacion_conductor', actualizarVehiculo);
+        return () => socket.off('ubicacion_conductor');
+    }, [socket, selectedVehicle]);
 
 
-  const requestUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation([latitude, longitude]);
-      }, (error) => {
-        let mensaje = "No se pudo obtener tu ubicación actual.";
-        if (error.code === error.PERMISSION_DENIED) {
-          mensaje = "No se puede acceder a la ubicación. Por favor, concede permisos en tu navegador.";
+    // Cargar Rutas
+    useEffect(() => {
+        const fetchRutas = async () => {
+            try {
+                const res = await api.get('/rutas');
+                setRutasDisponibles(res.data || []);
+            } catch (e) { console.error("Error cargando rutas", e); }
+        };
+        if (token) fetchRutas();
+    }, [token]);
+
+    // Cargar Perfil y Favoritos
+    const fetchPerfil = async () => {
+        try {
+            const res = await api.get('/usuarios/perfil');
+            if (res.data?.data) {
+                setPerfilCompleto(res.data.data);
+                setRutasFavoritas(res.data.data.rutasFavoritas || []);
+            }
+        } catch (e) {
+            console.error("Error cargando perfil", e);
         }
-        dispararError(mensaje, error.message, "Error de Ubicación");
-        setIsUbicacionModalOpen(true);
-      });
-    } else {
-      dispararError("Tu navegador no soporta geolocalización.", "navigator.geolocation is undefined", "Error de Sistema");
-    }
-  };
+    };
 
-  const setDefaultVehicles = () => {
-    // Fallback a ubicación por defecto (Ciudad de México) si falla el permiso
-    const defaultLat = 19.4326;
-    const defaultLon = -99.1332;
-    setVehicles([
-      { id: 1, plate: 'MX-001', status: 'En ruta', color: 'bg-green-400', text: 'text-green-900', pillBg: 'bg-green-100 text-green-700', eta: '2 min', occ: 'Alta', pos: [defaultLat + 0.002, defaultLon + 0.002], driver: 'Juan P.' },
-      { id: 2, plate: 'MX-002', status: 'Terminal', color: 'bg-amber-400', text: 'text-amber-900', pillBg: 'bg-amber-100 text-amber-700', eta: '5 min', occ: 'Baja', pos: [defaultLat - 0.003, defaultLon + 0.001], driver: 'Luis G.' },
-    ]);
-  };
+    useEffect(() => {
+        if (token) fetchPerfil();
+    }, [token]);
 
-  const handleAcceptLocation = () => {
-    localStorage.setItem('locationPermissionGranted', 'true');
-    setUbicacionPermitida(true);
-    setIsUbicacionModalOpen(false);
-    setShowMapUserLocation(true);
-    requestUserLocation();
-  };
-
-
-  const onLogout = () => {
-    cerrarSesion();
-    navigate("/LandingPage", { replace: true });
-  };
-
-  const [activeTab, setActiveTab] = useState('map');
-
-  const handleVehicleClick = (v) => {
-    setSelectedVehicle(v);
-
-    // Trazado automático al hacer clic en un vehículo
-    if (v.rutaId && rutasDisponibles.length > 0) {
-      const rutaInfo = rutasDisponibles.find(r => r._id === v.rutaId);
-      if (rutaInfo && rutaInfo.geometria) {
-        const mappedLine = rutaInfo.geometria.map(p => [p.latitud, p.longitud]);
-        setRouteLine(mappedLine);
-        if (rutaInfo.paradas) setParadas(rutaInfo.paradas);
-      }
-    } else {
-      setRouteLine([]);
-    }
-  };
-
-  const handleVerRuta = async () => {
-    try {
-      setSelectedVehicle(null);
-      const res = await api.get('/rutas', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = res.data;
-
-      if (data && data.length > 0) {
-        // Buscar la ruta que coincida con el vehículo seleccionado o la primera con geometría
-        const rutaReal = data.find(r => r.geometria && r.geometria.length > 0) || data[0];
-
-        if (rutaReal && rutaReal.geometria && rutaReal.geometria.length > 0) {
-          const mappedLine = rutaReal.geometria.map(p => [p.latitud, p.longitud]);
-          setRouteLine(mappedLine);
-
-          if (rutaReal.paradas) {
-            setParadas(rutaReal.paradas);
-          }
-
-          disparar({
-            tipo: 'exito',
-            titulo: 'Ruta trazada',
-            mensaje: `Visualizando trazado de: ${rutaReal.nombre}`
-          });
-        } else {
-          dispararError('No hay trazado', 'La ruta seleccionada no tiene geometría asignada.');
+    const handleVehicleClick = (v) => {
+        if (selectedVehicle?.id === v.id) {
+            setSelectedVehicle(null);
+            setRouteLine([]);
+            setParadas([]);
+            return;
         }
-      }
-    } catch (error) {
-      console.error("Error detallado en handleVerRuta:", error.message, error.response?.data);
-      dispararError('Error de Conexión', `No se pudo cargar la ruta: ${error.message}`);
-    }
-  };
 
-  const handleOpenReport = () => {
-    setIsReportModalOpen(true);
-  };
+        setSelectedVehicle(v);
+        const rid = v.rutaId || v.id_ruta;
+        const rutaInfo = rutasDisponibles.find(r => r._id.toString() === rid?.toString());
 
-  // Lógica de seguimiento de viaje
-  useEffect(() => {
-    if (userLocation && vehicles.length > 0 && !onboardedVehicle) {
-      // Detectar si el usuario está muy cerca de una unidad real
-      const closeVehicle = vehicles.find(v => {
-        if (v.isSimulated) return false;
-        const dist = Math.sqrt(Math.pow(v.pos[0] - userLocation[0], 2) + Math.pow(v.pos[1] - userLocation[1], 2));
-        return dist < 0.0003; // ~30 metros
-      });
-
-      if (closeVehicle) {
-        setOnboardedVehicle(closeVehicle);
-        dispararError('¡Viaje detectado!', `Parece que has abordado la unidad ${closeVehicle.placa}. Estamos siguiendo tu viaje.`, 'info');
-      }
-    } else if (onboardedVehicle && userLocation) {
-      // Detectar si el usuario se bajó (se alejó demasiado del vehículo detectado)
-      const v = vehicles.find(veh => veh.id === onboardedVehicle.id);
-      if (v) {
-        const dist = Math.sqrt(Math.pow(v.pos[0] - userLocation[0], 2) + Math.pow(v.pos[1] - userLocation[1], 2));
-        if (dist > 0.001) { // ~100 metros de separación
-          setOnboardedVehicle(null);
-          dispararError('Viaje terminado', 'Detectamos que has bajado de la unidad. Por favor, califica tu experiencia.', 'exito');
-          setIsReportModalOpen(true); // Abrir reporte para calificar (Modo Experiencia)
+        if (rutaInfo) {
+            if (rutaInfo.geometria) {
+                setRouteLine(rutaInfo.geometria.map(p => [p.latitud, p.longitud]));
+            }
+            setParadas(rutaInfo.paradas || []);
+            disparar({ tipo: 'exito', titulo: 'Ruta Detectada', mensaje: `Siguiendo: ${rutaInfo.nombre}` });
         }
-      }
-    }
-  }, [userLocation, vehicles, onboardedVehicle]);
+    };
 
-  return (
-    <main className="flex flex-col h-screen w-screen relative bg-slate-200 overflow-hidden">
-      {/* HEADER FLOTANTE (Perfil de Usuario) */}
-      <div className="fixed top-0 left-0 right-0 px-5 top-4 pb-4 flex justify-between items-center z-[500] pointer-events-none">
-        <div
-          onClick={() => setIsProfileOpen(true)}
-          className="bg-white/90 backdrop-blur p-2 rounded-full shadow-lg pointer-events-auto flex items-center gap-2 pr-4 mt-2 border border-white/50 cursor-pointer active:scale-95 transition-transform"
-        >
-          <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs">
-            {userInitial}
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-[9px] font-bold text-gray-400 uppercase">Hola</span>
-            <span className="text-xs font-bold text-slate-800">{username}</span>
-          </div>
-        </div>
-      </div>
+    const onLogout = () => {
+        cerrarSesion();
+        navigate("/LandingPage", { replace: true });
+    };
 
-      {/* CONTENIDO PRINCIPAL SEGÚN TAB */}
-      <div className="flex-1 relative w-full h-full overflow-hidden">
-        {activeTab === 'map' ? (
-          <>
-            <Mapa 
-              tileTheme="standard"
-              onMapClick={(latlng) => console.log("Click en mapa:", latlng)}
-            >
-               <CapaGeometria routeLine={routeLine} isDashed={false} />
-               <CapaParadas stops={paradas} />
-               <CapaVehiculos 
-                 vehicles={vehicles} 
-                 selectedVehicleId={onboardedVehicle?.id} 
-                 onVehicleClick={handleVehicleClick} 
-               />
-            </Mapa>
+    const handleToggleSuscripcion = async (rutaId) => {
+        try {
+            const res = await api.post('/usuarios/favoritos', { rutaId });
+            if (res.data.status === 'exito') {
+                const perfilRes = await api.get('/usuarios/perfil');
+                setRutasFavoritas(perfilRes.data.data.rutasFavoritas || []);
+                disparar({ 
+                    tipo: 'exito', 
+                    titulo: 'Suscripción Actualizada', 
+                    mensaje: res.data.mensaje 
+                });
+            }
+        } catch (e) {
+            dispararError("No se pudo gestionar la suscripción");
+        }
+    };
 
-            {/* LEYENDA DE COLORES */}
-            <div className="absolute bottom-120 right-2 z-[1000] bg-white/90 backdrop-blur p-3 rounded-xl shadow-lg border border-slate-100 text-[10px] space-y-2">
-              <p className="font-bold text-slate-700 border-b pb-1 mb-1">Capacidad / Estado</p>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#4ade80]"></div>
-                <span className="text-slate-600">Baja (Libre)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#facc15]"></div>
-                <span className="text-slate-600">Media</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#ef4444]"></div>
-                <span className="text-slate-600">Alta (Lleno)</span>
-              </div>
-              <div className="flex items-center gap-2 border-t pt-1">
-                <div className="w-3 h-3 rounded-full bg-[#a855f7]"></div>
-                <span className="text-slate-600">Sin Señal</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
-                <span className="text-slate-600">Simulación</span>
-              </div>
+    const handleVerRutaFavorita = (ruta) => {
+        setIsProfileOpen(false);
+        if (ruta.geometria) {
+            setRouteLine(ruta.geometria.map(p => [p.latitud, p.longitud]));
+        }
+        setParadas(ruta.paradas || []);
+        disparar({ 
+            tipo: 'info', 
+            titulo: 'Ruta Seleccionada', 
+            mensaje: `Mostrando: ${ruta.nombre}` 
+        });
+    };
+
+    return (
+        <main className="flex flex-col h-screen w-screen relative bg-slate-50 overflow-hidden font-sans">
+
+            <div className="flex-1 relative w-full h-full overflow-hidden">
+                {activeTab === 'map' ? (
+                    <>
+                        <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-[500] pointer-events-none">
+                            <div
+                                onClick={() => setIsProfileOpen(true)}
+                                className="bg-white/80 backdrop-blur-xl p-2.5 rounded-full shadow-2xl pointer-events-auto flex items-center gap-3 pr-5 border border-white/40 cursor-pointer active:scale-95 transition-all"
+                            >
+                                <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm">
+                                    {userInitial}
+                                </div>
+                                <div className="flex flex-col leading-tight">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bienvenido</span>
+                                    <span className="text-sm font-black text-slate-800">{username}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Mapa center={mapCenter} bounds={mapBounds} onMapClick={() => setSelectedVehicle(null)}>
+                            <CapaGeometria routeLine={routeLine} unitPos={selectedVehicle?.pos} />
+                            <CapaParadas stops={paradas} />
+                            <CapaVehiculos vehicles={vehicles} selectedVehicleId={selectedVehicle?.id} onVehicleClick={handleVehicleClick} />
+                        </Mapa>
+
+                        {/* Motor de Simulación Modular */}
+                        <SimPasajero 
+                            socket={socket} 
+                            rutas={rutasDisponibles} 
+                            onUpdate={actualizarVehiculo} 
+                        />
+
+                        {/* PANEL EVOLUTIVO: Se activa automáticamente al seleccionar unidad */}
+                        {selectedVehicle && (
+                            <PanelRutaInteractiva
+                                vehicle={selectedVehicle}
+                                ruta={rutasDisponibles.find(r => r._id.toString() === (selectedVehicle?.rutaId || selectedVehicle?.id_ruta)?.toString())}
+                                onReport={() => setIsReportModalOpen(true)}
+                                onExpand={(state) => {
+                                    if (state === 'full' && paradas.length > 0) {
+                                        setMapBounds([selectedVehicle.pos, [paradas[paradas.length - 1].latitud, paradas[paradas.length - 1].longitud]]);
+                                    }
+                                }}
+                            />
+                        )}
+
+                        <AlertaFlotante onClick={() => setIsReportModalOpen(true)} />
+                    </>
+                ) : activeTab === 'notifications' ? (
+                    <ListaNotificaciones onNotifUpdate={setHasNewNotifications} />
+                ) : (
+                    <PanelAfluencia />
+                )}
             </div>
 
-            <AlertaFlotante onClick={handleOpenReport} />
-          </>
-        ) : activeTab === 'afluencia' ? (
-          <PanelAfluencia />
-        ) : activeTab === 'notifications' ? (
-          <ListaNotificaciones />
-        ) : (
-          <div className="p-10">Más secciones próximamente...</div>
-        )}
-      </div>
+            <Navbar
+                rol="PASAJERO"
+                activeTab={activeTab}
+                hasNewNotifications={hasNewNotifications}
+                onMapClick={() => setActiveTab('map')}
+                onNotificationsClick={() => setActiveTab('notifications')}
+                onAfluenciaClick={() => setActiveTab('afluencia')}
+                onProfileClick={() => setIsProfileOpen(true)}
+            />
 
-      {/* NAVEGACIÓN INFERIOR */}
-      <Navbar
-        activeTab={activeTab}
-        onMapClick={() => setActiveTab('map')}
-        onAfluenciaClick={() => setActiveTab('afluencia')}
-        onNotificationsClick={() => setActiveTab('notifications')}
-        onProfileClick={() => setIsProfileOpen(true)}
-        onCenterLocation={() => {
-          setActiveTab('map');
-          setCenterOnUserTrigger(prev => prev + 1);
-        }}
-      />
+            <PanelPerfil
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
+                usuario={{ ...perfilCompleto, role: 'PASAJERO' }}
+                rutasFavoritas={rutasFavoritas}
+                rutasDisponibles={rutasDisponibles}
+                onToggleSuscripcion={handleToggleSuscripcion}
+                onVerRutaFavorita={handleVerRutaFavorita}
+                onEditarPerfil={() => setIsProfileEditOpen(true)}
+                onLogout={onLogout}
+            />
 
-      {/* COMPONENTES LATERALES Y MODALES */}
-      <PanelPerfil
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        usuario={usuario}
-        onLogout={onLogout}
-        onEditarPerfil={() => navigate('/perfil')} // Ejemplo: Redirigir a settings
-      />
+            <ModalPerfilPasajero 
+                isOpen={isProfileEditOpen}
+                onClose={() => setIsProfileEditOpen(false)}
+                usuario={perfilCompleto || usuario}
+                stats={{
+                    viajes: 0, // Por ahora estático según diseño
+                    favoritos: rutasFavoritas.length,
+                    puntos: '—'
+                }}
+                onActualizar={fetchPerfil}
+            />
 
-      <TarjetaBus
-        vehicle={selectedVehicle}
-        onClose={() => setSelectedVehicle(null)}
-        onReport={handleOpenReport}
-        onVerRuta={handleVerRuta}
-      />
-
-      <ReporteModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-      />
-
-      <ModalAlerta
-        mostrar={showSimAlert}
-        tipo="advertencia"
-        titulo="Modo de Simulación"
-        mensaje="No hay unidades activas cercanas a tu ubicación, se procederá a un modo de simulación ilustrativo."
-        alCerrar={() => setShowSimAlert(false)}
-      />
-
-      <UbicacionModal
-        isOpen={isUbicacionModalOpen}
-        onClose={() => setIsUbicacionModalOpen(false)}
-        onAccept={handleAcceptLocation}
-      />
-    </main>
-  );
+            <ReporteModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                token={token}
+            />
+        </main>
+    );
 };
 
 export default Pasajero;

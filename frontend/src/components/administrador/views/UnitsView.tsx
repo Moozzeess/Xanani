@@ -41,7 +41,7 @@ export default function unidadesView() {
       setUnidades(Array.isArray(resUnidades.data) ? resUnidades.data : resUnidades.data?.data || []);
       setHardwareLibre(Array.isArray(resHardware.data?.data) ? resHardware.data.data : []);
 
-      const conductorsResp = resConductores.data?.data || resConductores.data || [];
+      const conductorsResp = resConductores.data?.data?.conductores || resConductores.data?.data || resConductores.data || [];
       const conductorsData = Array.isArray(conductorsResp) ? conductorsResp : [];
       
       const conductoresMapeados = conductorsData.map((cData: any) => ({

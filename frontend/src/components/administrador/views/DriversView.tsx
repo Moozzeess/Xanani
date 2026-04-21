@@ -53,16 +53,17 @@ const DriversView: React.FC = () => {
   });
 
   const [rutasDisponibles, setRutasDisponibles] = useState<any[]>([]);
+  const [unidadesDisponibles, setUnidadesDisponibles] = useState<any[]>([]);
 
-  // Mock de viajes recientes según requerimiento (hasta que se conecte API)
-  const [viajesRecientes] = useState([
-    { id: 'v1', unidad: 'MX7-814', estado: 'Completado', horaInicio: 'Hoy, 09:30 AM', duracion: '1h 45m', stamp: 1 },
-    { id: 'v2', unidad: 'MX7-001', estado: 'Cancelado', horaInicio: 'Hoy, 08:15 AM', duracion: '--', stamp: 2 },
-    { id: 'v3', unidad: 'MX7-992', estado: 'En ruta', horaInicio: 'Hoy, 10:45 AM', duracion: '45m', stamp: 0 }
-  ]);
+  // Estados para el historial real
+  const [historialViajes, setHistorialViajes] = useState<any[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(true);
 
-  // Ordenado por el más reciente (stamp 0 es el último)
-  const viajesOrdenados = [...viajesRecientes].sort((a, b) => a.stamp - b.stamp);
+  // Filtros de Historial
+  const [filtroConductor, setFiltroConductor] = useState('');
+  const [filtroUnidad, setFiltroUnidad] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroLimit, setFiltroLimit] = useState('20');
 
   // Rating inicial calculado dinámicamente
   const calcularRating = () => {
@@ -80,9 +81,10 @@ const DriversView: React.FC = () => {
       try {
         if (!token) return;
 
-        const [resCond, resRutas] = await Promise.all([
+        const [resCond, resRutas, resUnidades] = await Promise.all([
           api.get('/conductores', { headers: { Authorization: `Bearer ${token}` } }),
-          api.get('/rutas', { headers: { Authorization: `Bearer ${token}` } })
+          api.get('/rutas', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/unidades', { headers: { Authorization: `Bearer ${token}` } })
         ]);
 
         // Mapear los usuarios del backend a la interfaz Conductor del frontend
@@ -100,13 +102,14 @@ const DriversView: React.FC = () => {
           edad: cData.edad || '',
           ruta: cData.rutaAsignadaId?.nombre || cData.ruta || 'Sin ruta',
           rutaAsignadaId: cData.rutaAsignadaId?._id || '',
-          estado: (cData.user?.isActive ?? cData.isActive) ? 'Activo' : 'Inactivo',
+          estado: cData.enRuta ? 'En Ruta' : ((cData.user?.isActive ?? cData.isActive) ? 'Activo' : 'Inactivo'),
           rating: calcularRating(),
           iniciales: obtenerIniciales(cData.user?.username || cData.username)
         }));
 
         setConductores(conductoresMapeados);
         setRutasDisponibles(resRutas.data || []);
+        setUnidadesDisponibles(Array.isArray(resUnidades.data) ? resUnidades.data : resUnidades.data?.data || []);
       } catch (error) {
         console.error('Error al obtener datos', error);
         alerta.dispararError('Error de carga', 'No se pudo sincronizar la información del servidor.');
@@ -118,6 +121,55 @@ const DriversView: React.FC = () => {
     fetchDatos();
   }, [token]);
 
+  // Cargar Historial con Filtros
+  React.useEffect(() => {
+    const fetchHistorial = async () => {
+      try {
+        if (!token) return;
+        setCargandoHistorial(true);
+
+        const params = new URLSearchParams();
+        if (filtroConductor) params.append('conductorId', filtroConductor);
+        if (filtroUnidad) params.append('unidadId', filtroUnidad);
+        if (filtroEstado) params.append('estado', filtroEstado);
+        params.append('limit', filtroLimit);
+
+        const res = await api.get(`/recorridos/historial/admin?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setHistorialViajes(res.data || []);
+      } catch (error) {
+        console.error("Error al cargar historial", error);
+      } finally {
+        setCargandoHistorial(false);
+      }
+    };
+
+    fetchHistorial();
+  }, [token, filtroConductor, filtroUnidad, filtroEstado, filtroLimit]);
+
+  const formatFecha = (fechaStr: string) => {
+    if (!fechaStr) return '--';
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const calcularDuracion = (inicio: string, fin: string | null) => {
+    if (!inicio || !fin) return '--';
+    const diff = new Date(fin).getTime() - new Date(inicio).getTime();
+    const minutos = Math.floor(diff / 60000);
+    const horas = Math.floor(minutos / 60);
+    const minRestantes = minutos % 60;
+    return horas > 0 ? `${horas}h ${minRestantes}m` : `${minRestantes}m`;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({
       ...form,
@@ -127,8 +179,8 @@ const DriversView: React.FC = () => {
 
   const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nombre.trim() || !form.unidad.trim() || !form.licencia.trim() || !form.telefono.trim() || !form.correo.trim() || !form.fechaNacimiento) {
-      alerta.dispararError('Campos incompletos', 'Asegúrese de llenar todos los campos obligatorios del formulario.', 'Validación fallida');
+    if (!form.nombre.trim() || !form.licencia.trim() || !form.telefono.trim() || !form.correo.trim() || !form.fechaNacimiento) {
+      alerta.dispararError('Campos incompletos', 'Asegúrese de llenar todos los campos obligatorios del formulario (Nombre, Licencia, Teléfono, Correo y Fecha de Nacimiento).', 'Validación fallida');
       return;
     }
 
@@ -411,8 +463,16 @@ const DriversView: React.FC = () => {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse"></span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 border ${
+                        conductor.estado === 'Activo' ? 'bg-green-50 text-green-700 border-green-200' :
+                        conductor.estado === 'En Ruta' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' :
+                        'bg-slate-50 text-slate-500 border-slate-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          conductor.estado === 'Activo' ? 'bg-green-500' :
+                          conductor.estado === 'En Ruta' ? 'bg-blue-500 animate-pulse' :
+                          'bg-slate-400'
+                        }`}></span>
                         {conductor.estado}
                       </span>
                     </td>
@@ -472,13 +532,58 @@ const DriversView: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
-        <div className="bg-slate-700 text-white py-3 px-6 flex justify-between items-center">
+        <div className="bg-slate-700 text-white py-3 px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <h2 className="font-bold text-lg flex items-center gap-2">
-            <History className="w-5 h-5" /> Historial de Viajes Recientes
+            <History className="w-5 h-5" /> Historial de Viajes
           </h2>
-          <button type="button" className="text-slate-300 hover:text-white text-sm transition-colors">
-            Exportar CSV
-          </button>
+
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            {/* Filtro Conductor */}
+            <select
+              value={filtroConductor}
+              onChange={(e) => setFiltroConductor(e.target.value)}
+              className="bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="">Todos los conductores</option>
+              {conductores.map(c => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
+
+            {/* Filtro Unidad */}
+            <select
+              value={filtroUnidad}
+              onChange={(e) => setFiltroUnidad(e.target.value)}
+              className="bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="">Todas las unidades</option>
+              {unidadesDisponibles.map(u => (
+                <option key={u._id} value={u._id}>{u.placa}</option>
+              ))}
+            </select>
+
+            {/* Filtro Estado */}
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="">Cualquier estado</option>
+              <option value="en_curso">En ruta</option>
+              <option value="finalizado">Completado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+
+            <select
+              value={filtroLimit}
+              onChange={(e) => setFiltroLimit(e.target.value)}
+              className="bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="10">Top 10</option>
+              <option value="20">Top 20</option>
+              <option value="50">Top 50</option>
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -493,34 +598,50 @@ const DriversView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {viajesOrdenados.length === 0 ? (
+              {cargandoHistorial ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500 italic">
+                    Cargando historial real...
+                  </td>
+                </tr>
+              ) : historialViajes.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center">
                       <History className="w-8 h-8 mb-2 text-slate-300" />
-                      <p>No hay historial de viajes reciente.</p>
-                      <p className="text-xs mt-1 text-slate-400">Los viajes aparecerán aquí a medida que se completen.</p>
+                      <p>No hay historial de viajes con estos filtros.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                viajesOrdenados.map((viaje) => (
-                  <tr key={viaje.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium">{viaje.unidad}</td>
+                historialViajes.map((viaje) => (
+                  <tr key={viaje._id} className="hover:bg-slate-50 group">
+                    <td className="px-6 py-4 font-bold text-slate-800">
+                      {viaje.unidadId?.placa || viaje.conductorId?.unidad || 'N/A'}
+                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                        {viaje.rutaId?.nombre || 'Ruta General'}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`font-bold ${viaje.estado === 'Completado' ? 'text-green-600' :
-                        viaje.estado === 'Cancelado' ? 'text-slate-400' :
-                          'text-blue-500 animate-pulse'
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                          {viaje.conductorId?.user?.username?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <span className="text-xs font-medium text-slate-600">{viaje.conductorId?.user?.username || 'Desconocido'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${viaje.estado === 'finalizado' ? 'bg-green-100 text-green-700 border border-green-200' :
+                          viaje.estado === 'en_curso' ? 'bg-blue-100 text-blue-700 border border-blue-200 animate-pulse' :
+                            'bg-slate-100 text-slate-500 border border-slate-200'
                         }`}>
-                        {viaje.estado}
+                        {viaje.estado === 'en_curso' ? 'En Ruta' : viaje.estado === 'finalizado' ? 'Completado' : viaje.estado}
                       </span>
                     </td>
-                    <td className="px-6 py-4">{viaje.horaInicio}</td>
-                    <td className="px-6 py-4">{viaje.duracion}</td>
+                    <td className="px-6 py-4 text-xs text-slate-500">{formatFecha(viaje.horaInicio)}</td>
+                    <td className="px-6 py-4 text-xs font-bold text-slate-600">{calcularDuracion(viaje.horaInicio, viaje.horaFin)}</td>
                     <td className="px-6 py-4">
-                      <button type="button" className="bg-blue-100 text-blue-600 p-1.5 rounded-full hover:bg-blue-200 transition-colors">
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+
                     </td>
                   </tr>
                 ))
@@ -604,8 +725,14 @@ const DriversView: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unidad Asignada * (Placa)</label>
-                      <input type="text" name="unidad" value={form.unidad} onChange={handleChange} required placeholder="Ej. MX7-105"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono uppercase" />
+                      <select name="unitSelect" value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono uppercase bg-white"
+                      >
+                        <option value="">-- Seleccionar Unidad --</option>
+                        {unidadesDisponibles.map(u => (
+                          <option key={u._id} value={u.placa}>{u.placa}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Asignar Ruta *</label>

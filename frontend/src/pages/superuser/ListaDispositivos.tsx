@@ -10,7 +10,12 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentDevice, setCurrentDevice] = useState<any>(null);
   const [admins, setAdmins] = useState<any[]>([]);
-  const [formData, setFormData] = useState({ adminId: '', topico: '' });
+  const [formData, setFormData] = useState({ 
+    adminId: '', 
+    topico: '', 
+    capacidadMaxima: 15, 
+    umbralPeso: 10 
+  });
 
   const { disparar, dispararError } = useAlertaGlobal();
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
@@ -84,7 +89,9 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
     setCurrentDevice(disp);
     setFormData({
       adminId: disp.administrador?._id || disp.administrador || '',
-      topico: disp.topico || 'xanani/hardware/test'
+      topico: disp.topico || 'xanani/hardware/test',
+      capacidadMaxima: disp.capacidadMaxima || 15,
+      umbralPeso: disp.umbralPeso || 10
     });
     setIsModalOpen(true);
   };
@@ -95,7 +102,12 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
       const res = await fetch(`${backendUrl}/api/hardware/${currentDevice._id}/assign`, {
         method: 'PUT',
         headers: getHeaders(),
-        body: JSON.stringify({ adminId: formData.adminId || null, topico: formData.topico })
+        body: JSON.stringify({ 
+          adminId: formData.adminId || null, 
+          topico: formData.topico,
+          capacidadMaxima: Number(formData.capacidadMaxima),
+          umbralPeso: Number(formData.umbralPeso)
+        })
       });
       if (res.ok) {
         disparar({ tipo: 'exito', titulo: 'Actualizado', mensaje: 'Se actualizaron los datos del dispositivo.' });
@@ -144,6 +156,7 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
               <tr className="bg-slate-100 text-slate-600 text-sm border-b border-slate-200">
                 <th className="p-4 font-semibold">Dirección MAC</th>
                 <th className="p-4 font-semibold">ID & Tópico MQTT</th>
+                <th className="p-4 font-semibold">Configuración</th>
                 <th className="p-4 font-semibold">Estado</th>
                 <th className="p-4 font-semibold">Asignado a</th>
                 <th className="p-4 font-semibold text-right">Acciones</th>
@@ -156,6 +169,16 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
                   <td className="p-4">
                     <p className="text-slate-800 font-bold text-sm">{disp.Id_Dispositivo_Hardware}</p>
                     <p className="text-slate-500 text-xs font-mono">{disp.topico || 'xanani/hardware/test'}</p>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-max">
+                        Capacidad: {disp.capacidadMaxima || '--'}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded w-max">
+                        Umbral: {disp.umbralPeso || '--'} kg
+                      </span>
+                    </div>
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${disp.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
@@ -212,6 +235,29 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
                 <label className="text-xs font-bold text-slate-500 uppercase">Tópico MQTT ESP32</label>
                 <input type="text" required className="w-full mt-1 p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 font-mono" value={formData.topico} onChange={e => setFormData({ ...formData, topico: e.target.value })} />
                 <p className="text-[10px] text-slate-400 mt-1">El tópico principal por el cual se enviarán/recibirán los comandos de este dispositivo específico.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Capacidad Máxima</label>
+                  <input 
+                    type="number" 
+                    required 
+                    className="w-full mt-1 p-2 border border-slate-200 rounded-lg text-sm bg-slate-50" 
+                    value={formData.capacidadMaxima} 
+                    onChange={e => setFormData({ ...formData, capacidadMaxima: Number(e.target.value) })} 
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Umbral Peso (kg)</label>
+                  <input 
+                    type="number" 
+                    required 
+                    className="w-full mt-1 p-2 border border-slate-200 rounded-lg text-sm bg-slate-50" 
+                    value={formData.umbralPeso} 
+                    onChange={e => setFormData({ ...formData, umbralPeso: Number(e.target.value) })} 
+                  />
+                </div>
               </div>
 
               <div className="pt-2">

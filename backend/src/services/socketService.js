@@ -6,6 +6,7 @@ const Incidencia = require('../models/Incidencia');
  * Gestiona la conexión con los clientes (frontend) y la emisión de datos en tiempo real.
  */
 let io;
+const rutasNotificadas = new Set(); // Cache para evitar spam de notificaciones
 
 /**
  * Intención: Instanciar y encender el motor de Socket.io emparejado al puerto del backend.
@@ -29,6 +30,22 @@ const inicializarSocket = (server) => {
 
   io.on('connection', (socket) => {
     // console.log(`Cliente conectado al socket: ${socket.id}`);
+
+    // Unirse a una sala específica de dispositivo para evitar interferencias
+    socket.on('suscribir_dispositivo', (idHardware) => {
+      if (idHardware) {
+        socket.join(`device_${idHardware}`);
+        console.log(`Socket ${socket.id} unido a sala: device_${idHardware}`);
+      }
+    });
+
+    // Salir de la sala del dispositivo
+    socket.on('desuscribir_dispositivo', (idHardware) => {
+      if (idHardware) {
+        socket.leave(`device_${idHardware}`);
+        console.log(`Socket ${socket.id} salió de sala: device_${idHardware}`);
+      }
+    });
 
     // Escuchar peticiones de reconfiguración MQTT desde el superusuario
     socket.on('configurar_mqtt', (configuracion) => {
@@ -79,9 +96,32 @@ const inicializarSocket = (server) => {
     // --- NUEVA LÓGICA DE GESTIÓN DE FLOTILLA ---
 
     // 1. Ubicación en tiempo real de los conductores
-    socket.on('ubicacion_conductor', (datos) => {
-      // Retransmitir al panel de administración (y a otros interesados si aplica)
+    socket.on('ubicacion_conductor', async (datos) => {
+      // Retransmitir al panel de administración y pasajeros
       socket.broadcast.emit('ubicacion_conductor', datos);
+
+      // Si es una ruta que no hemos marcado como activa en esta sesión
+      const { rutaId, rutaNombre } = datos;
+      if (rutaId && !rutasNotificadas.has(rutaId.toString())) {
+        rutasNotificadas.add(rutaId.toString());
+
+        const notificacionController = require('../controllers/notificacion.controller');
+        await notificacionController.crearNotificacionInterna({
+          titulo: '¡Ruta en Movimiento!',
+          mensaje: `Unidades reales han comenzado a circular en la ruta "${rutaNombre || 'Suscrita'}".`,
+          tipo: 'INFO',
+          rolDestino: 'PASAJERO',
+          data: { rutaId }
+        });
+
+        // Opcional: Avisar por socket de forma inmediata incluyendo la posición inicial
+        io.emit('ruta_activa', { 
+          rutaId, 
+          rutaNombre, 
+          pos: datos.pos, 
+          unidadId: datos.id 
+        });
+      }
     });
 
     // 2. Avisos globales o específicos desde Admin hacia Conductores
@@ -142,9 +182,15 @@ const inicializarSocket = (server) => {
  * Casos límite (edge cases):
  *  - Si el pool `io` no inicializó (por race condition), ataja con consola de advertencia y desecha el paquete en vez de detener la aplicación.
  */
-const emitirEvento = (evento, datos) => {
+const emitirEvento = (evento, datos, idHardware = null) => {
   if (io) {
-    io.emit(evento, datos);
+    if (idHardware) {
+      // Emitir solo a los interesados en este dispositivo específico (Aislamiento)
+      io.to(`device_${idHardware}`).emit(evento, datos);
+    } else {
+      // Emitir globalmente si no hay ID específico
+      io.emit(evento, datos);
+    }
   } else {
     console.warn('Socket.io no ha sido inicializado aún.');
   }

@@ -23,6 +23,12 @@ router.get(
 // Los endpoints de conductores se han movido a conductor.routes.js
 
 // Rutas de Pasajero / Perfil propio
+router.get(
+  '/perfil',
+  requireAuth,
+  usuarioController.obtenerPerfil
+);
+
 router.put(
   '/perfil',
   requireAuth,

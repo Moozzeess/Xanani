@@ -1,32 +1,32 @@
 import React, { useState } from 'react';
-import { Bell, Menu, Megaphone, Send, X } from 'lucide-react';
+import { Bell, Menu, Megaphone, Send, X, Siren, Users, User, Info } from 'lucide-react';
+import api from '../../services/api';
+import { useSocket } from '../../hooks/useSocket';
+import { useAlerta } from '../../hooks/useAlerta';
+import FormularioAnuncio from './FormularioAnuncio';
 
 export interface AdminHeaderProps {
   title: string;
   onToggleSidebar: () => void;
   onTriggerSOS: () => void;
+  notificaciones?: any[];
+  onClearNotificaciones?: () => void;
 }
 
-const AdminHeader: React.FC<AdminHeaderProps> = ({ title, onToggleSidebar, onTriggerSOS }) => {
-  // --- ESTADOS PARA EL MODAL Y EL FORMULARIO ---
+const AdminHeader: React.FC<AdminHeaderProps> = ({
+  title,
+  onToggleSidebar,
+  onTriggerSOS,
+  notificaciones = [],
+  onClearNotificaciones
+}) => {
+  // const { socket } = useSocket();
+  // const { disparar, dispararError } = useAlerta();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [avisoTexto, setAvisoTexto] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
-  const enviarAvisoGlobal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEnviando(true);
-
-    // Simulación de envío
-    console.log("Enviando aviso:", avisoTexto);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Limpiar y cerrar
-    setEnviando(false);
-    setAvisoTexto('');
-    setIsModalOpen(false);
-    alert("Aviso enviado con éxito");
-  };
+  const hayAlertas = notificaciones.length > 0;
 
   return (
     <>
@@ -41,15 +41,71 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, onToggleSidebar, onTri
         </div>
 
         <div className="flex items-center gap-3 lg:gap-6">
-          <button
-            type="button"
-            onClick={onTriggerSOS}
-            className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-full transition-colors"
-            title="Simular Emergencia"
-          >
-            <Bell className="w-6 h-6" />
-            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-full transition-colors"
+              title="Notificaciones"
+            >
+              <Bell className="w-6 h-6" />
+              {hayAlertas && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+            </button>
+
+            {isNotifOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] overflow-hidden">
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h4 className="font-bold text-slate-800">Notificaciones</h4>
+                  {hayAlertas && (
+                    <button
+                      onClick={onClearNotificaciones}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notificaciones.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400">
+                      <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                      <p className="text-sm">No hay notificaciones nuevas</p>
+                    </div>
+                  ) : (
+                    notificaciones.map((notif, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${notif.tipo === 'SOS' ? 'bg-red-50' : ''}`}
+                        onClick={() => {
+                          if (notif.tipo === 'SOS') onTriggerSOS();
+                          setIsNotifOpen(false);
+                        }}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`p-2 rounded-lg ${notif.tipo === 'SOS' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {notif.tipo === 'SOS' ? <Siren className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className={`text-sm font-bold ${notif.tipo === 'SOS' ? 'text-red-700' : 'text-slate-800'}`}>
+                              {notif.tipo === 'SOS' ? '¡EMERGENCIA SOS!' : 'Nuevo Reporte'}
+                            </p>
+                            <p className="text-xs text-slate-600 line-clamp-2">
+                              {notif.descripcion || 'Se ha recibido una nueva alerta.'}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              {new Date(notif.timestamp || Date.now()).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
@@ -91,40 +147,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, onToggleSidebar, onTri
                 </button>
               </div>
 
-              <form onSubmit={enviarAvisoGlobal} className="flex flex-col gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Mensaje del anuncio</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Ej. Tráfico pesado en Av. Central. Tomar precauciones..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-700 font-medium resize-none"
-                    value={avisoTexto}
-                    onChange={(e) => setAvisoTexto(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={enviando || !avisoTexto.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {enviando ? 'Enviando...' : (
-                      <>
-                        <Send className="w-4 h-4" /> Enviar Aviso
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+              <FormularioAnuncio
+                onExito={() => setIsModalOpen(false)}
+                onCancelar={() => setIsModalOpen(false)}
+              />
             </div>
           </div>
         </div>

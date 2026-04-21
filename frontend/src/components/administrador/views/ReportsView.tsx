@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  AlertCircle, 
   CheckCircle2, 
   MessageSquare, 
   Star, 
@@ -12,8 +11,11 @@ import {
   Search, 
   Filter, 
   Clock,
-  ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  Megaphone,
+  Info,
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 import { useSocket } from '../../../hooks/useSocket';
 import { useAlerta } from '../../../hooks/useAlerta';
@@ -41,6 +43,7 @@ interface Reporte {
   descripcion: string | null;
   calificacion: number | null;
   encontroAsiento: boolean | null;
+  destinatario?: string | null;
   estado: 'PENDIENTE' | 'REVISADO' | 'RESUELTO';
   createdAt: string;
 }
@@ -135,6 +138,62 @@ const ReportsView: React.FC = () => {
       });
     } catch (error: any) {
       dispararError('Error al actualizar el estado del reporte', error.response?.data?.mensaje);
+    }
+  };
+
+  /**
+   * Elimina un reporte permanentemente.
+   */
+  const eliminarReporte = async (id: string) => {
+    try {
+      if (!token) return;
+      if (!window.confirm('¿Estás seguro de que deseas eliminar este reporte permanentemente?')) return;
+
+      await api.delete(`/reportes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReportes(prev => prev.filter(r => r._id !== id));
+      
+      disparar({
+        tipo: 'exito',
+        titulo: 'Reporte Eliminado',
+        mensaje: 'El registro ha sido borrado de la base de datos.'
+      });
+    } catch (error: any) {
+      dispararError('Error al eliminar el reporte', error.response?.data?.mensaje);
+    }
+  };
+
+  /**
+   * Limpia todos los reportes resueltos de la vista actual.
+   */
+  const limpiarResueltos = async () => {
+    try {
+      if (!token) return;
+      const resueltos = reportes.filter(r => r.estado === 'RESUELTO');
+      if (resueltos.length === 0) {
+        disparar({ tipo: 'info', titulo: 'Nada que limpiar', mensaje: 'No hay reportes marcados como resueltos.' });
+        return;
+      }
+
+      if (!window.confirm(`Se eliminarán ${resueltos.length} reportes resueltos. ¿Continuar?`)) return;
+
+      setLoading(true);
+      await Promise.all(resueltos.map(r => 
+        api.delete(`/reportes/${r._id}`, { headers: { Authorization: `Bearer ${token}` } })
+      ));
+      
+      setReportes(prev => prev.filter(r => r.estado !== 'RESUELTO'));
+      
+      disparar({
+        tipo: 'exito',
+        titulo: 'Panel Limpio',
+        mensaje: 'Se han eliminado todos los reportes resueltos.'
+      });
+    } catch (error: any) {
+      dispararError('Error al limpiar el panel', error.response?.data?.mensaje);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -235,6 +294,15 @@ const ReportsView: React.FC = () => {
           <option value="RETRASO">Retraso</option>
           <option value="OTRO">Otros</option>
         </select>
+
+        <button 
+          onClick={limpiarResueltos}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors ml-auto shadow-sm"
+          title="Eliminar todos los reportes resueltos"
+        >
+          <Sparkles size={16} />
+          Limpiar Resueltos
+        </button>
       </div>
 
       {/* Lista de Reportes */}
@@ -251,12 +319,12 @@ const ReportsView: React.FC = () => {
           reportesFiltrados.map((reporte) => (
             <div 
               key={reporte._id} 
-              className={`report-card ${reporte.tipo === 'CONDUCCION_PELIGROSA' ? 'report-critical' : ''}`}
+              className={`report-card ${reporte.tipo === 'CONDUCCION_PELIGROSA' ? 'report-critical' : ''} ${reporte.tipo === 'ANUNCIO' ? 'report-announcement' : ''}`}
             >
               {/* Header de la tarjeta */}
               <div className="flex justify-between items-start mb-4">
                 <div className={`status-badge status-${reporte.estado.toLowerCase()}`}>
-                  {reporte.estado}
+                  {reporte.tipo === 'ANUNCIO' ? 'ANUNCIO' : reporte.estado}
                 </div>
                 <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                   <Clock size={12} />
@@ -268,37 +336,57 @@ const ReportsView: React.FC = () => {
 
               {/* Información del Usuario y Tipo */}
               <div className="flex items-center gap-3 mb-4">
-                <div className={`p-3 rounded-2xl ${reporte.tipo === 'CONDUCCION_PELIGROSA' ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                  {reporte.tipo === 'CONDUCCION_PELIGROSA' ? <ShieldAlert size={24} className="type-critical-icon" /> : <MessageSquare size={24} />}
+                <div className={`p-3 rounded-2xl ${
+                  reporte.tipo === 'CONDUCCION_PELIGROSA' ? 'bg-red-100 text-red-600' : 
+                  reporte.tipo === 'ANUNCIO' ? 'bg-blue-600 text-white shadow-lg' :
+                  'bg-blue-50 text-blue-600'
+                }`}>
+                  {reporte.tipo === 'CONDUCCION_PELIGROSA' ? <ShieldAlert size={24} className="type-critical-icon" /> : 
+                   reporte.tipo === 'ANUNCIO' ? <Megaphone size={24} /> :
+                   <MessageSquare size={24} />}
                 </div>
                 <div>
                   <h4 className="font-black text-slate-800 leading-tight">
-                    {reporte.tipo.replace(/_/g, ' ')}
+                    {reporte.tipo === 'ANUNCIO' ? 'ANUNCIO OFICIAL' : reporte.tipo.replace(/_/g, ' ')}
                   </h4>
                   <div className="flex items-center gap-2 mt-1">
                     <User size={12} className="text-slate-400" />
-                    <span className="text-xs font-bold text-slate-500">{reporte.usuario.username}</span>
+                    <span className="text-xs font-bold text-slate-500">
+                      {reporte.tipo === 'ANUNCIO' ? 'Administrador' : reporte.usuario.username}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Detalles de la Unidad y Ruta */}
-              <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Bus size={14} className="text-slate-400" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-black text-slate-400">Unidad</span>
-                    <span className="text-xs font-bold text-slate-700">{reporte.unidad?.placa || 'N/A'}</span>
+              {/* Detalles de la Unidad y Ruta o Destinatario */}
+              {reporte.tipo === 'ANUNCIO' ? (
+                <div className="mb-4 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+                  <div className="flex items-center gap-2">
+                    <Info size={14} className="text-blue-500" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-black text-slate-400">Destinatario</span>
+                      <span className="text-xs font-bold text-blue-700">{reporte.destinatario || 'Todos'}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-                  <Navigation size={14} className="text-slate-400" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-black text-slate-400">Ruta</span>
-                    <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{reporte.ruta?.nombre || 'N/A'}</span>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Bus size={14} className="text-slate-400" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-black text-slate-400">Unidad</span>
+                      <span className="text-xs font-bold text-slate-700">{reporte.unidad?.placa || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                    <Navigation size={14} className="text-slate-400" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-black text-slate-400">Ruta</span>
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{reporte.ruta?.nombre || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Contenido/Descripción */}
               {reporte.descripcion && (
@@ -348,6 +436,15 @@ const ReportsView: React.FC = () => {
                   </button>
                 </div>
               )}
+
+              {/* Botón de eliminar (siempre visible para admin) */}
+              <button 
+                onClick={() => eliminarReporte(reporte._id)}
+                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                title="Eliminar reporte permanentemente"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
           ))
         )}

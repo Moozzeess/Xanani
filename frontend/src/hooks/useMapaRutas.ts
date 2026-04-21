@@ -130,24 +130,54 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
     };
   }, [paradas]);
 
-  const agregarParada = useCallback((latlng: L.LatLng, nombreDefecto?: string) => {
+  const obtenerNombreUbicacion = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        // Retornamos los primeros dos segmentos de la dirección para que sea conciso pero descriptivo
+        const partes = data.display_name.split(',');
+        return partes.slice(0, 2).join(',').trim();
+      }
+      return '';
+    } catch (error) {
+      console.warn("No se pudo obtener la dirección exacta:", error);
+      return '';
+    }
+  };
+
+  const agregarParada = useCallback(async (latlng: L.LatLng, nombreDefecto?: string) => {
     const mapa = mapaRef.current;
     if (!mapa) return;
 
+    // Si no se proporciona un nombre, intentamos obtenerlo de las coordenadas
+    let nombreAsignado = nombreDefecto;
+    if (!nombreAsignado) {
+      nombreAsignado = await obtenerNombreUbicacion(latlng.lat, latlng.lng);
+    }
+
     setParadas((prev) => {
       const siguienteId = prev.length > 0 ? Math.max(...prev.map(p => p.id)) + 1 : 1;
-      let nombreAsignado = nombreDefecto || `Parada ${prev.length + 1}`;
+      const nombreFinal = nombreAsignado || `Parada ${prev.length + 1}`;
       
       const marcador = L.marker(latlng, { 
           draggable: true,
           icon: crearIconoMarcador(prev.length, prev.length + 1)
       }).addTo(mapa);
 
-      marcador.on('dragend', () => {
-        setParadas((actual) => [...actual]);
+      marcador.on('dragend', async () => {
+        const nuevaPos = marcador.getLatLng();
+        const nuevoNombre = await obtenerNombreUbicacion(nuevaPos.lat, nuevaPos.lng);
+        
+        setParadas((actual) => actual.map(p => {
+          if (p.marcador === marcador) {
+            return { ...p, nombre: nuevoNombre || p.nombre };
+          }
+          return p;
+        }));
       });
 
-      return [...prev, { id: siguienteId, marcador, nombre: nombreAsignado }];
+      return [...prev, { id: siguienteId, marcador, nombre: nombreFinal }];
     });
   }, []);
 
@@ -168,8 +198,16 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
         icon: crearIconoMarcador(index, paradasBackend.length)
       }).addTo(mapa);
 
-      marcador.on('dragend', () => {
-        setParadas((actual) => [...actual]);
+      marcador.on('dragend', async () => {
+        const nuevaPos = marcador.getLatLng();
+        const nuevoNombre = await obtenerNombreUbicacion(nuevaPos.lat, nuevaPos.lng);
+        
+        setParadas((actual) => actual.map(parada => {
+          if (parada.marcador === marcador) {
+            return { ...parada, nombre: nuevoNombre || parada.nombre };
+          }
+          return parada;
+        }));
       });
 
       return {
@@ -217,6 +255,15 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
     setGeometria([]);
   }, [paradas]);
 
+  const reordenarParadas = useCallback((indiceOrigen: number, indiceDestino: number) => {
+    setParadas((prev) => {
+      const resultado = [...prev];
+      const [removido] = resultado.splice(indiceOrigen, 1);
+      resultado.splice(indiceDestino, 0, removido);
+      return resultado;
+    });
+  }, []);
+
   return {
     paradas,
     geometria,
@@ -224,6 +271,7 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
     cargarParadasManuales,
     cambiarNombreParada,
     eliminarParada,
+    reordenarParadas,
     centrarMapaEn,
     limpiarMapa
   };

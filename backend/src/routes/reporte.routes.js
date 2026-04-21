@@ -14,4 +14,7 @@ router.get('/usuario', requireAuth, reporteController.misReportes);
 /** Actualizar estado de un reporte (administrativo) */
 router.patch('/:id', requireAuth, reporteController.actualizarEstadoReporte);
 
+/** Eliminar un reporte (administrativo) */
+router.delete('/:id', requireAuth, reporteController.eliminarReporte);
+
 module.exports = router;

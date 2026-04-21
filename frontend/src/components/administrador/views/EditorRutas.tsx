@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import L from 'leaflet';
-import { Search, MapPin, Trash2, ArrowLeft, Map as MapIcon } from 'lucide-react';
+import { Search, MapPin, Trash2, ArrowLeft, Map as MapIcon, X, Loader2, GripVertical, RotateCcw } from 'lucide-react';
 import { useMapaRutas } from '../../../hooks/useMapaRutas';
 
 interface ResultadoBusqueda {
@@ -31,9 +31,27 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, rutaInicial,
     cargarParadasManuales,
     cambiarNombreParada,
     eliminarParada,
+    reordenarParadas,
     centrarMapaEn,
     limpiarMapa
   } = useMapaRutas('mapa-rutas', true);
+
+  const [indiceArrastrado, setIndiceArrastrado] = useState<number | null>(null);
+
+  const manejarDragStart = (index: number) => {
+    setIndiceArrastrado(index);
+  };
+
+  const manejarDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const manejarDrop = (index: number) => {
+    if (indiceArrastrado !== null && indiceArrastrado !== index) {
+      reordenarParadas(indiceArrastrado, index);
+    }
+    setIndiceArrastrado(null);
+  };
 
   React.useEffect(() => {
     if (rutaInicial) {
@@ -44,33 +62,50 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, rutaInicial,
     }
   }, [rutaInicial, cargarParadasManuales]);
 
-  const buscarDireccion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!consultaBusqueda.trim()) return;
+  // Efecto de búsqueda automática con debounce
+  React.useEffect(() => {
+    if (!consultaBusqueda.trim()) {
+      setResultadosBusqueda([]);
+      return;
+    }
 
+    const timer = setTimeout(() => {
+      if (consultaBusqueda.length >= 3) {
+        ejecutarBusqueda(consultaBusqueda);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [consultaBusqueda]);
+
+  const ejecutarBusqueda = async (query: string) => {
     setBuscando(true);
     try {
-      const respuesta = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(consultaBusqueda)}`);
+      // Optimizamos la búsqueda para México y pedimos detalles de dirección
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=mx&addressdetails=1&limit=10&viewbox=-118.3,32.7,-86.7,14.5`;
+      const respuesta = await fetch(url);
       const datos = await respuesta.json();
       setResultadosBusqueda(datos);
     } catch (error) {
-      console.error('Error buscando dirección:', error);
-      disparar({
-        tipo: 'error',
-        titulo: 'Error de Búsqueda',
-        mensaje: 'No se pudo contactar al servicio de mapas. Intente de nuevo.'
-      });
+      console.error('Error en búsqueda:', error);
     } finally {
       setBuscando(false);
     }
   };
 
-  const seleccionarResultado = (resultado: ResultadoBusqueda) => {
+  const buscarDireccion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (consultaBusqueda.trim()) {
+      ejecutarBusqueda(consultaBusqueda);
+    }
+  };
+
+  const seleccionarResultado = async (resultado: ResultadoBusqueda) => {
     const lat = parseFloat(resultado.lat);
     const lon = parseFloat(resultado.lon);
 
     centrarMapaEn(lat, lon);
-    agregarParada(L.latLng(lat, lon), resultado.display_name.split(',')[0]);
+    await agregarParada(L.latLng(lat, lon), resultado.display_name.split(',')[0]);
 
     setResultadosBusqueda([]);
     setConsultaBusqueda('');
@@ -158,38 +193,75 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, rutaInicial,
 
         <div className="mb-6 relative z-50">
           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Añadir Paradas (Inicio, Intermedias, Final)</label>
-          <form onSubmit={buscarDireccion} className="relative">
+          <form onSubmit={buscarDireccion} className="relative group">
             <input
               type="text"
               value={consultaBusqueda}
               onChange={(e) => setConsultaBusqueda(e.target.value)}
-              placeholder="Escribe una dirección..."
-              className="w-full border border-slate-200 bg-white rounded-lg pl-10 pr-20 py-3 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+              placeholder="Ej. Av. Universidad 3000, Coyoacán..."
+              className="w-full border border-slate-200 bg-white rounded-lg pl-10 pr-24 py-3 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             />
             <Search className="w-5 h-5 text-slate-400 absolute left-3 top-3" />
-            <button
-              type="submit"
-              disabled={buscando}
-              className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-blue-600 text-white font-bold text-xs rounded hover:bg-blue-700 shadow-sm transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-            >
-              {buscando ? '...' : 'Buscar'}
-            </button>
+            
+            <div className="absolute right-1.5 top-1.5 bottom-1.5 flex items-center gap-1">
+              {consultaBusqueda && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConsultaBusqueda('');
+                    setResultadosBusqueda([]);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                  title="Limpiar búsqueda"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={buscando}
+                className="px-4 h-full bg-blue-600 text-white font-bold text-xs rounded hover:bg-blue-700 shadow-sm transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {buscando ? <Loader2 className="w-3.3 h-3.5 animate-spin" /> : 'Buscar'}
+              </button>
+            </div>
           </form>
 
           {/* Resultados de búsqueda */}
           {resultadosBusqueda.length > 0 && (
-            <div className="dropdown-resultados-busqueda">
-              {resultadosBusqueda.map((res) => (
-                <button
-                  key={res.place_id}
-                  type="button"
-                  onClick={() => seleccionarResultado(res)}
-                  className="w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-blue-50 focus:bg-blue-50 flex items-start gap-3 last:border-0 transition-colors"
-                >
-                  <MapPin className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                  <span className="text-sm font-medium text-slate-700 line-clamp-2">{res.display_name}</span>
-                </button>
-              ))}
+            <div className="dropdown-resultados-busqueda shadow-2xl border-blue-100 animate-in fade-in slide-in-from-top-2 duration-200">
+              {resultadosBusqueda.map((res) => {
+                // Limpiar un poco el nombre para que no sea excesivamente largo
+                const nombreCorto = res.display_name.split(',').slice(0, 3).join(',');
+                const detalleExtra = res.display_name.split(',').slice(3, 5).join(',').trim();
+                
+                return (
+                  <button
+                    key={res.place_id}
+                    type="button"
+                    onClick={() => seleccionarResultado(res)}
+                    className="w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-blue-50 focus:bg-blue-50 flex items-start gap-3 last:border-0 transition-colors group/item"
+                  >
+                    <MapPin className="w-5 h-5 text-blue-400 group-hover/item:text-blue-600 shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-700 line-clamp-1">{nombreCorto}</span>
+                      {detalleExtra && <span className="text-[10px] text-slate-500 line-clamp-1 italic">{detalleExtra}</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {buscando && resultadosBusqueda.length === 0 && (
+            <div className="dropdown-resultados-busqueda p-4 text-center text-slate-400 text-xs italic">
+              Buscando ubicaciones...
+            </div>
+          )}
+          
+          {!buscando && consultaBusqueda.length >= 3 && resultadosBusqueda.length === 0 && (
+            <div className="dropdown-resultados-busqueda p-4 text-center text-slate-400 text-xs italic">
+              No se encontraron resultados precisos. Intenta simplificar la dirección.
             </div>
           )}
         </div>
@@ -197,7 +269,19 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, rutaInicial,
         <div className="flex-1 overflow-y-auto pr-2 mb-6 min-h-[200px]">
           <div className="flex items-center justify-between mb-3 sticky top-0 bg-white z-10 py-1">
             <label className="block text-xs font-bold text-slate-500 uppercase">Estaciones de la Ruta</label>
-            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-bold shadow-sm">{paradas.length} <span className="hidden sm:inline">paradas</span></span>
+            <div className="flex items-center gap-2">
+              {paradas.length > 0 && (
+                <button
+                  type="button"
+                  onClick={limpiarMapa}
+                  className="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded border border-red-100 font-bold hover:bg-red-500 hover:text-white transition-all flex items-center gap-1 shadow-sm"
+                  title="Eliminar selección"
+                >
+                  <RotateCcw className="w-3 h-3" /> Limpiar Selección
+                </button>
+              )}
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-bold shadow-sm">{paradas.length} <span className="hidden sm:inline">paradas</span></span>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -220,22 +304,37 @@ export const EditorRutas: React.FC<PropsEditorRutas> = ({ disparar, rutaInicial,
               }
 
               return (
-                <div key={parada.id} className={`flex items-center gap-3 bg-white p-3 rounded-xl border shadow-sm transition-all group fade-in ${bordeContenedor}`}>
-                  <div className={`w-14 h-12 rounded-lg flex flex-col items-center justify-center text-xs font-bold shadow-sm shrink-0 border ${colorBadge}`}>
-                    <span className="text-[9px] min-h-[12px] opacity-80 uppercase tracking-tighter">{etiquetaTipo}</span>
-                    <span className="text-base leading-none">{indice + 1}</span>
+                <div 
+                  key={parada.id} 
+                  draggable
+                  onDragStart={() => manejarDragStart(indice)}
+                  onDragOver={manejarDragOver}
+                  onDrop={() => manejarDrop(indice)}
+                  className={`flex items-center gap-2 bg-white p-2 rounded-xl border shadow-sm transition-all group fade-in cursor-move ${bordeContenedor} ${indiceArrastrado === indice ? 'opacity-40 border-blue-400 bg-blue-50 scale-95' : 'hover:scale-[1.01]'}`}
+                >
+                  <div className="p-1 text-slate-300 group-hover:text-slate-500">
+                    <GripVertical className="w-4 h-4" />
                   </div>
-                  <input
-                    type="text"
-                    value={parada.nombre}
-                    onChange={(e) => cambiarNombreParada(parada.id, e.target.value)}
-                    className="bg-transparent text-sm font-bold text-slate-700 w-full outline-none focus:border-b-2 border-slate-300 focus:border-blue-500 px-1 py-1"
-                    placeholder="Nombre de estación"
-                  />
+
+                  <div className={`w-12 h-10 rounded-lg flex flex-col items-center justify-center text-xs font-bold shadow-sm shrink-0 border ${colorBadge}`}>
+                    <span className="text-[8px] min-h-[10px] opacity-80 uppercase tracking-tighter">{etiquetaTipo}</span>
+                    <span className="text-sm leading-none">{indice + 1}</span>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={parada.nombre}
+                      onChange={(e) => cambiarNombreParada(parada.id, e.target.value)}
+                      className="bg-transparent text-xs font-bold text-slate-700 w-full outline-none focus:border-b border-blue-500 px-1 py-0.5 truncate"
+                      placeholder="Nombre de estación"
+                    />
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => eliminarParada(parada.id)}
-                    className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors opacity-60 group-hover:opacity-100 shrink-0"
+                    className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                     title="Eliminar parada"
                   >
                     <Trash2 className="w-4 h-4" />

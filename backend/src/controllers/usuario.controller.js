@@ -83,12 +83,13 @@ const obtenerAdministradores = catchAsync(async (req, res, next) => {
  */
 const actualizarPerfil = catchAsync(async (req, res, next) => {
   const userId = req.auth?.userId; // Usar el ID del token para seguridad
-  const { username, fechaNacimiento, genero, nacionalidad, password } = req.body;
+  const { username, email, fechaNacimiento, genero, nacionalidad, password } = req.body;
 
   const user = await Usuario.findById(userId);
   if (!user) throw new ErrorApp('Usuario no encontrado', 404);
 
   if (username) user.username = username;
+  if (email) user.email = email.toLowerCase();
   if (fechaNacimiento) user.fechaNacimiento = fechaNacimiento;
   if (genero) user.genero = genero;
   if (nacionalidad) user.nacionalidad = nacionalidad;
@@ -141,9 +142,25 @@ const gestionarFavorito = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * Intención: Obtener el perfil completo del usuario autenticado.
+ */
+const obtenerPerfil = catchAsync(async (req, res, next) => {
+  const userId = req.auth?.userId;
+  const user = await Usuario.findById(userId, '-passwordHash').populate('rutasFavoritas');
+  
+  if (!user) throw new ErrorApp('Usuario no encontrado', 404);
+
+  res.status(200).json({
+    status: 'exito',
+    data: user
+  });
+});
+
 module.exports = {
   crearUsuario,
   obtenerAdministradores,
   actualizarPerfil,
-  gestionarFavorito
+  gestionarFavorito,
+  obtenerPerfil
 };

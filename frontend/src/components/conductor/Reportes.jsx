@@ -30,7 +30,7 @@ const Reportes = ({ isOpen, onClose, onSubmit }) => {
 
                     <div className="grid grid-cols-3 gap-3">
                         <button
-                            onClick={() => onSubmit('Accidente')}
+                            onClick={() => onSubmit('ACCIDENTE')}
                             className="bg-red-500/20 border border-red-500/40 rounded-3xl p-4 flex flex-col items-center justify-center gap-2 active:scale-90 transition-all hover:bg-red-500/30 group"
                         >
                             <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -40,7 +40,7 @@ const Reportes = ({ isOpen, onClose, onSubmit }) => {
                         </button>
 
                         <button
-                            onClick={() => onSubmit('Tráfico')}
+                            onClick={() => onSubmit('TRAFICO')}
                             className="bg-yellow-500/20 border border-yellow-500/40 rounded-3xl p-4 flex flex-col items-center justify-center gap-2 active:scale-90 transition-all hover:bg-yellow-500/30 group"
                         >
                             <div className="w-12 h-12 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -50,7 +50,7 @@ const Reportes = ({ isOpen, onClose, onSubmit }) => {
                         </button>
 
                         <button
-                            onClick={() => onSubmit('Falla Mecánica')}
+                            onClick={() => onSubmit('FALLA_MECANICA')}
                             className="bg-orange-500/20 border border-orange-500/40 rounded-3xl p-4 flex flex-col items-center justify-center gap-2 active:scale-90 transition-all hover:bg-orange-500/30 group"
                         >
                             <div className="w-12 h-12 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
