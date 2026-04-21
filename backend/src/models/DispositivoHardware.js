@@ -33,7 +33,7 @@ const dispositivoHardwareSchema = new mongoose.Schema({
     usuario_mqtt: { type: String, default: '', hash: true },
     password_mqtt: { type: String, default: '', hash: true },
     capacidadMaxima: { type: Number, default: 15 },
-    umbralPeso: { type: Number, default: 10 },
+    factorCalibracion: { type: Number, default: 10 },
     ultimaConexion: { type: Date, default: null }
 }, { timestamps: true });
 

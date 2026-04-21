@@ -3,7 +3,7 @@ import { SlidersHorizontal, Send, RefreshCw, Power } from 'lucide-react';
 interface InteractiveSettingsPanelProps {
   hardwareSettings: {
     capacidadMaxima: number;
-    umbralPeso: number;
+    factorCalibracion: number;
     powerOn: boolean;
   };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -43,11 +43,11 @@ export const InteractiveSettingsPanel = ({
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Umbral Peso (KG) HX711</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Factor Calibración HX711</label>
             <input 
               type="number" 
-              name="umbralPeso"
-              value={hardwareSettings.umbralPeso}
+              name="factorCalibracion"
+              value={hardwareSettings.factorCalibracion}
               onChange={onChange}
               min={0}
               step={0.5}

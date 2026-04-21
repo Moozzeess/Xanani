@@ -15,6 +15,20 @@ const api = axios.create({
   }
 });
 
+// Interceptor para incluir el token de autenticación en cada petición
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('xanani_token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Aumentamos el tipo de AxiosRequestConfig para soportar flags personalizados si es necesario
 declare module 'axios' {
   export interface AxiosRequestConfig {

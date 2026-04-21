@@ -8,7 +8,7 @@ const reporteSchema = new mongoose.Schema(
   {
     usuario: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Usuario',
       required: true
     },
 
@@ -35,8 +35,16 @@ const reporteSchema = new mongoose.Schema(
         'CONDUCCION_PELIGROSA',
         'RETRASO',
         'EXPERIENCIA',
+        'ANUNCIO',
         'OTRO'
       ]
+    },
+
+    /** Para reportes tipo ANUNCIO: CONDUCTORES, PASAJEROS, TODOS */
+    destinatario: {
+      type: String,
+      enum: ['CONDUCTORES', 'PASAJEROS', 'TODOS'],
+      default: null
     },
 
     descripcion: {

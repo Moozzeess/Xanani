@@ -26,6 +26,7 @@ export interface AdminSidebarProps {
   onClose: () => void;
   onSwitchView: (view: AdminViewId) => void;
   onLogout: () => void;
+  incidentCount?: number;
 }
 
 function navItemClass(isActive: boolean): string {
@@ -44,7 +45,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isOpen,
   onClose,
   onSwitchView,
-  onLogout
+  onLogout,
+  incidentCount = 0
 }) => {
   return (
     <aside
@@ -112,9 +114,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 group-hover:text-orange-400" /> Incidentes
           </div>
-          <span className="bg-orange-500/20 text-orange-400 text-xs font-bold px-2 py-0.5 rounded-full border border-orange-500/20">
-            3
-          </span>
+          {incidentCount > 0 && (
+            <span className="bg-orange-500/20 text-orange-400 text-xs font-bold px-2 py-0.5 rounded-full border border-orange-500/20">
+              {incidentCount}
+            </span>
+          )}
         </button>
 
         <button

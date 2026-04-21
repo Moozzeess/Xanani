@@ -34,22 +34,25 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
     esp32: false,
     macAddress: '',
     statusCode: -1,
+    errorMsg: '',
     sim800l: {
       connected: false,
       signalStrength: 0,
       dataPlanActive: false
     },
-   /* gps: {
+    gps: {
       latitud: 0,
       longitud: 0,
-      conectado: false
-    }*/
+      conectado: false,
+      satelites: 0,
+      velocidad: 0
+    }
   });
 
   // Memoria de Sensores Físicos
   const [sensorData, setSensorData] = useState({
     hardwareId: initialDevice?.Id_Dispositivo_Hardware || null as string | null,
-    celdasCarga: Array(16).fill(false),
+    celdasCarga: Array(16).fill(0),
     pasajeros: {
       entradas: 0,
       salidas: 0,
@@ -60,7 +63,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
   // Estado Operativo y Restricciones de Hardware
   const [hardwareSettings, setHardwareSettings] = useState({
     capacidadMaxima: initialDevice?.capacidadMaxima || 15,
-    umbralPeso: initialDevice?.umbralPeso || 10,
+    factorCalibracion: initialDevice?.factorCalibracion || 10,
     powerOn: initialDevice?.estado ? initialDevice.estado === 'activo' : true
   });
 
@@ -77,7 +80,9 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       esp32: false,
       macAddress: '',
       statusCode: -1,
-      sim800l: { connected: false, signalStrength: 0, dataPlanActive: false }
+      errorMsg: '',
+      sim800l: { connected: false, signalStrength: 0, dataPlanActive: false },
+      gps: { latitud: 0, longitud: 0, conectado: false, satelites: 0, velocidad: 0 }
     });
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
@@ -92,6 +97,10 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
 
     newSocket.on('connect', () => {
       console.log('Cliente WS conectado al backend');
+      // Suscribirse automáticamente a la sala del dispositivo si ya tenemos el ID
+      if (sensorData.hardwareId) {
+        newSocket.emit('suscribir_dispositivo', sensorData.hardwareId);
+      }
     });
 
     // Escuchar el estado de la conexión MQTT desde el backend
@@ -120,9 +129,12 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       }
     });
 
-    // Validar telemetría y reglas de negocio
+    // Validar telemetría y reglas de negocio (Nueva Estructura)
     newSocket.on('datos_esp32', (data) => {
-      console.log("Nuevos datos desde ESP32:", data);
+      console.log("Telemetría Real Recibida:", data);
+      const payload = data.payload;
+
+      if (!payload || typeof payload === 'string') return;
 
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
@@ -149,53 +161,51 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       if (!deviceStatus.esp32) {
         disparar({
           tipo: 'info',
-          titulo: 'ESP32 Detectado',
-          mensaje: `Se reestableció el flujo de telemetría desde el microcontrolador ${data.payload?.id ? `(${data.payload.id})` : ''}.`
+          titulo: 'Hardware Activo',
+          mensaje: `Se reestableció el flujo de datos desde el ID: ${payload.id || 'Desconocido'}.`
         });
       }
 
+      // Actualizar Estado del Dispositivo (Diagnóstico)
       setDeviceStatus(prev => ({
         ...prev,
         esp32: true,
-        macAddress: data.payload?.id || prev.macAddress,
-        statusCode: data.payload?.st !== undefined ? data.payload.st : prev.statusCode,
+        macAddress: payload.id || prev.macAddress,
+        statusCode: payload.st !== undefined ? payload.st : prev.statusCode,
+        errorMsg: payload.err || '',
         sim800l: {
-          connected: true,
-          signalStrength: data.payload?.sim_signal || 85,
-          dataPlanActive: true
+          connected: payload.sim?.con || false,
+          signalStrength: payload.sim?.signal || 0,
+          dataPlanActive: payload.sim?.con || false
+        },
+        gps: {
+          conectado: payload.gps?.con || false,
+          latitud: payload.gps?.lat || 0,
+          longitud: payload.gps?.lon || 0,
+          satelites: payload.gps?.sat || 0,
+          velocidad: payload.gps?.spd || 0
         }
       }));
 
-      if (data.payload) {
-        // Se leen "in", "out", "act" para alinear con el payload estructurado stringificado de Arduino `mosqitto.ino`,
-        // Haciendo fallback a "entradas" por compatibilidad vieja
-        const vEntradas = data.payload.in !== undefined ? data.payload.in : data.payload.entradas;
-        const vSalidas = data.payload.out !== undefined ? data.payload.out : data.payload.salidas;
-        const vActuales = data.payload.act !== undefined ? data.payload.act : data.payload.actuales;
-
-        const paramEntradas = vEntradas !== undefined ? vEntradas : sensorData.pasajeros.entradas;
-        const paramSalidas = vSalidas !== undefined ? vSalidas : sensorData.pasajeros.salidas;
-        const paramActuales = vActuales !== undefined ? vActuales : sensorData.pasajeros.actuales;
-
-        if (paramActuales > hardwareSettings.capacidadMaxima) {
+      // Actualizar Datos de Sensores
+      const { pasajeros, celdas } = payload;
+      if (pasajeros) {
+        if (pasajeros.act > hardwareSettings.capacidadMaxima) {
           disparar({
             tipo: 'advertencia',
-            titulo: 'Límite de Ocupación Superado',
-            mensaje: `El sensor indica ${paramActuales} personas, ¡superando la capacidad máxima de ${hardwareSettings.capacidadMaxima}!`
+            titulo: 'Sobrecupo Detectado',
+            mensaje: `Ocupación: ${pasajeros.act} / Máx: ${hardwareSettings.capacidadMaxima}`
           });
         }
 
-        if (paramSalidas > paramEntradas) {
-          dispararError(
-            'Inconsistencia en los Sensores IR',
-            `El contador físico marca un desajuste gravísimo: hay ${paramSalidas} salidas y solo ${paramEntradas} entradas registradas históricamente.`
-          );
-        }
-
         setSensorData(prev => ({
-          hardwareId: data.payload?.id || prev.hardwareId,
-          celdasCarga: data.payload.celdasCarga || prev.celdasCarga,
-          pasajeros: { entradas: paramEntradas, salidas: paramSalidas, actuales: paramActuales }
+          hardwareId: payload.id || prev.hardwareId,
+          celdasCarga: celdas || prev.celdasCarga,
+          pasajeros: { 
+            entradas: pasajeros.in, 
+            salidas: pasajeros.out, 
+            actuales: pasajeros.act 
+          }
         }));
       }
     });
@@ -279,7 +289,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       payload = {
         action: 'configure',
         capacidad_maxima: hardwareSettings.capacidadMaxima,
-        umbral_peso: hardwareSettings.umbralPeso
+        factor_calibracion: hardwareSettings.factorCalibracion
       };
     } else if (tipo === 'reset') {
       payload = { action: 'reset_counters' };
@@ -307,14 +317,14 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         </div>
       </div>
 
-      {/* Contenido scrolleable */}
+      {/* Contenido scrolleable con nuevo layout de 3 columnas */}
       <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
         <HardwareInstructions />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* COLUMNA IZQUIERDA: Configuración y Estado */}
-          <div className="space-y-6 lg:col-span-1">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          
+          {/* COLUMNA 1: CONFIGURACIÓN (Izquierda - 3 cols) */}
+          <div className="xl:col-span-3 space-y-6">
             <MqttSettingsPanel
               mqttConfig={mqttConfig}
               onChange={handleConfigChange}
@@ -325,6 +335,19 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
               isConnecting={isConnecting}
             />
 
+            <DeviceIdentificationPanel
+              isConnected={isConnected}
+              esp32Online={deviceStatus.esp32}
+              hardwareId={sensorData.hardwareId}
+              onSaved={onSaved}
+              mqttConfig={mqttConfig}
+              hardwareSettings={hardwareSettings}
+              initialDevice={initialDevice}
+            />
+          </div>
+
+          {/* COLUMNA 2: DIAGNÓSTICO EN VIVO (Centro - 4 cols) */}
+          <div className="xl:col-span-4 space-y-6">
             <DeviceStatusPanel
               deviceStatus={deviceStatus}
             />
@@ -340,21 +363,10 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
               }}
               isConnected={isConnected}
             />
-
-            <DeviceIdentificationPanel
-              isConnected={isConnected}
-              esp32Online={deviceStatus.esp32}
-              hardwareId={sensorData.hardwareId}
-              onSaved={onSaved}
-              mqttConfig={mqttConfig}
-              hardwareSettings={hardwareSettings}
-              initialDevice={initialDevice}
-            />
           </div>
 
-          {/* COLUMNA DERECHA: Sensores y Sumario */}
-          <div className="space-y-6 lg:col-span-2">
-
+          {/* COLUMNA 3: DATOS DE SENSORES Y SUMARIO (Derecha - 5 cols) */}
+          <div className="xl:col-span-5 space-y-6">
             <SensorDataPanel
               sensorData={sensorData}
               capacidadMaxima={hardwareSettings.capacidadMaxima}
@@ -369,8 +381,8 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
               entradas={sensorData.pasajeros.entradas}
               salidas={sensorData.pasajeros.salidas}
             />
-
           </div>
+
         </div>
       </div>
     </div>

@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
-import { useAuth } from '../../../auth/useAuth';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
+} from 'recharts';
+import { Bookmark, Info, TrendingUp, Search } from 'lucide-react';
+import { estadisticasService } from '../../../services/estadisticasService';
 
 /**
- * Pestaña de Afluencia Genérica.
- * Muestra histogramas de ocupación de las rutas.
- * Reutilizable entre Pasajero, Conductor y Administrador.
+ * PanelAfluencia: Muestra histogramas de ocupación de las rutas suscritas del pasajero.
+ * Intención: Ayudar al pasajero a planificar sus viajes basados en la afluencia histórica.
  */
 const PanelAfluencia = () => {
-  const { token } = useAuth();
-  const [data, setData] = useState(null);
+  const [rutas, setRutas] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await api.get('/estadisticas/afluencia/RUTA_1', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        setData(res.data);
+        const data = await estadisticasService.obtenerAfluenciaSuscripciones();
+        setRutas(data);
       } catch (error) {
         console.error("Error fetching statistics", error);
       } finally {
@@ -26,70 +25,120 @@ const PanelAfluencia = () => {
       }
     };
     fetchData();
-  }, [token]);
+  }, []);
 
-  if (loading) return <div className="p-10 text-center animate-pulse">Cargando estadísticas de afluencia...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-slate-50 p-10">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-slate-500 font-medium animate-pulse">Analizando afluencia de tus rutas...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 p-6 overflow-y-auto">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Afluencia de Rutas</h1>
-        <p className="text-slate-500 text-sm">Pronóstico de ocupación basado en el historial diario.</p>
+    <div className="flex flex-col h-full w-full bg-slate-50 overflow-y-auto p-4 md:p-8 pb-24">
+      <header className="mb-8 max-w-4xl">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Tu Afluencia</h1>
+        <p className="text-slate-500 mt-2 text-lg">Pronóstico de ocupación basado en tus rutas favoritas.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Gráfico de Histograma Mockup */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-80">
-          <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-            Ocupación por Hora (Ruta Centro)
-          </h3>
-          
-          <div className="flex-1 flex items-end gap-1 px-2">
-            {data?.histograma.map((item, idx) => (
-              <div 
-                key={idx} 
-                className="flex-1 group relative flex flex-col items-center"
-              >
-                <div 
-                  className={`w-full rounded-t-sm transition-all duration-300 ${item.ocupacion > 80 ? 'bg-red-400' : 'bg-indigo-400 opacity-60'}`}
-                  style={{ height: `${item.ocupacion}%` }}
-                ></div>
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[8px] px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                   {item.ocupacion}%
+      {rutas.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl">
+          {rutas.map((ruta) => (
+            <div key={ruta.rutaId} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex flex-col h-[400px]">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600">
+                    <Bookmark className="w-5 h-5 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-xl">{ruta.nombre}</h3>
+                    <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Histograma de 24h</p>
+                  </div>
                 </div>
-                {idx % 3 === 0 && <span className="text-[9px] text-slate-400 mt-2">{item.hora}</span>}
+                <div className="flex items-center text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                  <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
+                  <span>Optimizado</span>
+                </div>
               </div>
-            ))}
+              
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <BarChart data={ruta.histograma} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="hora" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#94a3b8', fontSize: 10}} 
+                      interval={2}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#94a3b8', fontSize: 10}}
+                    />
+                    <Tooltip 
+                      cursor={{fill: '#f8fafc', radius: 4}}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                      formatter={(value) => [`${value}%`, 'Ocupación']}
+                    />
+                    <Bar 
+                      dataKey="ocupacion" 
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {ruta.histograma.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.ocupacion > 75 ? '#ef4444' : entry.ocupacion > 40 ? '#3b82f6' : '#10b981'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="mt-6 flex items-center gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <Info className="w-4 h-4 text-blue-500 shrink-0" />
+                <p className="text-[11px] text-slate-600 leading-tight">
+                  Las barras <span className="text-red-500 font-bold">rojas</span> indican alta demanda. Recomendamos planificar tu viaje fuera de estos horarios.
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 max-w-2xl">
+          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 text-slate-300">
+            <Bookmark className="w-10 h-10" />
           </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">No tienes rutas suscritas</h3>
+          <p className="text-slate-500 text-center max-w-md px-6 mb-8">
+            Suscríbete a tus rutas frecuentes para ver sus horarios de afluencia y planificar mejor tus traslados.
+          </p>
+          <button className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+            <Search className="w-5 h-5" />
+            Descubrir Rutas
+          </button>
         </div>
+      )}
 
-        {/* Panel Informativo de Horas Pico */}
-        <div className="space-y-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="font-bold text-slate-700 mb-2">Horas Pico Detectadas</h3>
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center bg-red-50 p-2 rounded-lg text-sm">
-                        <span className="font-medium text-red-700">07:00 - 09:00</span>
-                        <span className="text-xs text-red-600 bg-white px-2 py-0.5 rounded-full font-bold">ALTA</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-red-50 p-2 rounded-lg text-sm">
-                        <span className="font-medium text-red-700">18:00 - 20:00</span>
-                        <span className="text-xs text-red-600 bg-white px-2 py-0.5 rounded-full font-bold">ALTA</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-green-50 p-2 rounded-lg text-sm">
-                        <span className="font-medium text-green-700">11:00 - 13:00</span>
-                        <span className="text-xs text-green-600 bg-white px-2 py-0.5 rounded-full font-bold">BAJA</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-indigo-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-100">
-                <h3 className="font-bold mb-1">Xanani Tip</h3>
-                <p className="text-indigo-100 text-xs">Para encontrar lugar seguro, intenta abordar antes de las 07:00 o cerca de las 11:00 am.</p>
-            </div>
+      {/* Tip Seccional */}
+      {rutas.length > 0 && (
+        <div className="mt-12 bg-indigo-600 p-8 rounded-3xl text-white shadow-xl shadow-indigo-100 max-w-4xl relative overflow-hidden group">
+          <div className="relative z-10">
+            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+              <Info className="w-6 h-6" />
+              Xanani Tip
+            </h3>
+            <p className="text-indigo-100 text-sm max-w-xl">
+              Los histogramas se basan en el promedio de las últimas 4 semanas. Recuerda que factores externos como el clima o eventos especiales pueden afectar la afluencia en tiempo real.
+            </p>
+          </div>
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

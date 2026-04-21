@@ -8,9 +8,10 @@ const ErrorApp = require('../utils/ErrorApp');
 exports.obtenerMisNotificaciones = catchAsync(async (req, res, next) => {
   const { role, userId } = req.auth;
 
-  // Buscar notificaciones dirigidas al rol del usuario o a TODOS
+  // Buscar notificaciones dirigidas al rol del usuario o a TODOS, que NO hayan sido leídas por este usuario
   const notificaciones = await Notificacion.find({
-    rolDestino: { $in: [role, 'TODOS'] }
+    rolDestino: { $in: [role, 'TODOS'] },
+    leidaPor: { $ne: userId }
   }).sort({ createdAt: -1 }).limit(20);
 
   // Mapear para incluir un campo booleano 'leida'

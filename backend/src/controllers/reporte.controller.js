@@ -1,4 +1,5 @@
 const Reporte = require('../models/Reporte');
+const Notificacion = require('../models/Notificacion');
 const socketService = require('../services/socketService');
 
 /**
@@ -7,7 +8,8 @@ const socketService = require('../services/socketService');
  */
 exports.crearReporte = async (req, res) => {
   try {
-    const { unidadId, rutaId, tipo, descripcion, calificacion, encontroAsiento } = req.body;
+    console.log("Cuerpo del reporte recibido:", req.body);
+    const { unidadId, rutaId, tipo, descripcion, calificacion, encontroAsiento, destinatario, estado } = req.body;
 
     const nuevoReporte = new Reporte({
       usuario: req.auth.userId,
@@ -16,10 +18,27 @@ exports.crearReporte = async (req, res) => {
       tipo,
       descripcion: descripcion || null,
       calificacion: calificacion || null,
-      encontroAsiento: encontroAsiento ?? null
+      encontroAsiento: encontroAsiento ?? null,
+      destinatario: destinatario || null,
+      estado: estado || 'PENDIENTE'
     });
 
     await nuevoReporte.save();
+
+    // Si es un ANUNCIO, crear también una Notificación persistente para los destinatarios
+    if (tipo === 'ANUNCIO' && descripcion) {
+      try {
+        await Notificacion.create({
+          titulo: 'Aviso del Administrador',
+          mensaje: descripcion,
+          tipo: 'SISTEMA',
+          rolDestino: destinatario === 'TODOS' ? 'TODOS' : (destinatario === 'CONDUCTORES' ? 'CONDUCTOR' : 'PASAJERO')
+        });
+      } catch (notifError) {
+        console.error("Error al crear la notificación persistente:", notifError);
+        // No bloqueamos el flujo principal si falla la notificación persistente
+      }
+    }
 
     // Poblar para enviar datos completos por socket
     const reportePoblado = await Reporte.findById(nuevoReporte._id)
@@ -35,6 +54,7 @@ exports.crearReporte = async (req, res) => {
       reporte: reportePoblado
     });
   } catch (error) {
+    console.error("Error en crearReporte:", error);
     const esTipoInvalido = error.name === 'ValidationError';
     res.status(esTipoInvalido ? 400 : 500).json({
       mensaje: esTipoInvalido
@@ -59,6 +79,7 @@ exports.obtenerReportes = async (req, res) => {
 
     res.json(reportes);
   } catch (error) {
+    console.error("Error en obtenerReportes:", error);
     res.status(500).json({
       mensaje: 'Error al obtener los reportes',
       error: error.message
@@ -125,6 +146,33 @@ exports.actualizarEstadoReporte = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       mensaje: 'Error al actualizar el estado del reporte',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Elimina un reporte de la base de datos (uso administrativo).
+ * @param {string} req.params.id - ID del reporte.
+ */
+exports.eliminarReporte = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reporteEliminado = await Reporte.findByIdAndDelete(id);
+
+    if (!reporteEliminado) {
+      return res.status(404).json({
+        mensaje: 'Reporte no encontrado'
+      });
+    }
+
+    res.json({
+      mensaje: 'Reporte eliminado correctamente'
+    });
+  } catch (error) {
+    console.error("Error en eliminarReporte:", error);
+    res.status(500).json({
+      mensaje: 'Error al eliminar el reporte',
       error: error.message
     });
   }

@@ -68,7 +68,7 @@ const PanelPerfil = ({
                             <div className="flex items-center gap-2">
                                 <p className="font-bold text-lg truncate max-w-[150px]">{usuario?.username || 'Usuario'}</p>
                                 {!isConductor && (
-                                    <button 
+                                    <button
                                         onClick={onEditarPerfil}
                                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                                         title="Editar perfil"
@@ -79,7 +79,7 @@ const PanelPerfil = ({
                             </div>
                             <p className="text-xs text-white/60 truncate">{usuario?.email || ''}</p>
                             <span className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${isConductor ? 'bg-amber-400 text-amber-900' : 'bg-blue-500 text-white'}`}>
-                                {isConductor ? 'Conductor Verificado' : 'Pasajero Certificado'}
+                                {isConductor ? 'Conductor' : 'Pasajero'}
                             </span>
                         </div>
                     </div>
@@ -94,10 +94,7 @@ const PanelPerfil = ({
                             <p className="text-xl font-black">{isConductor ? '1' : rutasFavoritas.length}</p>
                             <p className="text-[9px] text-white/60 font-bold uppercase">{isConductor ? 'Ruta' : 'Favoritos'}</p>
                         </div>
-                        <div className="bg-white/10 rounded-xl p-3 text-center backdrop-blur-md">
-                            <p className="text-xl font-black">{isConductor ? (conductorData?.rating || '5.0') : (calificacionPromedio || '—')}</p>
-                            <p className="text-[9px] text-white/60 font-bold uppercase">Puntos</p>
-                        </div>
+
                     </div>
                 </div>
 
@@ -188,7 +185,7 @@ const PanelPerfil = ({
                             <div className="space-y-2">
                                 {rutasDisponibles
                                     .filter(r => !rutasFavoritas.some(f => (f._id || f.id) === (r._id || r.id)))
-                                    .slice(0, 3) 
+                                    .slice(0, 3)
                                     .map((ruta) => (
                                         <div
                                             key={ruta._id || ruta.id}

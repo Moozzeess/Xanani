@@ -58,7 +58,7 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
         const datos = JSON.parse(mensajeTexto);
 
         // Si el mensaje incluye un ID de hardware, actualizar su última conexión
-        const idHardware = datos.id_hardware || datos.Id_Dispositivo_Hardware;
+        const idHardware = datos.id || datos.id_hardware || datos.Id_Dispositivo_Hardware;
         if (idHardware) {
           await DispositivoHardware.findOneAndUpdate(
             { Id_Dispositivo_Hardware: idHardware },
@@ -68,14 +68,39 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
 
         if (datos.xanani_ping_request) {
           const tiempoMs = Date.now() - datos.xanani_ping_request;
-          return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs });
+          return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs }, idHardware);
         }
+
+        // Normalización de datos para el frontend (Soporte GPS NEO 6M, SIM800L y Celdas)
+        const payloadNormalizado = {
+          id: idHardware,
+          // GPS NEO 6M
+          gps: datos.gps || { con: false, lat: 0, lon: 0, sat: 0, spd: 0 },
+          // SIM800L
+          sim: {
+            con: datos.sim_con !== undefined ? datos.sim_con : (datos.sim800l?.connected || false),
+            signal: datos.sim_signal !== undefined ? datos.sim_signal : (datos.sim800l?.signalStrength || 0)
+          },
+          // Sensores de Pasajeros (IR)
+          pasajeros: {
+            in: datos.in !== undefined ? datos.in : (datos.entradas || 0),
+            out: datos.out !== undefined ? datos.out : (datos.salidas || 0),
+            act: datos.act !== undefined ? datos.act : (datos.actuales || 0)
+          },
+          // Celdas de Carga (HX711) - Soporta tanto booleanos como valores numéricos de peso
+          celdas: datos.celdas || [],
+          // Código de estado/error de Arduino
+          st: datos.st !== undefined ? datos.st : -1,
+          err: datos.err || null, // Mensaje de error específico de Arduino
+          fecha: new Date().toISOString()
+        };
 
         emitirEvento('datos_esp32', {
           tema: topic,
-          payload: datos,
-          fecha: new Date().toISOString()
-        });
+          payload: payloadNormalizado,
+          fecha: payloadNormalizado.fecha
+        }, idHardware);
+
       } catch (e) {
         emitirEvento('datos_esp32', {
           tema: topic,

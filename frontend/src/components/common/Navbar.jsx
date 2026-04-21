@@ -10,7 +10,8 @@ const Navbar = ({
     onProfileClick, 
     onAfluenciaClick, 
     activeTab,
-    rol = 'PASAJERO' // Valor por defecto
+    rol = 'PASAJERO',
+    hasNewNotifications = false // Nueva prop para controlar el indicador
 }) => {
     const esConductor = rol === 'CONDUCTOR';
 
@@ -57,7 +58,9 @@ const Navbar = ({
                 >
                     <div className="relative">
                         <Bell className="w-6 h-6" />
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        {hasNewNotifications && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                        )}
                     </div>
                     <span className="text-[10px] font-medium">
                         {esConductor ? 'Avisos' : 'Alertas'}
@@ -73,6 +76,7 @@ const Navbar = ({
                     <span className="text-[10px] font-medium">Perfil</span>
                 </button>
             </div>
+
 
             {/* Indicador de barra de inicio (estilo iOS) */}
             <div className="w-full flex justify-center pb-2">

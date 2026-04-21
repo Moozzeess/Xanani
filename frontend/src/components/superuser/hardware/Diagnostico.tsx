@@ -4,36 +4,42 @@ interface DeviceStatusPanelProps {
   deviceStatus: {
     esp32: boolean;
     macAddress?: string;
-    error_code?: number;
+    statusCode: number;
+    errorMsg?: string;
     sim800l: {
       connected: boolean;
       signalStrength: number;
       dataPlanActive: boolean;
     };
-  /*  gps: {
+    gps: {
       latitud: number;
       longitud: number;
       conectado: boolean;
-    };*/
+      satelites: number;
+      velocidad: number;
+    };
   };
 }
 
 export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
   const parseEstatusCodigo = (code?: number) => {
     switch(code) {
-      case 0: return { t: 'Tráfico Normal', c: 'text-emerald-600', bg: 'bg-emerald-100/50' };
-      case 1: return { t: 'Unidad Llena', c: 'text-amber-600', bg: 'bg-amber-100/50' };
-      default: return { t: 'Esperando datos...', c: 'text-slate-400', bg: 'bg-slate-100' };
+      case 0: return { t: 'Sistema Operativo', c: 'text-emerald-600', bg: 'bg-emerald-100/50' };
+      case 1: return { t: 'Error en Sensores IR', c: 'text-red-600', bg: 'bg-red-100/50' };
+      case 2: return { t: 'Falla Módulo GPS', c: 'text-amber-600', bg: 'bg-amber-100/50' };
+      case 3: return { t: 'Sin Señal GPRS', c: 'text-rose-600', bg: 'bg-rose-100/50' };
+      case 4: return { t: 'Peso Excedido', c: 'text-orange-600', bg: 'bg-orange-100/50' };
+      default: return { t: 'Esperando telemetría...', c: 'text-slate-400', bg: 'bg-slate-100' };
     }
   };
 
-  const statusText = parseEstatusCodigo(deviceStatus.error_code);
+  const statusText = parseEstatusCodigo(deviceStatus.statusCode);
 
   return (
     <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
       <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
         <Signal size={16} className="text-blue-500" />
-        Estado de Diagnóstico
+        Estado de Diagnóstico Real
       </h3>
       
       <div className="space-y-4">
@@ -50,7 +56,7 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
                   Transmisión Principal
                   {deviceStatus.macAddress && (
                      <span className="font-mono bg-slate-200 px-1 py-0.5 rounded text-[9px] text-slate-600">
-                       MAC: {deviceStatus.macAddress}
+                       ID: {deviceStatus.macAddress}
                      </span>
                   )}
                 </p>
@@ -65,12 +71,15 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
           </div>
           
           <div className={`mt-3 pt-2 text-center rounded-md ${statusText.bg}`}>
-             <p className="text-[10px] font-bold text-slate-500 uppercase">Mensaje de Diagnóstico Actual</p>
-             <p className={`text-xs font-bold pb-2 ${statusText.c}`}>{statusText.t}</p>
+             <p className="text-[10px] font-bold text-slate-500 uppercase">Estado del Hardware</p>
+             <p className={`text-xs font-bold ${statusText.c}`}>{statusText.t}</p>
+             {deviceStatus.errorMsg && (
+               <p className="text-[9px] text-red-500 font-mono mt-1 pb-1">{deviceStatus.errorMsg}</p>
+             )}
           </div>
         </div>
 
-        {/* GPS Module 
+        {/* GPS Module (NEO-6M) */}
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
@@ -78,7 +87,15 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
                 <MapPin size={16} />
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-700">Módulo GPS</p>
+                <p className="text-sm font-bold text-slate-700">Módulo GPS NEO-6M</p>
+                <div className="flex gap-2">
+                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${deviceStatus.gps.satelites > 0 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-400'}`}>
+                    Sats: {deviceStatus.gps.satelites}
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">
+                    {deviceStatus.gps.velocidad.toFixed(1)} km/h
+                  </span>
+                </div>
               </div>
             </div>
             <div>
@@ -92,18 +109,18 @@ export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
           {deviceStatus.gps.conectado && (
             <div className="mt-2 pt-2 border-t border-slate-200">
               <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="bg-white p-1.5 rounded border border-slate-100">
+                <div className="bg-white p-1.5 rounded border border-slate-100 shadow-sm">
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Latitud</p>
                   <p className="text-[11px] font-mono font-bold text-slate-700">{deviceStatus.gps.latitud.toFixed(6)}</p>
                 </div>
-                <div className="bg-white p-1.5 rounded border border-slate-100">
+                <div className="bg-white p-1.5 rounded border border-slate-100 shadow-sm">
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Longitud</p>
                   <p className="text-[11px] font-mono font-bold text-slate-700">{deviceStatus.gps.longitud.toFixed(6)}</p>
                 </div>
               </div>
             </div>
           )}
-        </div>*/}
+        </div>
 
         {/* SIM800L */}
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">

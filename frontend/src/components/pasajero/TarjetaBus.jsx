@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, MapPin, Flag, X } from 'lucide-react';
+import { User, MapPin, Flag, X, List } from 'lucide-react';
 import MapaAsientos from './MapaAsientos';
 
 /**
@@ -36,26 +36,27 @@ const TarjetaBus = ({ vehicle, onClose, onReport, onVerRuta }) => {
                     </div>
 
                     {/* Componente de Asientos */}
-                    <MapaAsientos 
-                        ocupacionActual={vehicle.ocupacionActual} 
-                        capacidadMaxima={vehicle.capacidadMaxima} 
+                    <MapaAsientos
+                        ocupacionActual={vehicle.ocupacionActual}
+                        capacidadMaxima={vehicle.capacidadMaxima}
                         vehicleId={vehicle.id || vehicle.placa}
-                        ocupabilidad={vehicle.occ} 
+                        ocupabilidad={vehicle.occ}
                     />
 
                     <div className="grid grid-cols-2 gap-3">
-                        <button 
+                        <button
                             onClick={onVerRuta}
-                            className="bg-slate-100 py-3.5 rounded-xl font-bold text-sm hover:bg-slate-200 text-slate-700 transition-colors flex items-center justify-center gap-2">
-                            <MapPin className="w-4 h-4" /> Ver Ruta
+                            className="bg-indigo-50 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-wider hover:bg-indigo-100 text-indigo-600 transition-all border border-indigo-100 flex items-center justify-center gap-2">
+                            <List className="w-4 h-4" /> Ruta
                         </button>
                         <button
                             onClick={onReport}
-                            className="bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2"
+                            className="bg-slate-900 text-white py-3.5 rounded-xl font-black text-[11px] uppercase tracking-wider hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2"
                         >
                             <Flag className="w-4 h-4" /> Reportar
                         </button>
                     </div>
+
                 </div>
             </div>
         </div>

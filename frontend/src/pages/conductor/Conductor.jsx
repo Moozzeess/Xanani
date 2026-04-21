@@ -18,7 +18,7 @@ import HistorialGeneral from '../../components/common/HistorialGeneral';
 import PanelPerfil from '../../components/common/PanelPerfil';
 import { NoRouteOverlay } from '../../components/conductor/IniciarFinalizar';
 import { useConductorSimulation } from '../../simulations/conductorSimulation';
-import { Bell, CheckCircle, MessageSquare } from 'lucide-react';
+import { Bell, CheckCircle, MessageSquare, Trash2 } from 'lucide-react';
 import ModalAlerta from '../../components/common/ModalAlerta';
 
 
@@ -168,6 +168,53 @@ const Conductor = () => {
       });
     }
   }, [simulatedPosition, ubicacionReal, isTesting, socket, viewMode, rawIds, unidadActual, passengerCount, capacity]);
+  
+  // Listener para Avisos del Administrador en Tiempo Real
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('aviso_conductor', (datos) => {
+      // Mostrar toast inmediato
+      addToastNotification('Aviso de Administración', datos.mensaje, 'info');
+      // Recargar notificaciones si estamos en la vista de avisos
+      if (viewMode === 'avisos') {
+        cargarNotificaciones();
+      }
+    });
+
+    return () => {
+      socket.off('aviso_conductor');
+    };
+  }, [socket, viewMode]);
+
+  // Cargar Notificaciones desde el Backend
+  const cargarNotificaciones = async () => {
+    try {
+      const res = await api.get('/notificaciones', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = res.data.data;
+      // Mapear al formato que espera el componente (id, title, message, type, leida)
+      const mapped = data.map(n => ({
+        id: n._id,
+        title: n.titulo,
+        message: n.mensaje,
+        type: n.tipo === 'ADVERTENCIA' ? 'alert' : 'info',
+        leida: n.leida,
+        fecha: n.createdAt
+      }));
+      setNotificaciones(mapped);
+    } catch (error) {
+      console.error("Error al cargar notificaciones:", error);
+    }
+  };
+
+  // Cargar avisos al entrar en la vista correspondiente
+  useEffect(() => {
+    if (viewMode === 'avisos') {
+      cargarNotificaciones();
+    }
+  }, [viewMode]);
 
   const [tripStats, setTripStats] = useState({
     timeStarted: null,
@@ -231,8 +278,24 @@ const Conductor = () => {
     setIsReportModalOpen(false);
   };
 
-  const removeNotification = (id) => {
-    setNotificaciones(prev => prev.filter(notif => notif.id !== id));
+  const removeNotification = async (id) => {
+    // Si el ID es numérico (toast temporal), solo filtrar localmente
+    if (typeof id === 'number') {
+      setNotificaciones(prev => prev.filter(notif => notif.id !== id));
+      return;
+    }
+
+    // Si es un ID de MongoDB, marcar como leída en el backend
+    try {
+      await api.patch(`/notificaciones/${id}/leida`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotificaciones(prev => prev.filter(notif => notif.id !== id));
+    } catch (error) {
+      console.error("Error al marcar como leída:", error);
+      // Fallback: eliminar localmente aunque falle el backend para no bloquear al usuario
+      setNotificaciones(prev => prev.filter(notif => notif.id !== id));
+    }
   };
 
   const handleStartRoute = () => {
@@ -360,7 +423,7 @@ const Conductor = () => {
                    <p className="text-slate-400 text-sm">Mensajes del administrador y estado de incidencias.</p>
                 </div>
              </header>
-
+ 
              <div className="space-y-4 max-w-2xl mx-auto">
                 {/* Mensaje de Bienvenida / Estado */}
                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-4">
@@ -373,14 +436,14 @@ const Conductor = () => {
                       <span className="text-[10px] text-blue-400 mt-1 block">Ahora</span>
                    </div>
                 </div>
-
+ 
                 <div className="border-b border-white/10 my-6"></div>
-
+ 
                 <h3 className="font-bold text-white/80 mb-2 flex items-center gap-2">
                    <MessageSquare className="w-4 h-4" />
                    Historial de Avisos
                 </h3>
-
+ 
                 {notificaciones.length === 0 ? (
                    <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
                       <Bell className="w-12 h-12 text-white/10 mx-auto mb-3" />
@@ -389,7 +452,7 @@ const Conductor = () => {
                 ) : (
                    <div className="space-y-3">
                       {notificaciones.map((n) => (
-                         <div key={n.id} className="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-start">
+                         <div key={n.id} className="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-start pointer-events-auto">
                             <div className="flex-1">
                                <div className="flex items-center gap-2">
                                   <span className={`w-2 h-2 rounded-full ${n.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
@@ -397,12 +460,29 @@ const Conductor = () => {
                                </div>
                                <p className="text-sm text-slate-200 mt-1">{n.message}</p>
                             </div>
+                            <button 
+                               onClick={() => removeNotification(n.id)}
+                               className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                               title="Marcar como leído"
+                            >
+                               <Trash2 className="w-4 h-4" />
+                            </button>
                          </div>
                       ))}
+                      
+                      <button 
+                         onClick={() => {
+                            // Marcar todas como leídas (limpiar pantalla)
+                            notificaciones.forEach(n => removeNotification(n.id));
+                         }}
+                         className="w-full py-4 text-xs font-bold text-slate-400 hover:text-white transition-colors border-t border-white/5 pointer-events-auto"
+                      >
+                         Limpiar todos los avisos
+                      </button>
                    </div>
                 )}
              </div>
-
+ 
              <button 
                 onClick={() => setViewMode('espera')}
                 className="fixed bottom-24 right-6 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl z-[100] font-bold active:scale-95 transition-transform"

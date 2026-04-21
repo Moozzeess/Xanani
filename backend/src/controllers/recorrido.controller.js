@@ -211,3 +211,35 @@ exports.cancelarRecorrido = async (req, res) => {
     });
   }
 };
+
+/**
+ * Intención: Obtiene el historial global de todos los recorridos para el administrador.
+ * Soporta filtros por conductor, unidad y estado.
+ */
+exports.obtenerHistorialAdmin = async (req, res) => {
+    try {
+        const { conductorId, unidadId, estado, limit = 100 } = req.query;
+        const filtro = {};
+
+        if (conductorId) filtro.conductorId = conductorId;
+        if (unidadId) filtro.unidadId = unidadId;
+        if (estado) filtro.estado = estado;
+
+        const historial = await Recorrido.find(filtro)
+            .populate({
+                path: 'conductorId',
+                populate: { path: 'user', select: 'username email' }
+            })
+            .populate('unidadId', 'placa')
+            .populate('rutaId', 'nombre')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit));
+
+        res.status(200).json(historial);
+    } catch (error) {
+        res.status(500).json({ 
+            mensaje: 'Error al obtener historial administrativo', 
+            error: error.message 
+        });
+    }
+};

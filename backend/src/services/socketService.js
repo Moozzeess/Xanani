@@ -31,6 +31,22 @@ const inicializarSocket = (server) => {
   io.on('connection', (socket) => {
     // console.log(`Cliente conectado al socket: ${socket.id}`);
 
+    // Unirse a una sala específica de dispositivo para evitar interferencias
+    socket.on('suscribir_dispositivo', (idHardware) => {
+      if (idHardware) {
+        socket.join(`device_${idHardware}`);
+        console.log(`Socket ${socket.id} unido a sala: device_${idHardware}`);
+      }
+    });
+
+    // Salir de la sala del dispositivo
+    socket.on('desuscribir_dispositivo', (idHardware) => {
+      if (idHardware) {
+        socket.leave(`device_${idHardware}`);
+        console.log(`Socket ${socket.id} salió de sala: device_${idHardware}`);
+      }
+    });
+
     // Escuchar peticiones de reconfiguración MQTT desde el superusuario
     socket.on('configurar_mqtt', (configuracion) => {
       console.log(`Petición para reconfigurar MQTT recibida de ${socket.id}:`, configuracion);
@@ -166,9 +182,15 @@ const inicializarSocket = (server) => {
  * Casos límite (edge cases):
  *  - Si el pool `io` no inicializó (por race condition), ataja con consola de advertencia y desecha el paquete en vez de detener la aplicación.
  */
-const emitirEvento = (evento, datos) => {
+const emitirEvento = (evento, datos, idHardware = null) => {
   if (io) {
-    io.emit(evento, datos);
+    if (idHardware) {
+      // Emitir solo a los interesados en este dispositivo específico (Aislamiento)
+      io.to(`device_${idHardware}`).emit(evento, datos);
+    } else {
+      // Emitir globalmente si no hay ID específico
+      io.emit(evento, datos);
+    }
   } else {
     console.warn('Socket.io no ha sido inicializado aún.');
   }

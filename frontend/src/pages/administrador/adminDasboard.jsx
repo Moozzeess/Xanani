@@ -31,6 +31,12 @@ const AdminDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSOSOpen, setIsSOSOpen] = useState(false);
   const [activeSOS, setActiveSOS] = useState(null);
+  const [notificaciones, setNotificaciones] = useState([]);
+
+  // Conteo de incidentes pendientes para el Sidebar
+  const incidentCount = useMemo(() => {
+    return notificaciones.filter(n => n.tipo === 'SOS' || n.tipo === 'MECANICA' || n.tipo === 'TRAFICO').length;
+  }, [notificaciones]);
 
   // Escuchar incidencias globales (especialmente SOS)
   useEffect(() => {
@@ -38,6 +44,18 @@ const AdminDashboard = () => {
 
     const handleGlobalIncidencia = (incidencia) => {
       console.log('Nueva incidencia recibida en Dashboard:', incidencia);
+      
+      // Agregar a notificaciones locales (no persistentes)
+      setNotificaciones(prev => [
+        {
+          tipo: incidencia.tipo,
+          descripcion: incidencia.descripcion,
+          timestamp: new Date().toISOString(),
+          ...incidencia
+        },
+        ...prev
+      ].slice(0, 20)); // Limitar a las últimas 20 para no saturar memoria
+
       if (incidencia.tipo === 'SOS') {
         setActiveSOS(incidencia);
         setIsSOSOpen(true);
@@ -94,6 +112,7 @@ const AdminDashboard = () => {
         onClose={toggleSidebar}
         onSwitchView={switchView}
         onLogout={onLogout}
+        incidentCount={incidentCount}
       />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
@@ -101,6 +120,8 @@ const AdminDashboard = () => {
           title={pageTitle}
           onToggleSidebar={toggleSidebar}
           onTriggerSOS={() => setIsSOSOpen(true)}
+          notificaciones={notificaciones}
+          onClearNotificaciones={() => setNotificaciones([])}
         />
 
         <main id="main-container" className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">

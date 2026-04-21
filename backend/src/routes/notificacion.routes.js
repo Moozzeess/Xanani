@@ -15,6 +15,6 @@ router.get('/', notificacionController.obtenerMisNotificaciones);
  * PATCH /api/notificaciones/:id/leer
  * Marcar una notificación como leída.
  */
-router.patch('/:id/leer', notificacionController.marcarComoLeida);
+router.patch('/:id/leida', notificacionController.marcarComoLeida);
 
 module.exports = router;

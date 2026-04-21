@@ -1,4 +1,4 @@
-import { CheckCircle2, MapPin } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface ConfigSummaryPanelProps {
   isConnected: boolean;
@@ -10,7 +10,7 @@ interface ConfigSummaryPanelProps {
   simSignalStrength: number;
   hardwareSettings: {
     capacidadMaxima: number;
-    umbralPeso: number;
+    factorCalibracion: number;
   };
   entradas: number;
   salidas: number;
@@ -46,7 +46,7 @@ export const ConfigSummaryPanel = ({
           <div className="bg-indigo-950/50 p-3 rounded-lg border border-indigo-800/50">
              <p className="text-indigo-300 font-bold mb-1">Parametrización</p>
              <p><span className="text-slate-400">Capacidad Oficial:</span> {hardwareSettings.capacidadMaxima} pasjx.</p>
-             <p><span className="text-slate-400">Tara Sensores Peso:</span> {hardwareSettings.umbralPeso} Kg</p>
+             <p><span className="text-slate-400">Ref. Calibración:</span> {hardwareSettings.factorCalibracion}</p>
           </div>
           <div className="bg-indigo-950/50 p-3 rounded-lg border border-indigo-800/50">
              <p className="text-indigo-300 font-bold mb-1">Diagnóstico en Vivo</p>
