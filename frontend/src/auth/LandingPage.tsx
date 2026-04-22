@@ -8,6 +8,7 @@ import UbicacionModal from '../components/common/UbicacionModal';
 import { useAlertaGlobal } from '../context/AlertaContext';
 import { io, Socket } from 'socket.io-client';
 import Mapa from '../components/common/Mapa';
+import CapaVehiculos from '../components/common/mapa/CapaVehiculos';
 
 const SOCKET_URL = 'http://localhost:4000'; 
 
@@ -21,7 +22,6 @@ const LandingPasajero: React.FC = () => {
   const [ubicacionUsuario, setUbicacionUsuario] = useState<[number, number]>([19.4326, -99.1332]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const socketRef = useRef<Socket | null>(null);
-  const [centerOnUserTrigger, setCenterOnUserTrigger] = useState(0);
 
   // Efecto para gestionar WebSockets y ubicación inicial
   useEffect(() => {
@@ -104,7 +104,6 @@ const LandingPasajero: React.FC = () => {
     localStorage.setItem('locationPermissionGranted', 'true');
     setEstaAbiertoModalUbicacion(false);
     solicitarUbicacionUsuario();
-    setCenterOnUserTrigger(prev => prev + 1);
   };
 
   return (
@@ -122,11 +121,10 @@ const LandingPasajero: React.FC = () => {
 
       {/* MAPA REFACTORIZADO */}
       <Mapa 
-        vehicles={vehicles as any}
         center={ubicacionUsuario}
-        centerOnUserTrigger={centerOnUserTrigger}
-        onLocationUpdate={(lat: number, lng: number) => setUbicacionUsuario([lat, lng])}
-      />
+      >
+        <CapaVehiculos vehicles={vehicles as any} />
+      </Mapa>
 
       {/* LEYENDA DE COLORES */}
       <div className="absolute bottom-24 left-4 z-[1000] bg-white/90 backdrop-blur p-3 rounded-xl shadow-lg border border-slate-200 text-[10px] space-y-2">

@@ -30,7 +30,7 @@ export default function RutaProtegida({ children, allowedRoles }: ProtectedRoute
   }
 
   // Redirigir si el rol del usuario no está dentro de los permitidos
-  if (allowedRoles && !allowedRoles.includes(usuario.role)) {
+  if (allowedRoles && !allowedRoles.map(r => r.toUpperCase()).includes(String(usuario.role).toUpperCase())) {
     return <Navigate to="/" replace />;
   }
 

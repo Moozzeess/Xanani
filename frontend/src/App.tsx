@@ -11,14 +11,9 @@ import AdminDashboard from "./pages/administrador/adminDasboard";
 import Conductor from "./pages/conductor/Conductor";
 import Pasajero from "./pages/pasajero/Pasajero";
 
-/**
- * Determina la ruta por defecto según el rol del usuario.
- * 
- * @param {Role} rol - El rol del usuario.
- * @returns {string} La ruta de destino.
- */
-function obtenerRutaPorDefecto(rol: Role): string {
-  switch (rol) {
+function obtenerRutaPorDefecto(rol: Role | string): string {
+  if (!rol) return "/LandingPage";
+  switch (String(rol).toUpperCase()) {
     case "SUPERUSUARIO":
       return "/superuser";
     case "ADMINISTRADOR":
@@ -32,11 +27,6 @@ function obtenerRutaPorDefecto(rol: Role): string {
   }
 }
 
-/**
- * Componente que maneja la ruta raíz:
- * - Si es invitado: muestra LandingPasajero.
- * - Si está autenticado: redirige según el rol.
- */
 function RutaHome() {
   const { estaAutenticado, estaCargando, usuario } = useAuth();
 
@@ -46,7 +36,13 @@ function RutaHome() {
     return <LandingPasajero />;
   }
 
-  return <Navigate to={obtenerRutaPorDefecto(usuario.role)} replace />;
+  const rutaDestino = obtenerRutaPorDefecto(usuario.role);
+  
+  if (rutaDestino === "/LandingPage") {
+    return <LandingPasajero />;
+  }
+
+  return <Navigate to={rutaDestino} replace />;
 }
 
 /**

@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUsuario(null);
       },
       tieneRol: (rol) => {
-        return usuario?.role === rol;
+        return Boolean(usuario?.role && String(usuario.role).toUpperCase() === String(rol).toUpperCase());
       }
     }),
     [token, usuario, estaAutenticado, estaCargando]

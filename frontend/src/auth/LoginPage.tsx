@@ -12,8 +12,9 @@ type FormType = "login" | "register" | "recover";
  * @param {Role} rol - El rol del usuario autenticado.
  * @returns {string} La ruta de redirección.
  */
-function obtenerRutaPorDefecto(rol: Role): string {
-  switch (rol) {
+function obtenerRutaPorDefecto(rol: Role | string): string {
+  if (!rol) return "/";
+  switch (String(rol).toUpperCase()) {
     case "SUPERUSUARIO":
       return "/superuser";
     case "ADMINISTRADOR":
@@ -34,15 +35,21 @@ function obtenerRutaPorDefecto(rol: Role): string {
 const PaginaLogin = () => {
   const [formularioActivo, setFormularioActivo] = useState<FormType>("login");
   const navegar = useNavigate();
-  const { iniciarSesion, registrarUsuario, estaAutenticado, usuario, estaCargando } = useAuth();
+  const { iniciarSesion, registrarUsuario, estaAutenticado, usuario, estaCargando, cerrarSesion } = useAuth();
 
   // Efecto para redirigir si el usuario ya está autenticado
   useEffect(() => {
     if (estaCargando) return;
     if (estaAutenticado && usuario) {
-      navegar(obtenerRutaPorDefecto(usuario.role), { replace: true });
+      const rutaDestino = obtenerRutaPorDefecto(usuario.role);
+      if (rutaDestino === "/") {
+        console.warn("Rol inválido detectado (" + usuario.role + "). Forzando cierre de sesión...");
+        cerrarSesion();
+      } else {
+        navegar(rutaDestino, { replace: true });
+      }
     }
-  }, [estaAutenticado, usuario, estaCargando, navegar]);
+  }, [estaAutenticado, usuario, estaCargando, navegar, cerrarSesion]);
 
   // Estados del formulario de login
   const [usuarioOEmail, setUsuarioOEmail] = useState("");
