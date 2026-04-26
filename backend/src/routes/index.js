@@ -21,6 +21,7 @@ const recorridoRoutes = require('./recorrido.routes');
 const reporteRoutes = require('./reporte.routes');
 const incidenteRoutes = require('./incidente.routes');
 const adminRoutes = require('./admin.routes');
+const superadminRoutes = require('./superadmin.routes');
 const estadisticasRoutes = require('./estadisticas.routes');
 const notificacionRoutes = require('./notificacion.routes');
 
@@ -40,6 +41,7 @@ router.use('/recorridos', recorridoRoutes);
 router.use('/reportes', reporteRoutes);
 router.use('/incidentes', incidenteRoutes);
 router.use('/admin', adminRoutes);
+router.use('/superadmin', superadminRoutes);
 router.use('/estadisticas', estadisticasRoutes);
 router.use('/notificaciones', notificacionRoutes);
 
