@@ -10,4 +10,9 @@ const autenticacionController = require('../controllers/autenticacion.controller
 router.post('/registro', autenticacionController.registrar);
 router.post('/login', autenticacionController.iniciarSesion);
 
+// Nuevas rutas de seguridad
+router.get('/verify-email/:token', autenticacionController.verificarCorreo);
+router.post('/forgot-password', autenticacionController.solicitarRecuperacion);
+router.post('/reset-password/:token', autenticacionController.restablecerContrasena);
+
 module.exports = router;

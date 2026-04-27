@@ -1,7 +1,9 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { Usuario, USER_ROLES } = require('../models/Usuario');
 const { signAccessToken } = require('../utils/jwt');
 const ErrorApp = require('../utils/ErrorApp');
+const emailService = require('./email.service');
 
 /**
  * Intención: Inscribe un cliente orgánico en el sistema y le provee un JWT firmado.
@@ -29,12 +31,20 @@ async function register({ username, email, password }) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  
+  // Crear token de verificación
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+  
   const user = await Usuario.create({
     username,
     email: email.toLowerCase(),
     passwordHash,
-    role: usersCount === 0 ? USER_ROLES.SUPERUSUARIO : USER_ROLES.PASAJERO
+    role: usersCount === 0 ? USER_ROLES.SUPERUSUARIO : USER_ROLES.PASAJERO,
+    verificationToken
   });
+
+  // Lanzar el envío de correo de manera asíncrona (no bloqueante)
+  emailService.enviarCorreoVerificacion(user.email, user.username, verificationToken);
 
   const token = signAccessToken({
     id: user._id.toString(),
@@ -84,6 +94,11 @@ async function login({ usernameOrEmail, password }) {
     throw new ErrorApp('Inicio de sesión fallido: Contraseña o datos incorrectos.', 401, 'Usuario no encontrado o inactivo.');
   }
 
+  // Verificar que el usuario haya confirmado su correo
+  if (!user.isVerified) {
+    throw new ErrorApp('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.', 403, 'Cuenta no verificada.');
+  }
+
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
     throw new ErrorApp('Inicio de sesión fallido: Contraseña o datos incorrectos.', 401, 'Fallo en la comparación de hash de contraseña (bcrypt).');
@@ -112,7 +127,72 @@ async function login({ usernameOrEmail, password }) {
   };
 }
 
+/**
+ * VERIFICAR CORREO (Token URL clickeado)
+ */
+async function verifyEmail(token) {
+  // Normalizar el token (trim y lowercase) por si el cliente de correo lo alteró
+  const tokenLimpio = (token || '').trim();
+  
+  const user = await Usuario.findOne({ verificationToken: tokenLimpio });
+  if (!user) {
+    throw new ErrorApp('Token inválido o expirado.', 400, 'Verification token no encontrado.');
+  }
+
+  user.isVerified = true;
+  user.verificationToken = null; // Limpiar para que no se re-use
+  await user.save();
+  return { mensaje: 'Correo verificado exitosamente.' };
+}
+
+/**
+ * OLVIDÉ MI CONTRASEÑA
+ */
+async function forgotPassword(email) {
+  const user = await Usuario.findOne({ email: email.toLowerCase() });
+  if (!user) {
+    // Para no revelar qué correos existen, devolvemos éxito silencioso siempre o un error genérico.
+    // Usaremos un éxito silencioso.
+    return { mensaje: 'Si el correo existe, hemos enviado un enlace de recuperación.' };
+  }
+
+  const resetToken = crypto.randomBytes(20).toString('hex');
+  user.resetPasswordToken = resetToken;
+  user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
+
+  await user.save();
+  
+  // Disparar correo
+  emailService.enviarCorreoRecuperacion(user.email, user.username, resetToken);
+
+  return { mensaje: 'Si el correo existe, hemos enviado un enlace de recuperación.' };
+}
+
+/**
+ * RESTABLECER CONTRASEÑA
+ */
+async function resetPassword({ token, newPassword }) {
+  const user = await Usuario.findOne({
+    resetPasswordToken: token,
+    resetPasswordExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    throw new ErrorApp('El enlace de recuperación es inválido o ha expirado.', 400);
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.resetPasswordToken = null;
+  user.resetPasswordExpires = null;
+  await user.save();
+
+  return { mensaje: 'Contraseña actualizada exitosamente.' };
+}
+
 module.exports = {
   register,
-  login
+  login,
+  verifyEmail,
+  forgotPassword,
+  resetPassword
 };

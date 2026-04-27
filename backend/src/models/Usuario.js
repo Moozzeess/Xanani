@@ -40,6 +40,23 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    // Nuevos campos para validación y recuperación de contraseñas
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verificationToken: {
+      type: String,
+      default: null
+    },
+    resetPasswordToken: {
+      type: String,
+      default: null
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null
+    },
     // Campos opcionales para perfil del pasajero (Fines estadísticos)
     foto: {
       type: String, // Base64 o URL (por ahora no se implementa subida)

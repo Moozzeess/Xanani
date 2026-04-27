@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/login.css";
 import { useAuth } from "./useAuth";
 import type { Role } from "../types/auth";
+import api from "../services/api";
 
 type FormType = "login" | "register" | "recover";
 
@@ -12,9 +13,8 @@ type FormType = "login" | "register" | "recover";
  * @param {Role} rol - El rol del usuario autenticado.
  * @returns {string} La ruta de redirección.
  */
-function obtenerRutaPorDefecto(rol: Role | string): string {
-  if (!rol) return "/";
-  switch (String(rol).toUpperCase()) {
+function obtenerRutaPorDefecto(rol: Role): string {
+  switch (rol) {
     case "SUPERUSUARIO":
       return "/superuser";
     case "ADMINISTRADOR":
@@ -24,7 +24,7 @@ function obtenerRutaPorDefecto(rol: Role | string): string {
     case "PASAJERO":
       return "/pasajero";
     default:
-      return "/LandingPage";
+      return "/";
   }
 }
 
@@ -35,21 +35,15 @@ function obtenerRutaPorDefecto(rol: Role | string): string {
 const PaginaLogin = () => {
   const [formularioActivo, setFormularioActivo] = useState<FormType>("login");
   const navegar = useNavigate();
-  const { iniciarSesion, registrarUsuario, estaAutenticado, usuario, estaCargando, cerrarSesion } = useAuth();
+  const { iniciarSesion, registrarUsuario, estaAutenticado, usuario, estaCargando } = useAuth();
 
   // Efecto para redirigir si el usuario ya está autenticado
   useEffect(() => {
     if (estaCargando) return;
     if (estaAutenticado && usuario) {
-      const rutaDestino = obtenerRutaPorDefecto(usuario.role);
-      if (rutaDestino === "/") {
-        console.warn("Rol inválido detectado (" + usuario.role + "). Forzando cierre de sesión...");
-        cerrarSesion();
-      } else {
-        navegar(rutaDestino, { replace: true });
-      }
+      navegar(obtenerRutaPorDefecto(usuario.role), { replace: true });
     }
-  }, [estaAutenticado, usuario, estaCargando, navegar, cerrarSesion]);
+  }, [estaAutenticado, usuario, estaCargando, navegar]);
 
   // Estados del formulario de login
   const [usuarioOEmail, setUsuarioOEmail] = useState("");
@@ -60,6 +54,10 @@ const PaginaLogin = () => {
   const [usuarioRegistro, setUsuarioRegistro] = useState("");
   const [contrasenaRegistro, setContrasenaRegistro] = useState("");
   const [confirmarContrasenaRegistro, setConfirmarContrasenaRegistro] = useState("");
+
+  // Recuperar contraseña
+  const [emailRecuperacion, setEmailRecuperacion] = useState("");
+  const [estadoRecuperacion, setEstadoRecuperacion] = useState<string | null>(null);
 
   const [estaEnviando, setEstaEnviando] = useState(false);
 
@@ -107,17 +105,28 @@ const PaginaLogin = () => {
    * Maneja el envío del formulario de registro.
    */
   const alEnviarRegistro = async () => {
-    if (contrasenaRegistro !== confirmarContrasenaRegistro) {
-      return;
-    }
-
     try {
       setEstaEnviando(true);
       await registrarUsuario({
-        email: emailRegistro.trim(),
         username: usuarioRegistro.trim(),
+        email: emailRegistro.trim(),
         password: contrasenaRegistro
       });
+      alert("¡Cuenta creada con éxito! Por favor revisa la bandeja de entrada de tu correo electrónico (o la consola del servidor) para verificar tu cuenta.");
+    } catch (e) {
+      console.error(e);
+      alert(String(e));
+    } finally {
+      setEstaEnviando(false);
+    }
+  };
+
+  const alEnviarRecuperacion = async () => {
+    if (!emailRecuperacion) return;
+    try {
+      setEstaEnviando(true);
+      await api.post("/autenticacion/forgot-password", { email: emailRecuperacion });
+      setEstadoRecuperacion("Si el correo existe, hemos enviado un enlace de recuperación. Revisa tu bandeja.");
     } catch (e) {
       console.error(e);
     } finally {
@@ -243,8 +252,23 @@ const PaginaLogin = () => {
                 {formularioActivo === "recover" && (
                   <div className="auth-form">
                     <p className="recover-info">Se enviará un enlace a tu correo.</p>
-                    <input className="input-style" placeholder="Email" type="email" />
-                    <button className="btn-auth-submit">Enviar</button>
+                    <input 
+                      className="input-style" 
+                      placeholder="Email" 
+                      type="email" 
+                      value={emailRecuperacion}
+                      onChange={(e) => setEmailRecuperacion(e.target.value)}
+                    />
+                    
+                    {estadoRecuperacion && <p style={{color: 'green', fontSize: '12px'}}>{estadoRecuperacion}</p>}
+                    
+                    <button 
+                      className="btn-auth-submit"
+                      onClick={alEnviarRecuperacion}
+                      disabled={estaEnviando || !emailRecuperacion}
+                    >
+                      {estaEnviando ? "Enviando..." : "Enviar Enlace"}
+                    </button>
                     <button onClick={() => setFormularioActivo("login")} className="option-link-back">Volver al inicio</button>
                   </div>
                 )}

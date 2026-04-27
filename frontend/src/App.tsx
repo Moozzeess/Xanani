@@ -2,6 +2,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import PaginaLogin from "./auth/LoginPage";
 import LandingPasajero from "./auth/LandingPage";
+import VerifyEmail from "./auth/VerifyEmail";
+import ResetPassword from "./auth/ResetPassword";
 import { useAuth } from "./auth/useAuth";
 import type { Role } from "./types/auth";
 import RutaProtegida from "./auth/ProtectedRoute";
@@ -11,9 +13,14 @@ import AdminDashboard from "./pages/administrador/adminDasboard";
 import Conductor from "./pages/conductor/Conductor";
 import Pasajero from "./pages/pasajero/Pasajero";
 
-function obtenerRutaPorDefecto(rol: Role | string): string {
-  if (!rol) return "/LandingPage";
-  switch (String(rol).toUpperCase()) {
+/**
+ * Determina la ruta por defecto según el rol del usuario.
+ * 
+ * @param {Role} rol - El rol del usuario.
+ * @returns {string} La ruta de destino.
+ */
+function obtenerRutaPorDefecto(rol: Role): string {
+  switch (rol) {
     case "SUPERUSUARIO":
       return "/superuser";
     case "ADMINISTRADOR":
@@ -27,6 +34,11 @@ function obtenerRutaPorDefecto(rol: Role | string): string {
   }
 }
 
+/**
+ * Componente que maneja la ruta raíz:
+ * - Si es invitado: muestra LandingPasajero.
+ * - Si está autenticado: redirige según el rol.
+ */
 function RutaHome() {
   const { estaAutenticado, estaCargando, usuario } = useAuth();
 
@@ -36,13 +48,7 @@ function RutaHome() {
     return <LandingPasajero />;
   }
 
-  const rutaDestino = obtenerRutaPorDefecto(usuario.role);
-  
-  if (rutaDestino === "/LandingPage") {
-    return <LandingPasajero />;
-  }
-
-  return <Navigate to={rutaDestino} replace />;
+  return <Navigate to={obtenerRutaPorDefecto(usuario.role)} replace />;
 }
 
 /**
@@ -55,6 +61,8 @@ function App() {
       <Routes>
         <Route path="/LandingPage" element={<RutaHome />} />
         <Route path="/login" element={<PaginaLogin />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         <Route
           path="/superuser"

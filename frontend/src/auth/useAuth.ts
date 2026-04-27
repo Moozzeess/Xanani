@@ -77,13 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
   const [estaCargando, setEstaCargando] = useState(true);
 
-   // Efecto para cargar la sesión al iniciar la aplicación
+  // Efecto para cargar la sesión al iniciar la aplicación
   useEffect(() => {
-      const almacenado = obtenerAuthAlmacenado();
+    const almacenado = obtenerAuthAlmacenado();
     setToken(almacenado.token);
     setUsuario(almacenado.usuario);
-  setEstaCargando(false);
-}, []);
+    setEstaCargando(false);
+  }, []);
 
   const estaAutenticado = Boolean(token && usuario);
 
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUsuario(null);
       },
       tieneRol: (rol) => {
-        return Boolean(usuario?.role && String(usuario.role).toUpperCase() === String(rol).toUpperCase());
+        return usuario?.role === rol;
       }
     }),
     [token, usuario, estaAutenticado, estaCargando]
