@@ -17,7 +17,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.57.1",
     "@tailwindcss/vite": "^4.1.18",
     "leaflet": "^1.9.4",
     "leaflet-defaulticon-compatibility": "^0.1.2",

@@ -1,7 +1,32 @@
 const mqtt = require('mqtt');
-const { MQTT_BROKER_URL, MQTT_TOPIC } = require('../config/env');
+const crypto = require('crypto');
+const { MQTT_BROKER_URL, MQTT_TOPIC, MQTT_SECRET_KEY, MQTT_AUTH_USER, MQTT_AUTH_PASS } = require('../config/env');
 const { emitirEvento } = require('./socketService');
 const DispositivoHardware = require('../models/DispositivoHardware');
+
+/**
+ * Función para desencriptar el payload de hardware.
+ * Espera formato: "IV_HEX:CIPHERTEXT_HEX"
+ */
+function desencriptarPayload(payload) {
+  if (!MQTT_SECRET_KEY) return payload; // Fallback
+  try {
+    const parts = payload.split(':');
+    if (parts.length !== 2) return payload; // Posible mensaje en texto plano (Legacy mode)
+    
+    const iv = Buffer.from(parts[0], 'hex');
+    const encryptedText = Buffer.from(parts[1], 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(MQTT_SECRET_KEY.padEnd(32, '0').slice(0, 32)), iv);
+    
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+  } catch (e) {
+    console.error("Fallo al desencriptar paquete MQTT. Posible ataque o llave incorrecta:", e.message);
+    throw new Error("Encrypted payload rejected");
+  }
+}
+
 
 // Mantener la instancia del cliente para poder desconectarlo al reconfigurar
 let clienteActual = null;
@@ -53,8 +78,15 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
     });
 
     cliente.on('message', async (topic, message) => {
-      const mensajeTexto = message.toString();
+      const mensajeCrudo = message.toString();
       try {
+        // Fase 1: Intentar Desencriptar (si falla pero es obligatorio, rechazará el paquete)
+        // Por compatibilidad temporal (Legacy), si empieza con '{', asumimos texto plano.
+        let mensajeTexto = mensajeCrudo;
+        if (!mensajeCrudo.trim().startsWith('{')) {
+            mensajeTexto = desencriptarPayload(mensajeCrudo);
+        }
+
         const datos = JSON.parse(mensajeTexto);
         const idHardware = datos.id || datos.id_hardware || datos.Id_Dispositivo_Hardware;
 
@@ -183,6 +215,8 @@ const enviarComando = (payloadJSON, topicComandos = null) => {
     const topicFinal = topicComandos || (currentTopic.replace('#', 'config') || `${currentTopic}/config`);
     const mensajeString = typeof payloadJSON === 'string' ? payloadJSON : JSON.stringify(payloadJSON);
 
+    // TODO: Encriptar comandos de salida si el ESP32 lo requiere. Por ahora se manda en plano.
+    
     clienteActual.publish(topicFinal, mensajeString, { qos: 1 }, (err) => {
       if (err) {
         console.error(`Error al publicar en ${topicFinal}:`, err);

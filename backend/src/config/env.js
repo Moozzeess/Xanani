@@ -7,7 +7,8 @@ require('dotenv').config();
 const requiredEnv = [
   'MONGO_URI',
   'JWT_SECRET',
-  //'MQTT_BROKER_URL',
+  'MQTT_BROKER_URL',
+  'MQTT_TOPIC',
   'FRONTEND_URL' // Crítico para CORS de Sockets
 ];
 
@@ -24,7 +25,10 @@ module.exports = {
   PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI,
   JWT_SECRET: process.env.JWT_SECRET,
-  //MQTT_BROKER_URL: process.env.MQTT_BROKER_URL,
-  //MQTT_TOPIC: process.env.MQTT_TOPIC',
+  MQTT_BROKER_URL: process.env.MQTT_BROKER_URL,
+  MQTT_TOPIC: process.env.MQTT_TOPIC,
+  MQTT_SECRET_KEY: process.env.MQTT_SECRET_KEY,
+  MQTT_AUTH_USER: process.env.MQTT_AUTH_USER,
+  MQTT_AUTH_PASS: process.env.MQTT_AUTH_PASS,
   FRONTEND_URL: process.env.FRONTEND_URL,
 };

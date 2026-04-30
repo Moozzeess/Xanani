@@ -9,7 +9,7 @@ import { useAlertaGlobal } from '../context/AlertaContext';
 import { io, Socket } from 'socket.io-client';
 import Mapa from '../components/common/Mapa';
 
-const SOCKET_URL = 'http://localhost:4000'; 
+const SOCKET_URL = 'http://localhost:4000';
 
 /**
  * Página de aterrizaje (Landing) para pasajeros en modo invitado.
@@ -41,13 +41,13 @@ const LandingPasajero: React.FC = () => {
       setVehicles(prev => {
         const id = datos.id || datos.placa;
         const index = prev.findIndex(v => v.id === id);
-        
+
         // Determinar colores para el componente Mapa
         let colorClass = 'bg-blue-400';
         if (!datos.isSimulated) {
-            if (estado === EstadoBus.BAJA) colorClass = 'bg-green-400';
-            else if (estado === EstadoBus.MEDIA) colorClass = 'bg-yellow-400';
-            else if (estado === EstadoBus.ALTA) colorClass = 'bg-red-400';
+          if (estado === EstadoBus.BAJA) colorClass = 'bg-green-400';
+          else if (estado === EstadoBus.MEDIA) colorClass = 'bg-yellow-400';
+          else if (estado === EstadoBus.ALTA) colorClass = 'bg-red-400';
         }
 
         const newVehicle = {
@@ -121,7 +121,7 @@ const LandingPasajero: React.FC = () => {
       </header>
 
       {/* MAPA REFACTORIZADO */}
-      <Mapa 
+      <Mapa
         vehicles={vehicles as any}
         center={ubicacionUsuario}
         centerOnUserTrigger={centerOnUserTrigger}

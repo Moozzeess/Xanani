@@ -2,6 +2,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import PaginaLogin from "./auth/LoginPage";
 import LandingPasajero from "./auth/LandingPage";
+import VerifyEmail from "./auth/VerifyEmail";
+import ResetPassword from "./auth/ResetPassword";
 import { useAuth } from "./auth/useAuth";
 import type { Role } from "./types/auth";
 import RutaProtegida from "./auth/ProtectedRoute";
@@ -59,6 +61,8 @@ function App() {
       <Routes>
         <Route path="/LandingPage" element={<RutaHome />} />
         <Route path="/login" element={<PaginaLogin />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         <Route
           path="/superuser"

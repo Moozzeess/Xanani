@@ -49,7 +49,33 @@ const iniciarSesion = catchAsync(async (req, res) => {
   res.status(200).json(result);
 });
 
+const verificarCorreo = catchAsync(async (req, res) => {
+  const { token } = req.params;
+  const result = await authService.verifyEmail(token);
+  res.status(200).json(result);
+});
+
+const solicitarRecuperacion = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  if (!email) throw new ErrorApp('Datos incompletos: El correo es obligatorio.', 400);
+
+  const result = await authService.forgotPassword(email);
+  res.status(200).json(result);
+});
+
+const restablecerContrasena = catchAsync(async (req, res) => {
+  const { token } = req.params;
+  const { newPassword } = req.body;
+  if (!newPassword) throw new ErrorApp('Datos incompletos: La nueva contraseña es obligatoria.', 400);
+
+  const result = await authService.resetPassword({ token, newPassword });
+  res.status(200).json(result);
+});
+
 module.exports = {
   registrar,
-  iniciarSesion
+  iniciarSesion,
+  verificarCorreo,
+  solicitarRecuperacion,
+  restablecerContrasena
 };
