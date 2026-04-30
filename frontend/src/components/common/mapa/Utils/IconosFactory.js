@@ -37,3 +37,15 @@ export const htmlMarcadorParada = (indice) => {
     </div>
   `;
 };
+
+/**
+ * Genera el marcador de ubicación del usuario (punto azul con pulso).
+ */
+export const htmlMarcadorUsuario = () => {
+  return `
+    <div class="relative flex items-center justify-center">
+      <div class="user-pulse"></div>
+      <div class="user-dot"></div>
+    </div>
+  `;
+};

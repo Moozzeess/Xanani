@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TriangleAlert, X, OctagonAlert, Clock, Trash2, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { TriangleAlert, X, OctagonAlert, Clock, Trash2, Shield, CheckCircle, AlertCircle, Bus } from 'lucide-react';
 import { useAlertaGlobal } from '../../context/AlertaContext';
 import api from '../../services/api';
 
@@ -81,6 +81,17 @@ const ReporteModal = ({ isOpen, onClose, unidadId }) => {
             </div>
           ) : (
             <>
+              {unidadId && (
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                    <Bus size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest leading-none mb-1">Unidad Seleccionada</p>
+                    <p className="text-xs font-black text-slate-800">{unidadId}</p>
+                  </div>
+                </div>
+              )}
               <p className="text-xs font-bold text-gray-400 uppercase mb-3">Tipo de incidencia</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {TIPOS_INCIDENCIA.map(({ tipo, icono: Icono, etiqueta, color }) => (

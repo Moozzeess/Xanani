@@ -58,23 +58,6 @@ const PanelDescubrimiento = ({
             {sinUnidades ? 'Sin unidades activas' : `${totalUnidades} unidad${totalUnidades !== 1 ? 'es' : ''} en área`}
           </span>
         </div>
-
-        {sinUnidades && (
-          <div className="flex gap-2">
-            <button
-              onClick={onActivarAlerta}
-              className="bg-blue-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg active:scale-95 transition-all pointer-events-auto"
-            >
-              Activar alerta
-            </button>
-            <button
-              onClick={onVerDemo}
-              className="bg-white/95 backdrop-blur text-slate-700 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-white/60 active:scale-95 transition-all pointer-events-auto"
-            >
-              Ver demo
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Fila de chips de filtro */}

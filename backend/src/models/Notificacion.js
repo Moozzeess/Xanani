@@ -25,6 +25,11 @@ const notificacionSchema = new mongoose.Schema(
       enum: ['CONDUCTOR', 'PASAJERO', 'TODOS'],
       default: 'TODOS'
     },
+    usuarioDestino: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Usuario',
+      default: null
+    },
     // Datos adicionales opcionales (ej. ID de la ruta para "Ver ruta")
     data: {
       type: mongoose.Schema.Types.Mixed,

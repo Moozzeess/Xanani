@@ -11,18 +11,25 @@ import ModalAlerta from '../components/common/ModalAlerta';
  * @param {Array} rutas - Listado de rutas disponibles para vincular paradas.
  * @param {Function} onUpdate - Callback para actualizar la lista de vehículos en el padre.
  */
-const SimPasajero = ({ socket, rutas, onUpdate }) => {
+const SimPasajero = ({ socket, rutas, rutasSuscritas = [], onUpdate }) => {
     
     useEffect(() => {
         if (!socket) return;
 
         const handleSimulacion = (datos) => {
-            // Aseguramos que los datos simulados tengan el formato correcto
-            const id = datos.id || datos.placa || `SIM-${datos.rutaId?.slice(-4)}`;
+            const rid = datos.rutaId || datos.id_ruta;
+            
+            // FILTRO CRÍTICO: Solo mostrar simulaciones de rutas suscritas
+            if (!rutasSuscritas.includes(rid?.toString())) {
+                return;
+            }
+
+            // Aseguramos que los datos simulados tengan el formato correcto y un ID único
+            const rawId = datos.id || datos.placa || rid?.slice(-4);
+            const id = `SIM-${rawId}`;
             
             // Cálculo de parada más cercana para la simulación
             let indexParadaActual = datos.indexParadaActual || 0;
-            const rid = datos.rutaId || datos.id_ruta;
             const rutaInfo = rutas.find(r => r._id.toString() === rid?.toString());
             
             if (rutaInfo && rutaInfo.paradas && datos.pos) {

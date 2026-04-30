@@ -9,7 +9,7 @@ import { estadisticasService } from '../../../services/estadisticasService';
  * PanelAfluencia: Muestra histogramas de ocupación de las rutas suscritas del pasajero.
  * Intención: Ayudar al pasajero a planificar sus viajes basados en la afluencia histórica.
  */
-const PanelAfluencia = () => {
+const PanelAfluencia = ({ onDiscover }) => {
   const [rutas, setRutas] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -117,7 +117,10 @@ const PanelAfluencia = () => {
           <p className="text-slate-500 text-center max-w-md px-6 mb-8">
             Suscríbete a tus rutas frecuentes para ver sus horarios de afluencia y planificar mejor tus traslados.
           </p>
-          <button className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+          <button 
+            onClick={onDiscover}
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+          >
             <Search className="w-5 h-5" />
             Descubrir Rutas
           </button>

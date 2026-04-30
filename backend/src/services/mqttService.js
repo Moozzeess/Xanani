@@ -6,7 +6,7 @@ const DispositivoHardware = require('../models/DispositivoHardware');
 // Mantener la instancia del cliente para poder desconectarlo al reconfigurar
 let clienteActual = null;
 let currentBroker = MQTT_BROKER_URL;
-let currentTopic = MQTT_TOPIC || 'xanani/telemetria/#'; // Fallback seguro
+let currentTopic = MQTT_TOPIC || 'xanani/#'; // Escucha global para telemetría y debug
 
 /**
  * Intención: Genera interconexión hacia un Broker MQTT (Mosquitto) con escucha en vivo.
@@ -56,9 +56,10 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
       const mensajeTexto = message.toString();
       try {
         const datos = JSON.parse(mensajeTexto);
+        const idHardware = datos.id || datos.id_hardware || datos.Id_Dispositivo_Hardware;
+
 
         // Si el mensaje incluye un ID de hardware, actualizar su última conexión
-        const idHardware = datos.id || datos.id_hardware || datos.Id_Dispositivo_Hardware;
         if (idHardware) {
           await DispositivoHardware.findOneAndUpdate(
             { Id_Dispositivo_Hardware: idHardware },
@@ -71,35 +72,60 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs }, idHardware);
         }
 
-        // Normalización de datos para el frontend (Soporte GPS NEO 6M, SIM800L y Celdas)
+        // Normalización de datos común (Soporte GPS NEO 6M, SIM800L y Celdas)
         const payloadNormalizado = {
           id: idHardware,
           // GPS NEO 6M
-          gps: datos.gps || { con: false, lat: 0, lon: 0, sat: 0, spd: 0 },
+          gps: {
+            con: datos.gps?.con !== undefined ? datos.gps.con : (datos.gps_status === 'OK'),
+            lat: datos.gps?.lat || 0,
+            lon: datos.gps?.lon || 0,
+            sat: datos.gps?.sat || 0,
+            spd: datos.gps?.spd || 0
+          },
           // SIM800L
           sim: {
-            con: datos.sim_con !== undefined ? datos.sim_con : (datos.sim800l?.connected || false),
-            signal: datos.sim_signal !== undefined ? datos.sim_signal : (datos.sim800l?.signalStrength || 0)
+            con: datos.sim800l?.connected !== undefined ? datos.sim800l.connected : (datos.sim_con || false),
+            signal: datos.sim800l?.signalStrength !== undefined ? datos.sim800l.signalStrength : (datos.sim_signal || 0)
           },
           // Sensores de Pasajeros (IR)
           pasajeros: {
-            in: datos.in !== undefined ? datos.in : (datos.entradas || 0),
-            out: datos.out !== undefined ? datos.out : (datos.salidas || 0),
-            act: datos.act !== undefined ? datos.act : (datos.actuales || 0)
+            in: datos.entradas !== undefined ? datos.entradas : (datos.in || 0),
+            out: datos.salidas !== undefined ? datos.salidas : (datos.out || 0),
+            act: datos.actuales !== undefined ? datos.actuales : (datos.act || 0)
           },
-          // Celdas de Carga (HX711) - Soporta tanto booleanos como valores numéricos de peso
+          // Celdas de Carga (HX711)
           celdas: datos.celdas || [],
+          // Configuración actual (si el ESP32 la reporta)
+          config: {
+            capacidad_maxima: datos.capacidad_maxima || null,
+            factor_calibracion: datos.factor_calibracion || null,
+            action: datos.action || null
+          },
           // Código de estado/error de Arduino
           st: datos.st !== undefined ? datos.st : -1,
-          err: datos.err || null, // Mensaje de error específico de Arduino
+          err: datos.err || null,
           fecha: new Date().toISOString()
         };
 
+        // Caso: Tópico de Validación/Debug (xanani/debug/...)
+        if (topic.includes('/debug')) {
+          emitirEvento('datos_debug_esp32', payloadNormalizado, idHardware);
+        }
+
+        // Emitir a la sala privada del dispositivo (Aislamiento)
         emitirEvento('datos_esp32', {
           tema: topic,
           payload: payloadNormalizado,
           fecha: payloadNormalizado.fecha
         }, idHardware);
+
+        // Emitir también de forma global para permitir el "Descubrimiento" en el panel de pruebas
+        emitirEvento('datos_esp32', {
+          tema: topic,
+          payload: payloadNormalizado,
+          fecha: payloadNormalizado.fecha
+        }, null);
 
       } catch (e) {
         emitirEvento('datos_esp32', {

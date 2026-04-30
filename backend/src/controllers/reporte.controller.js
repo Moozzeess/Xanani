@@ -25,8 +25,8 @@ exports.crearReporte = async (req, res) => {
 
     await nuevoReporte.save();
 
-    // Si es un ANUNCIO, crear también una Notificación persistente para los destinatarios
-    if (tipo === 'ANUNCIO' && descripcion) {
+    // Si es un ANUNCIO, crear también una Notificación persistente para los destinatarios (Solo ADMIN o SUPERUSER)
+    if (tipo === 'ANUNCIO' && descripcion && ['ADMINISTRADOR', 'SUPERUSER'].includes(req.auth.role)) {
       try {
         await Notificacion.create({
           titulo: 'Aviso del Administrador',
@@ -36,7 +36,6 @@ exports.crearReporte = async (req, res) => {
         });
       } catch (notifError) {
         console.error("Error al crear la notificación persistente:", notifError);
-        // No bloqueamos el flujo principal si falla la notificación persistente
       }
     }
 
@@ -137,6 +136,29 @@ exports.actualizarEstadoReporte = async (req, res) => {
       return res.status(404).json({
         mensaje: 'Reporte no encontrado'
       });
+    }
+
+    // DISPARAR NOTIFICACIÓN EN TIEMPO REAL (SEGMENTADA)
+    // Se envía solo al usuario que creó el reporte para evitar que otros lo vean
+    socketService.emitirEvento('aviso_pasajero', {
+      titulo: 'Reporte Actualizado',
+      mensaje: `Tu reporte sobre la unidad ${reporteActualizado.unidad?.placa || 'en ruta'} ha sido marcado como ${estado.toLowerCase()}.`,
+      tipo: 'INFO',
+      usuarioDestino: reporteActualizado.usuario._id
+    }, null, reporteActualizado.usuario._id);
+
+    // PERSISTIR NOTIFICACIÓN EN BD para el historial del pasajero
+    try {
+      await Notificacion.create({
+        titulo: 'Reporte Actualizado',
+        mensaje: `El administrador ha marcado tu reporte como ${estado.toLowerCase()}.`,
+        tipo: 'INFO',
+        rolDestino: 'PASAJERO',
+        usuarioDestino: reporteActualizado.usuario._id,
+        data: { reporteId: reporteActualizado._id }
+      });
+    } catch (notifError) {
+      console.error('Error al persistir notificación de reporte:', notifError);
     }
 
     res.json({

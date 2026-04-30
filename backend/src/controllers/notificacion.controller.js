@@ -8,9 +8,13 @@ const ErrorApp = require('../utils/ErrorApp');
 exports.obtenerMisNotificaciones = catchAsync(async (req, res, next) => {
   const { role, userId } = req.auth;
 
-  // Buscar notificaciones dirigidas al rol del usuario o a TODOS, que NO hayan sido leídas por este usuario
+  // Buscar notificaciones dirigidas al rol del usuario, a TODOS, o directamente a su ID, 
+  // que NO hayan sido leídas por este usuario
   const notificaciones = await Notificacion.find({
-    rolDestino: { $in: [role, 'TODOS'] },
+    $or: [
+      { rolDestino: { $in: [role, 'TODOS'] } },
+      { usuarioDestino: userId }
+    ],
     leidaPor: { $ne: userId }
   }).sort({ createdAt: -1 }).limit(20);
 

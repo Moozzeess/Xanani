@@ -52,7 +52,9 @@ const Conductor = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showSimModal, setShowSimModal] = useState(false);
-  const [isHardwareActive, setIsHardwareActive] = useState(false); // Simulación de estado de hardware
+  const [isHardwareActive, setIsHardwareActive] = useState(false);
+  const [hardwareId, setHardwareId] = useState(null);
+  const hardwareTimeoutRef = React.useRef(null);
   const [profileData, setProfileData] = useState(null);
   const [ubicacionReal, setUbicacionReal] = useState(null);
 
@@ -109,6 +111,12 @@ const Conductor = () => {
             rutaId: conductor.rutaAsignadaId?._id || null,
             conductorProfileId: conductor._id
           });
+
+          // Extraer ID de hardware para monitoreo en tiempo real
+          const hwId = unidadInfo?.dispositivoHardware?.Id_Dispositivo_Hardware;
+          if (hwId) {
+            setHardwareId(hwId);
+          }
           
           // 1. Mapear paradas primero (son la fuente de verdad de la ruta)
           let paradasMapeadas = [];
@@ -186,6 +194,42 @@ const Conductor = () => {
       socket.off('aviso_conductor');
     };
   }, [socket, viewMode]);
+
+  // Listener para Actividad de Hardware en Tiempo Real
+  useEffect(() => {
+    if (!socket || !hardwareId) return;
+
+    // Suscribirse a la sala del dispositivo para recibir su telemetría
+    socket.emit('suscribir_dispositivo', hardwareId);
+
+    const manejarDatosHardware = (data) => {
+      const payload = data.payload;
+      if (!payload || payload.id !== hardwareId) return;
+
+      // Si recibimos datos, el hardware está activo
+      setIsHardwareActive(true);
+
+      // Reiniciar el temporizador de desconexión (30 segundos)
+      if (hardwareTimeoutRef.current) {
+        clearTimeout(hardwareTimeoutRef.current);
+      }
+
+      hardwareTimeoutRef.current = setTimeout(() => {
+        setIsHardwareActive(false);
+        console.log(`Hardware ${hardwareId} marcado como offline por inactividad.`);
+      }, 30000);
+    };
+
+    socket.on('datos_esp32', manejarDatosHardware);
+
+    return () => {
+      socket.off('datos_esp32', manejarDatosHardware);
+      socket.emit('desuscribir_dispositivo', hardwareId);
+      if (hardwareTimeoutRef.current) {
+        clearTimeout(hardwareTimeoutRef.current);
+      }
+    };
+  }, [socket, hardwareId]);
 
   // Cargar Notificaciones desde el Backend
   const cargarNotificaciones = async () => {

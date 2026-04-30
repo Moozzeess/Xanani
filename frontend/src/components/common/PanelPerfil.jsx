@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Star, Route, MapPin, Bell, Trash2, LogOut, ChevronRight, Heart, Pencil, Briefcase, Truck, CreditCard } from 'lucide-react';
+import { X, User, Star, Route, MapPin, Bell, Trash2, LogOut, ChevronRight, Heart, Pencil, Briefcase, Truck, CreditCard, Eye } from 'lucide-react';
 
 /**
  * Panel lateral de perfil (drawer desde la derecha).
@@ -19,6 +19,7 @@ const PanelPerfil = ({
     onLimpiarHistorial,
     onToggleSuscripcion, // Cambiado de onQuitarFavorito
     onVerRutaFavorita,
+    onVerRuta,
     onCentrarParada,
     onLogout,
     onEditarPerfil // Función para abrir el modal/formulario de edición
@@ -165,7 +166,7 @@ const PanelPerfil = ({
                                             e.stopPropagation();
                                             onToggleSuscripcion?.(ruta._id || ruta.id);
                                         }}
-                                        className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-400 transition-all"
+                                        className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-all"
                                         title="Quitar suscripción"
                                     >
                                         <X className="w-3.5 h-3.5" />
@@ -185,7 +186,6 @@ const PanelPerfil = ({
                             <div className="space-y-2">
                                 {rutasDisponibles
                                     .filter(r => !rutasFavoritas.some(f => (f._id || f.id) === (r._id || r.id)))
-                                    .slice(0, 3)
                                     .map((ruta) => (
                                         <div
                                             key={ruta._id || ruta.id}
@@ -194,12 +194,21 @@ const PanelPerfil = ({
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm text-slate-700 font-medium truncate">{ruta.nombre}</p>
                                             </div>
-                                            <button
-                                                onClick={() => onToggleSuscripcion?.(ruta._id || ruta.id)}
-                                                className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg hover:bg-blue-600 hover:text-white transition-all"
-                                            >
-                                                Suscribirse
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => onVerRuta?.(ruta)}
+                                                    className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-colors"
+                                                    title="Ver paradas e itinerario"
+                                                >
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onToggleSuscripcion?.(ruta._id || ruta.id)}
+                                                    className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg hover:bg-blue-600 hover:text-white transition-all"
+                                                >
+                                                    Suscribirse
+                                                </button>
+                                            </div>
                                         </div>
                                     ))
                                 }

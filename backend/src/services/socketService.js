@@ -95,6 +95,14 @@ const inicializarSocket = (server) => {
 
     // --- NUEVA LÓGICA DE GESTIÓN DE FLOTILLA ---
 
+    // Suscribir usuario a su sala privada (para notificaciones personales)
+    socket.on('suscribir_usuario', (userId) => {
+      if (userId) {
+        socket.join(`user_${userId}`);
+        // console.log(`Socket ${socket.id} unido a sala privada: user_${userId}`);
+      }
+    });
+
     // 1. Ubicación en tiempo real de los conductores
     socket.on('ubicacion_conductor', async (datos) => {
       // Retransmitir al panel de administración y pasajeros
@@ -124,10 +132,20 @@ const inicializarSocket = (server) => {
       }
     });
 
-    // 2. Avisos globales o específicos desde Admin hacia Conductores
+    // 2. Avisos globales o específicos desde Admin hacia Conductores y Pasajeros
     socket.on('aviso_conductor', (datos) => {
       // datos = { mensaje, severidad, conductorId? }
       socket.broadcast.emit('aviso_conductor', datos);
+    });
+
+    socket.on('aviso_pasajero', (datos) => {
+      // Si el aviso tiene un destinatario específico, enviarlo solo a su sala
+      if (datos.usuarioDestino) {
+        io.to(`user_${datos.usuarioDestino}`).emit('aviso_pasajero', datos);
+      } else {
+        // De lo contrario, retransmitir a todos los pasajeros (Aviso Global)
+        socket.broadcast.emit('aviso_pasajero', datos);
+      }
     });
 
     // 3. Reportes de incidencias desde Conductores hacia Admin
@@ -175,18 +193,19 @@ const inicializarSocket = (server) => {
  * Parámetros:
  *  - {string} evento - Topic del socket (e.g. `datos_esp32`).
  *  - {Object} datos - Carga útil (Payload JSON).
+ *  - {string} idHardware - Opcional. ID para sala de dispositivo.
+ *  - {string} usuarioId - Opcional. ID para sala privada de usuario.
  * Retorno:
  *  - {void} Fuego y olvido (Broadcast).
- * Reglas de negocio:
- *  - Herramienta genérica de transmisión unilateral Backend -> Cliente.
- * Casos límite (edge cases):
- *  - Si el pool `io` no inicializó (por race condition), ataja con consola de advertencia y desecha el paquete en vez de detener la aplicación.
  */
-const emitirEvento = (evento, datos, idHardware = null) => {
+const emitirEvento = (evento, datos, idHardware = null, usuarioId = null) => {
   if (io) {
     if (idHardware) {
       // Emitir solo a los interesados en este dispositivo específico (Aislamiento)
       io.to(`device_${idHardware}`).emit(evento, datos);
+    } else if (usuarioId) {
+      // Emitir solo al usuario específico (Sala Privada)
+      io.to(`user_${usuarioId}`).emit(evento, datos);
     } else {
       // Emitir globalmente si no hay ID específico
       io.emit(evento, datos);

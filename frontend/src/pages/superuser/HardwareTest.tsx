@@ -46,7 +46,10 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       conectado: false,
       satelites: 0,
       velocidad: 0
-    }
+    },
+    pasajeros: { entradas: 0, salidas: 0, actuales: 0 },
+    celdas: [] as number[],
+    is_debug: false
   });
 
   // Memoria de Sensores Físicos
@@ -72,17 +75,22 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
 
   // Referencia para el timeout del latido del ESP32
   const timeoutRef = useRef<number | null>(null);
+  const esp32OnlineRef = useRef(false);
 
   // Función interna para manejar Desconexión General
   const manejarDesconexionGeneral = (mensajeError?: string) => {
     setIsConnected(false);
+    esp32OnlineRef.current = false;
     setDeviceStatus({
       esp32: false,
       macAddress: '',
       statusCode: -1,
       errorMsg: '',
       sim800l: { connected: false, signalStrength: 0, dataPlanActive: false },
-      gps: { latitud: 0, longitud: 0, conectado: false, satelites: 0, velocidad: 0 }
+      gps: { latitud: 0, longitud: 0, conectado: false, satelites: 0, velocidad: 0 },
+      pasajeros: { entradas: 0, salidas: 0, actuales: 0 },
+      celdas: [],
+      is_debug: false
     });
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
@@ -97,10 +105,6 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
 
     newSocket.on('connect', () => {
       console.log('Cliente WS conectado al backend');
-      // Suscribirse automáticamente a la sala del dispositivo si ya tenemos el ID
-      if (sensorData.hardwareId) {
-        newSocket.emit('suscribir_dispositivo', sensorData.hardwareId);
-      }
     });
 
     // Escuchar el estado de la conexión MQTT desde el backend
@@ -129,36 +133,32 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       }
     });
 
-    // Validar telemetría y reglas de negocio (Nueva Estructura)
+    // Validar telemetría y reglas de negocio
     newSocket.on('datos_esp32', (data) => {
-      console.log("Telemetría Real Recibida:", data);
       const payload = data.payload;
-
       if (!payload || typeof payload === 'string') return;
 
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
       }
 
-      // Armar Latido para marcar Offline si no hay datos en 30s
+      // Latido para marcar Offline si no hay datos en 30s
       timeoutRef.current = window.setTimeout(() => {
-        setDeviceStatus(prev => {
-          if (prev.esp32) {
-            disparar({
-              tipo: 'advertencia',
-              titulo: 'Pérdida de Señal',
-              mensaje: 'No se han recibido datos del ESP32 en los últimos 30 segundos.'
-            });
-          }
-          return {
-            ...prev,
-            esp32: false,
-            sim800l: { ...prev.sim800l, connected: false }
-          };
+        esp32OnlineRef.current = false;
+        setDeviceStatus(prev => ({
+          ...prev,
+          esp32: false,
+          sim800l: { ...prev.sim800l, connected: false }
+        }));
+        disparar({
+          tipo: 'advertencia',
+          titulo: 'Pérdida de Señal',
+          mensaje: 'No se han recibido datos del ESP32 en los últimos 30 segundos.'
         });
       }, 30000);
 
-      if (!deviceStatus.esp32) {
+      if (!esp32OnlineRef.current) {
+        esp32OnlineRef.current = true;
         disparar({
           tipo: 'info',
           titulo: 'Hardware Activo',
@@ -184,27 +184,26 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
           longitud: payload.gps?.lon || 0,
           satelites: payload.gps?.sat || 0,
           velocidad: payload.gps?.spd || 0
-        }
+        },
+        pasajeros: {
+          entradas: payload.pasajeros?.in || 0,
+          salidas: payload.pasajeros?.out || 0,
+          actuales: payload.pasajeros?.act || 0
+        },
+        celdas: payload.celdas || [],
+        is_debug: data.tema?.includes('/debug') || false
       }));
 
       // Actualizar Datos de Sensores
       const { pasajeros, celdas } = payload;
       if (pasajeros) {
-        if (pasajeros.act > hardwareSettings.capacidadMaxima) {
-          disparar({
-            tipo: 'advertencia',
-            titulo: 'Sobrecupo Detectado',
-            mensaje: `Ocupación: ${pasajeros.act} / Máx: ${hardwareSettings.capacidadMaxima}`
-          });
-        }
-
         setSensorData(prev => ({
           hardwareId: payload.id || prev.hardwareId,
           celdasCarga: celdas || prev.celdasCarga,
-          pasajeros: { 
-            entradas: pasajeros.in, 
-            salidas: pasajeros.out, 
-            actuales: pasajeros.act 
+          pasajeros: {
+            entradas: pasajeros.in,
+            salidas: pasajeros.out,
+            actuales: pasajeros.act
           }
         }));
       }
@@ -242,7 +241,15 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       }
       newSocket.disconnect();
     };
-  }, [hardwareSettings.capacidadMaxima]);
+  }, []);
+
+  // Efecto separado para manejar la suscripción reactiva al cambiar el hardwareId
+  useEffect(() => {
+    if (socket && isConnected && sensorData.hardwareId) {
+      console.log(`Suscribiendo socket a dispositivo: ${sensorData.hardwareId}`);
+      socket.emit('suscribir_dispositivo', sensorData.hardwareId);
+    }
+  }, [socket, isConnected, sensorData.hardwareId]);
 
   // Manejadores
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,7 +329,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         <HardwareInstructions />
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          
+
           {/* COLUMNA 1: CONFIGURACIÓN (Izquierda - 3 cols) */}
           <div className="xl:col-span-3 space-y-6">
             <MqttSettingsPanel

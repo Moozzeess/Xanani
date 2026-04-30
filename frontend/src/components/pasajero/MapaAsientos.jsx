@@ -12,7 +12,8 @@ import React, { useMemo } from 'react';
 const MapaAsientos = ({ ocupacionActual, capacidadMaxima, vehicleId, ocupabilidad }) => {
     
     // 1. Determinar el número real de asientos y ocupados
-    const totalAsientos = capacidadMaxima || 16;
+    // Se limita a un máximo de 15 según requerimiento de diseño, o se usa el valor configurado
+    const totalAsientos = Math.min(capacidadMaxima || 15, 15);
     
     // Si tenemos ocupacionActual la usamos, si no, usamos el respaldo de etiquetas
     let numOcupados = typeof ocupacionActual === 'number' 

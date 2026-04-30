@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Cpu, Plus, Edit, Trash2, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Cpu, Plus, Edit, Trash2, X, Activity } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 import { useAlertaGlobal } from '../../context/AlertaContext';
 
 export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew: () => void, onTestDevice?: (device: any) => void }) {
-  const [dispositivos, setDispositivos] = useState<any[]>([]);
+   const [dispositivos, setDispositivos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [onlineDevices, setOnlineDevices] = useState<Record<string, number>>({});
+  const socketRef = useRef<Socket | null>(null);
 
   // States para el modal de asignación
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +67,41 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
   useEffect(() => {
     fetchDispositivos();
     fetchAdmins();
+
+    // Inicializar conexión de socket para monitoreo en vivo
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+    const socket = io(backendUrl);
+    socketRef.current = socket;
+
+    socket.on('datos_esp32', (data) => {
+      if (data.payload && data.payload.id) {
+        setOnlineDevices(prev => ({
+          ...prev,
+          [data.payload.id]: Date.now()
+        }));
+      }
+    });
+
+    // Intervalo para limpiar dispositivos inactivos de la vista (cada 10s)
+    const interval = setInterval(() => {
+      setOnlineDevices(prev => {
+        const now = Date.now();
+        const updated = { ...prev };
+        let changed = false;
+        Object.keys(updated).forEach(id => {
+          if (now - updated[id] > 40000) { // 40 segundos de tolerancia
+            delete updated[id];
+            changed = true;
+          }
+        });
+        return changed ? updated : prev;
+      });
+    }, 10000);
+
+    return () => {
+      socket.disconnect();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -180,10 +218,18 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
                       </span>
                     </div>
                   </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${disp.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {disp.estado.toUpperCase()}
-                    </span>
+                   <td className="p-4">
+                    <div className="flex flex-col gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium w-max ${disp.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {disp.estado.toUpperCase()}
+                      </span>
+                      {onlineDevices[disp.Id_Dispositivo_Hardware] && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 animate-pulse">
+                          <Activity size={10} />
+                          VIVO / ONLINE
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4 text-slate-600">
                     {disp.administrador ? (

@@ -1,23 +1,36 @@
 import React, { useState } from 'react';
-import { Bus, Clock, MapPin, User, Star, ChevronUp, ChevronDown, Flag } from 'lucide-react';
+import { Bus, Clock, MapPin, User, Star, ChevronUp, ChevronDown, Flag, X } from 'lucide-react';
 import MapaAsientos from './MapaAsientos';
 
 /**
  * PanelRutaInteractiva (Versión Real-Time Premium)
  */
-const PanelRutaInteractiva = ({ vehicle, ruta, onExpand, onReport }) => {
+const PanelRutaInteractiva = ({ vehicle, ruta, onExpand, onReport, onClose }) => {
     const [viewState, setViewState] = useState('collapsed');
 
-    if (!vehicle || !ruta) {
+    if (!ruta) {
         return (
             <div className="fixed inset-x-0 bottom-0 h-28 bg-white rounded-t-[40px] flex items-center justify-center shadow-2xl z-[2000]">
-                <p className="text-slate-400 text-xs font-bold animate-pulse uppercase tracking-widest">Sincronizando telemetría...</p>
+                <p className="text-slate-400 text-xs font-bold animate-pulse uppercase tracking-widest">Selecciona una ruta o unidad...</p>
             </div>
         );
     }
 
+    const isInfoOnly = !vehicle;
+    const vehicleData = vehicle || { 
+        id: `PREV-${ruta._id || ruta.id}`,
+        nombreUnidad: 'Vista Previa de Ruta', 
+        pos: [ruta.paradas[0].latitud, ruta.paradas[0].longitud],
+        ocupacionActual: 0,
+        capacidadMaxima: 15,
+        occ: 'Inactiva',
+        isSimulated: false,
+        conductorNombre: 'Sin Asignar',
+        indexParadaActual: 0
+    };
+
     const paradas = ruta.paradas || [];
-    const indexActual = vehicle.indexParadaActual || 0;
+    const indexActual = vehicleData.indexParadaActual || 0;
 
     // Función para calcular distancia entre coordenadas (Haversine)
     const calcularDistancia = (lat1, lon1, lat2, lon2) => {
@@ -64,47 +77,79 @@ const PanelRutaInteractiva = ({ vehicle, ruta, onExpand, onReport }) => {
                 <div className="w-14 h-1.5 bg-slate-200 rounded-full mx-auto mb-4"></div>
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 ${vehicle.isSimulated ? 'bg-indigo-600' : 'bg-emerald-600'} rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100`}>
+                        <div className={`w-12 h-12 ${vehicleData.isSimulated ? 'bg-indigo-600' : (isInfoOnly ? 'bg-slate-400' : 'bg-emerald-600')} rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100`}>
                             <Bus className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{ruta.nombre}</span>
-                            <h2 className="text-base font-black text-slate-800 leading-tight">{vehicle.nombreUnidad}</h2>
+                            <h2 className="text-base font-black text-slate-800 leading-tight">{vehicleData.nombreUnidad}</h2>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                            <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="text-xs font-black text-emerald-700">
-                                {estimarMinutos(calcularDistancia(vehicle.pos?.[0], vehicle.pos?.[1], paradas[indexActual]?.latitud, paradas[indexActual]?.longitud))} MIN
-                            </span>
+                    <div className="text-right flex items-center gap-3">
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                                <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="text-xs font-black text-emerald-700">
+                                    {estimarMinutos(calcularDistancia(vehicleData.pos?.[0], vehicleData.pos?.[1], paradas[indexActual]?.latitud, paradas[indexActual]?.longitud))} MIN
+                                </span>
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">ETA Real-Time</p>
                         </div>
-                        <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">ETA Real-Time</p>
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose?.();
+                            }}
+                            className="p-2 bg-slate-100 text-slate-400 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors pointer-events-auto"
+                            title="Cerrar vista"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-8 pb-10 no-scrollbar">
                 
-                {/* MAPA DE ASIENTOS (Datos de Sensores) */}
-                {(viewState === 'half' || viewState === 'full') && (
+                {/* MAPA DE ASIENTOS (Solo si hay unidad vinculada) */}
+                {(viewState === 'half' || viewState === 'full') && !isInfoOnly && (
                     <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
                         <MapaAsientos 
-                            ocupacionActual={vehicle.ocupacionActual} 
-                            capacidadMaxima={vehicle.capacidadMaxima} 
-                            vehicleId={vehicle.id}
-                            ocupabilidad={vehicle.occ} 
+                            ocupacionActual={vehicleData.ocupacionActual} 
+                            capacidadMaxima={vehicleData.capacidadMaxima} 
+                            vehicleId={vehicleData.id}
+                            ocupabilidad={vehicleData.occ} 
                         />
                     </div>
                 )}
 
-                {/* PRÓXIMAS ESTACIONES (Estado Half) */}
-                {viewState === 'half' && (
+                {/* ITINERARIO COMPLETO (Prioridad en Vista Previa) */}
+                {(viewState === 'half' || viewState === 'full') && isInfoOnly && (
+                    <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Itinerario Completo</h3>
+                        <div className="space-y-4">
+                            {paradas.map((p, idx) => (
+                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100">
+                                        <MapPin className="w-4 h-4 text-indigo-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black text-slate-800">{p.nombre}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Estación {idx + 1}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* PRÓXIMAS ESTACIONES (Solo para unidades activas en estado Half) */}
+                {viewState === 'half' && !isInfoOnly && (
                     <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avance de la Estación</h3>
                         <div className="space-y-3">
                             {paradasProximas.map((p, i) => {
-                                const dist = calcularDistancia(vehicle.pos?.[0], vehicle.pos?.[1], p.latitud, p.longitud);
+                                const dist = calcularDistancia(vehicleData.pos?.[0], vehicleData.pos?.[1], p.latitud, p.longitud);
                                 const min = estimarMinutos(dist);
                                 return (
                                     <div key={i} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -118,8 +163,8 @@ const PanelRutaInteractiva = ({ vehicle, ruta, onExpand, onReport }) => {
                     </div>
                 )}
 
-                {/* ITINERARIO Y CONDUCTOR (Estado Full) */}
-                {viewState === 'full' && (
+                {/* ITINERARIO Y CONDUCTOR (Solo para unidades activas en estado Full) */}
+                {viewState === 'full' && !isInfoOnly && (
                     <div className="mt-8 relative animate-in fade-in duration-500">
                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Información Real de Unidad</h3>
                         
@@ -130,9 +175,9 @@ const PanelRutaInteractiva = ({ vehicle, ruta, onExpand, onReport }) => {
 
                         <div className="space-y-10 relative">
                             {paradas.map((p, idx) => {
-                                const esPasada = idx < indexActual;
+                                 const esPasada = idx < indexActual;
                                 const esActual = idx === indexActual;
-                                const dist = calcularDistancia(vehicle.pos?.[0], vehicle.pos?.[1], p.latitud, p.longitud);
+                                const dist = calcularDistancia(vehicleData.pos?.[0], vehicleData.pos?.[1], p.latitud, p.longitud);
                                 const min = estimarMinutos(dist);
                                 return (
                                     <div key={idx} className={`flex items-start gap-6 ${esPasada ? 'opacity-40' : 'opacity-100'}`}>
@@ -157,7 +202,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, onExpand, onReport }) => {
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Conductor Asignado</p>
-                                        <p className="text-sm font-bold">{vehicle.conductorNombre}</p>
+                                        <p className="text-sm font-bold">{vehicleData.conductorNombre}</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end">
