@@ -23,6 +23,7 @@ const incidenteRoutes = require('./incidente.routes');
 const adminRoutes = require('./admin.routes');
 const estadisticasRoutes = require('./estadisticas.routes');
 const notificacionRoutes = require('./notificacion.routes');
+const osrmRoutes = require('./osrm.routes');
 
 router.get('/salud', (_, res) => {
   res.json({ status: 'ok', mensaje: 'Servidor operativo' });
@@ -42,5 +43,6 @@ router.use('/incidentes', incidenteRoutes);
 router.use('/admin', adminRoutes);
 router.use('/estadisticas', estadisticasRoutes);
 router.use('/notificaciones', notificacionRoutes);
+router.use('/osrm', osrmRoutes);
 
 module.exports = router;
