@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { obtenerRutaPorCalles } from '../services/osrmService';
 
 export interface ItemParada {
   id: number;
@@ -80,21 +81,12 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
     }
 
     const actualizarTrazo = async () => {
-      const coordenadas = paradas.map((p) => `${p.marcador.getLatLng().lng},${p.marcador.getLatLng().lat}`).join(';');
-      const url = `https://router.project-osrm.org/route/v1/driving/${coordenadas}?overview=full&geometries=geojson`;
-
+      const coordsParaRuta = paradas.map(p => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as [number, number]);
+      
       try {
-        const res = await fetch(url);
-        const data = await res.json();
+        const latlngs = await obtenerRutaPorCalles(coordsParaRuta, 'driving');
+        
         if (!montado) return;
-
-        let latlngs: [number, number][] = [];
-
-        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-          latlngs = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
-        } else {
-          latlngs = paradas.map((p) => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as [number, number]);
-        }
 
         setGeometria(latlngs);
 
@@ -105,28 +97,22 @@ export const useMapaRutas = (idContenedorMapa: string, activo: boolean) => {
         lineaRutaRef.current = L.polyline(latlngs, {
           color: '#3b82f6',
           weight: 5,
+          opacity: 0.8,
+          lineJoin: 'round'
         }).addTo(mapa);
 
       } catch (err) {
         if (!montado) return;
-        const coordsRespaldo = paradas.map((p) => [p.marcador.getLatLng().lat, p.marcador.getLatLng().lng] as [number, number]);
-        setGeometria(coordsRespaldo);
-        
-        if (lineaRutaRef.current) {
-          mapa.removeLayer(lineaRutaRef.current);
-        }
-        lineaRutaRef.current = L.polyline(coordsRespaldo, {
-          color: '#3b82f6',
-          weight: 4,
-          dashArray: '10, 10'
-        }).addTo(mapa);
+        console.error("Error al actualizar el trazo de la ruta:", err);
       }
     };
 
-    actualizarTrazo();
+    // Debounce simple para evitar saturar el servicio OSRM
+    const timeout = setTimeout(actualizarTrazo, 300);
 
     return () => {
       montado = false;
+      clearTimeout(timeout);
     };
   }, [paradas]);
 

@@ -4,6 +4,7 @@ const { Usuario, USER_ROLES } = require('../models/Usuario');
 const { signAccessToken } = require('../utils/jwt');
 const ErrorApp = require('../utils/ErrorApp');
 const emailService = require('./email.service');
+const { NODE_ENV } = require('../config/env');
 
 /**
  * Intención: Inscribe un cliente orgánico en el sistema y le provee un JWT firmado.
@@ -40,7 +41,8 @@ async function register({ username, email, password }) {
     email: email.toLowerCase(),
     passwordHash,
     role: usersCount === 0 ? USER_ROLES.SUPERUSUARIO : USER_ROLES.PASAJERO,
-    verificationToken
+    verificationToken,
+    isVerified: NODE_ENV === 'development' // Auto-verificar en desarrollo
   });
 
   // Lanzar el envío de correo de manera asíncrona (no bloqueante)
@@ -94,8 +96,8 @@ async function login({ usernameOrEmail, password }) {
     throw new ErrorApp('Inicio de sesión fallido: Contraseña o datos incorrectos.', 401, 'Usuario no encontrado o inactivo.');
   }
 
-  // Verificar que el usuario haya confirmado su correo
-  if (!user.isVerified) {
+  // Verificar que el usuario haya confirmado su correo (Omitir en desarrollo para facilitar pruebas locales)
+  if (!user.isVerified && NODE_ENV !== 'development') {
     throw new ErrorApp('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.', 403, 'Cuenta no verificada.');
   }
 

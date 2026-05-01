@@ -271,27 +271,7 @@ const PanelPerfil = ({
                         </div>
                     )}
 
-                    {/* Configuración */}
-                    <div className="px-5 py-4">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-3">Configuración</p>
 
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <Bell className="w-4 h-4 text-slate-500" />
-                                <span className="text-sm text-slate-700 font-medium">Notificaciones</span>
-                            </div>
-                            <button
-                                onClick={onToggleNotificaciones}
-                                className={`relative w-10 h-5 rounded-full transition-colors ${notificacionesActivas ? 'bg-blue-600' : 'bg-slate-300'
-                                    }`}
-                            >
-                                <span
-                                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform
-                    ${notificacionesActivas ? 'translate-x-5' : 'translate-x-0.5'}`}
-                                />
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Footer: cerrar sesión */}

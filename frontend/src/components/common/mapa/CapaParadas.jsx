@@ -6,7 +6,7 @@ import { useMapaInstance } from './MapaContext';
  * Capa para renderizar los puntos de parada como círculos minimalistas.
  * Optimizado para una visualización premium sin ruido visual.
  */
-const CapaParadas = ({ stops = [] }) => {
+const CapaParadas = ({ stops = [], onStopClick }) => {
     const map = useMapaInstance();
     const groupRef = useRef(L.layerGroup());
 
@@ -29,7 +29,7 @@ const CapaParadas = ({ stops = [] }) => {
 
             // Renderizar como punto pequeño minimalista
             const marker = L.circleMarker([lat, lng], {
-                radius: 5,
+                radius: 6,
                 fillColor: '#ffffff',
                 color: '#3b82f6',
                 weight: 2,
@@ -38,16 +38,21 @@ const CapaParadas = ({ stops = [] }) => {
                 pane: 'markerPane'
             });
 
+            marker.on('click', () => {
+                if (onStopClick) onStopClick(s);
+            });
+
             marker.bindPopup(`
                 <div class="text-center p-1">
                     <div class="text-[10px] font-black text-indigo-500 uppercase">Parada</div>
                     <div class="font-bold text-slate-800 text-xs">${s.nombre || 'Punto de Abordaje'}</div>
+                    <div class="text-[9px] text-slate-400 mt-1 font-medium">Click para ver ruta</div>
                 </div>
-            `, { offset: [0, 0], className: 'minimal-popup' });
+            `, { offset: [0, -5], className: 'minimal-popup' });
 
             groupRef.current.addLayer(marker);
         });
-    }, [map, stops]);
+    }, [map, stops, onStopClick]);
 
     return null;
 };

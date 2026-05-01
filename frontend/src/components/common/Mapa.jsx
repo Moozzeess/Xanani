@@ -15,7 +15,8 @@ const Mapa = ({
   children,
   onMapClick = (latlng) => {},
   onMapLongPress = (latlng) => {},
-  autoFitPadding = [50, 50]
+  autoFitPadding = [50, 50],
+  followDuration = 1.5 // Duración de la animación de seguimiento (por defecto 1.5s)
 }) => {
   const mapContainerRef = useRef(null);
   const [mapInstance, setMapInstance] = useState(null);
@@ -72,14 +73,22 @@ const Mapa = ({
             Math.pow(currentCenter.lng - center[1], 2)
         );
 
-        if (dist > 0.0001) {
-            mapInstance.flyTo(center, mapInstance.getZoom(), {
-                animate: true,
-                duration: 1.5
-            });
+        // Umbral de movimiento
+        if (dist > 0.00001) {
+            if (followDuration <= 0.5) {
+                // Modo Navegación: seguimiento instantáneo sin animaciones pesadas
+                mapInstance.setView(center, mapInstance.getZoom(), { animate: false });
+            } else {
+                // Modo Vista General: salto suave con animación
+                mapInstance.flyTo(center, mapInstance.getZoom(), {
+                    animate: true,
+                    duration: followDuration,
+                    easeLinearity: 0.25
+                });
+            }
         }
     }
-  }, [center, mapInstance, bounds]);
+  }, [center, mapInstance, bounds, followDuration]);
 
   // 3. Reactividad de los límites (Bounds)
   useEffect(() => {

@@ -35,6 +35,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
   const [datos, setDatos] = useState<DashboardAdminResponse | null>(null);
   const [cargando, setCargando] = useState(true);
   const [alertasRecientes, setAlertasRecientes] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   /**
    * Obtiene los datos actualizados del backend.
@@ -56,6 +57,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
 
   // Efecto inicial y polling cada 30 segundos
   useEffect(() => {
+    setMounted(true);
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
@@ -75,7 +77,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
     };
   }, [socket, fetchDashboardData]);
 
-  if (cargando && !datos) {
+  if (!mounted || (cargando && !datos)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -162,7 +164,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
           </div>
           
           <div className="h-72 w-full min-h-[280px]">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <ResponsiveContainer width="99%" aspect={2.5} minWidth={0}>
               <AreaChart data={graficos.afluencia}>
                 <defs>
                   <linearGradient id="colorPasajeros" x1="0" y1="0" x2="0" y2="1">
@@ -205,7 +207,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
           <p className="text-xs text-slate-500 mb-6">Disponibilidad actual de unidades</p>
           
           <div className="flex-1 min-h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <ResponsiveContainer width="99%" aspect={1} minWidth={0}>
               <PieChart>
                 <Pie
                   data={graficos.distribucionUnidades}
@@ -236,7 +238,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
           <p className="text-xs text-slate-500 mb-6">Frecuencia por tipo de reporte</p>
           
           <div className="h-64 w-full min-h-[250px]">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <ResponsiveContainer width="99%" aspect={1.5} minWidth={0}>
               <BarChart data={graficos.incidentesPorTipo} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />

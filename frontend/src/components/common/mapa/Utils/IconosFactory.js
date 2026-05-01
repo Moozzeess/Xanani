@@ -3,16 +3,18 @@
  * Centraliza la generación de HTML/SVG para asegurar consistencia visual entre roles.
  */
 
-export const htmlMarcadorVehiculo = (v, enSeguimiento = false) => {
+export const htmlMarcadorVehiculo = (v, enSeguimiento = false, rotation = 0) => {
   const colorClass = v.color || 'bg-blue-600';
   const txtColor = v.text || 'text-white';
   const labelEta = v.eta != null ? (v.eta < 1 ? '<1m' : `${v.eta}m`) : v.eta || 'Desc.';
   const esDemoStyle = v.esDemo ? ' opacity-90 saturate-[0.8]' : '';
 
   return `
-    <div class="bus-marker-container relative w-12 h-12 flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer${esDemoStyle}">
-      <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow-xl border border-white/20 z-20 whitespace-nowrap">
-        ${v.esDemo ? '🚌 SIM ' : ''}${labelEta}
+    <div class="bus-marker-container relative w-12 h-12 flex items-center justify-center transition-transform cursor-pointer${esDemoStyle}" 
+         style="transform: rotate(${rotation}deg);">
+      <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow-xl border border-white/20 z-20 whitespace-nowrap"
+           style="transform: translateX(-50%) rotate(${-rotation}deg);">
+        ${v.esDemo ? ' SIM ' : ''}${labelEta}
       </div>
       <!-- Halo pulsante tipo Xanani Premium -->
       <div class="absolute inset-0 rounded-2xl bg-blue-500 opacity-30 animate-ping"></div>

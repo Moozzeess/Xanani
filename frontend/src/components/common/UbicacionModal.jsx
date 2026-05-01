@@ -23,11 +23,11 @@ const UbicacionModal = ({ isOpen, onClose, onAccept }) => {
                 {/* Header*/}
                 <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex flex-col items-center text-white relative">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <MapPin size={120} />
+                        <img src="/parada_bus.svg" style={{ width: '120px', height: '120px' }} className="brightness-0 invert" alt="" />
                     </div>
 
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 ring-8 ring-white/10">
-                        <MapPin size={40} className="text-white fill-white/20" />
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 ring-8 ring-white/10 p-4">
+                        <img src="/parada_bus.svg" className="w-full h-full brightness-0 invert" alt="Ubicación" />
                     </div>
 
                     <h2 className="text-2xl font-bold text-center">Activa tu Ubicación</h2>

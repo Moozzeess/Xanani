@@ -7,7 +7,7 @@ import { useMapaInstance } from './MapaContext';
  * Muestra un trazado vial desde el usuario hasta la parada detectada
  * e indica la parada con el icono oficial y la ETA si está disponible.
  */
-const CapaInvitacion = ({ trazo = [], parada = null, eta = null }) => {
+const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = false, onParadaClick }) => {
     const map = useMapaInstance();
     const lineRef = useRef(null);
     const markerRef = useRef(null);
@@ -19,7 +19,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null }) => {
         if (Array.isArray(trazo) && trazo.length > 1) {
             if (!lineRef.current) {
                 lineRef.current = L.polyline(trazo, {
-                    color: '#3b82f6',
+                    color: estaSuscrito ? '#10b981' : '#3b82f6',
                     weight: 4,
                     opacity: 0.8,
                     dashArray: '8, 12',
@@ -58,7 +58,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null }) => {
             
             // Generar contenido del popup (se actualiza si cambia la ETA)
             const etaHtml = eta ? `
-                <div class="mt-2 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-lg border border-blue-100">
+                <div class="mt-2 flex items-center justify-center gap-1 ${estaSuscrito ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2 py-1 rounded-lg border">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span class="text-[10px] font-black">LLEGA EN ${eta} MIN</span>
                 </div>
@@ -66,7 +66,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null }) => {
 
             const popupContent = `
                 <div class="text-center p-2 min-w-[120px]">
-                    <p class="text-[10px] font-black text-blue-600 uppercase mb-1 tracking-wider">Tu parada cercana</p>
+                    <p class="text-[10px] font-black ${estaSuscrito ? 'text-emerald-600' : 'text-blue-600'} uppercase mb-1 tracking-wider">${estaSuscrito ? 'Tu parada habitual' : 'Tu parada cercana'}</p>
                     <p class="text-sm font-bold text-slate-800 leading-tight">${parada.nombre || 'Parada detectada'}</p>
                     ${etaHtml}
                 </div>
@@ -75,7 +75,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null }) => {
             if (!markerRef.current) {
                 const icon = L.divIcon({
                     html: `
-                        <div class="invitation-stop-marker">
+                        <div class="invitation-stop-marker ${estaSuscrito ? 'is-subscribed' : ''}">
                             <div class="pulse-invitation"></div>
                             <div class="stop-icon-container">
                                 <img src="/parada_bus.svg" style="width: 28px; height: 28px;" />
@@ -88,6 +88,11 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null }) => {
                 });
 
                 markerRef.current = L.marker(pos, { icon, zIndexOffset: 900 }).addTo(map);
+                
+                markerRef.current.on('click', () => {
+                    if (onParadaClick) onParadaClick(parada);
+                });
+
                 markerRef.current.bindPopup(popupContent, { 
                     closeButton: false, 
                     className: 'minimal-popup',

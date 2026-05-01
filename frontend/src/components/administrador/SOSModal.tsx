@@ -90,7 +90,7 @@ const SOSModal: React.FC<SOSModalProps> = ({ isOpen, onClose, incidencia }) => {
               </h4>
               <p className="text-slate-500 font-black text-lg">Unidad: {incidencia?.unidadId || 'N/A'}</p>
               <p className="text-red-600 font-bold mt-1 flex items-center gap-2 text-sm">
-                <MapPin className="w-5 h-5" /> {incidencia?.descripcion || 'Solicitud de ayuda inmediata'}
+                <img src="/parada_bus.svg" className="w-5 h-5" style={{ filter: 'invert(27%) sepia(91%) saturate(2352%) hue-rotate(346deg) brightness(104%) contrast(97%)' }} alt="Ubicación" /> {incidencia?.descripcion || 'Solicitud de ayuda inmediata'}
               </p>
               {incidencia?.timestamp && (
                 <p className="text-slate-400 text-xs mt-1">

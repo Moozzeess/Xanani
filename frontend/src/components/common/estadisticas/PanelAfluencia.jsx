@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { Bookmark, Info, TrendingUp, Search } from 'lucide-react';
 import { estadisticasService } from '../../../services/estadisticasService';
@@ -12,8 +12,10 @@ import { estadisticasService } from '../../../services/estadisticasService';
 const PanelAfluencia = ({ onDiscover }) => {
   const [rutas, setRutas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const fetchData = async () => {
       try {
         const data = await estadisticasService.obtenerAfluenciaSuscripciones();
@@ -27,7 +29,7 @@ const PanelAfluencia = ({ onDiscover }) => {
     fetchData();
   }, []);
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-50 p-10">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
@@ -62,36 +64,36 @@ const PanelAfluencia = ({ onDiscover }) => {
                   <span>Optimizado</span>
                 </div>
               </div>
-              
+
               <div className="flex-1 w-full min-h-0">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <ResponsiveContainer width="99%" aspect={1.7} minWidth={0}>
                   <BarChart data={ruta.histograma} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="hora" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{fill: '#94a3b8', fontSize: 10}} 
+                    <XAxis
+                      dataKey="hora"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 10 }}
                       interval={2}
                     />
-                    <YAxis 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{fill: '#94a3b8', fontSize: 10}}
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 10 }}
                     />
-                    <Tooltip 
-                      cursor={{fill: '#f8fafc', radius: 4}}
+                    <Tooltip
+                      cursor={{ fill: '#f8fafc', radius: 4 }}
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                       formatter={(value) => [`${value}%`, 'Ocupación']}
                     />
-                    <Bar 
-                      dataKey="ocupacion" 
+                    <Bar
+                      dataKey="ocupacion"
                       radius={[4, 4, 0, 0]}
                     >
                       {ruta.histograma.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.ocupacion > 75 ? '#ef4444' : entry.ocupacion > 40 ? '#3b82f6' : '#10b981'} 
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.ocupacion > 75 ? '#ef4444' : entry.ocupacion > 40 ? '#3b82f6' : '#10b981'}
                         />
                       ))}
                     </Bar>
@@ -117,7 +119,7 @@ const PanelAfluencia = ({ onDiscover }) => {
           <p className="text-slate-500 text-center max-w-md px-6 mb-8">
             Suscríbete a tus rutas frecuentes para ver sus horarios de afluencia y planificar mejor tus traslados.
           </p>
-          <button 
+          <button
             onClick={onDiscover}
             className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
           >
@@ -127,21 +129,6 @@ const PanelAfluencia = ({ onDiscover }) => {
         </div>
       )}
 
-      {/* Tip Seccional */}
-      {rutas.length > 0 && (
-        <div className="mt-12 bg-indigo-600 p-8 rounded-3xl text-white shadow-xl shadow-indigo-100 max-w-4xl relative overflow-hidden group">
-          <div className="relative z-10">
-            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-              <Info className="w-6 h-6" />
-              Xanani Tip
-            </h3>
-            <p className="text-indigo-100 text-sm max-w-xl">
-              Los histogramas se basan en el promedio de las últimas 4 semanas. Recuerda que factores externos como el clima o eventos especiales pueden afectar la afluencia en tiempo real.
-            </p>
-          </div>
-          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
-        </div>
-      )}
     </div>
   );
 };

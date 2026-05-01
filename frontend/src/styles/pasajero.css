@@ -302,12 +302,38 @@
 }
 
 @keyframes ping-invitation {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
 
 @keyframes bounce-in {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+
+  60% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Estado Suscrito (Esmeralda) */
+.invitation-stop-marker.is-subscribed .stop-icon-container {
+  border-color: #179af0;
+  box-shadow: 0 8px 16px rgba(8, 148, 246, 0.4);
+}
+
+.invitation-stop-marker.is-subscribed .pulse-invitation {
+  background: rgba(7, 52, 236, 0.2);
+  border-color: rgba(8, 148, 246, 0.4);
 }

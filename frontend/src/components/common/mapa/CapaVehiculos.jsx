@@ -43,13 +43,17 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, onVehicleClick
                 // Crear nuevo marcador si no existe
                 const icon = L.divIcon({
                     className: 'bg-transparent',
-                    html: htmlMarcadorVehiculo(v, enSeguimiento),
+                    html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0),
                     iconSize: [48, 48],
                     iconAnchor: [24, 24],
                 });
 
                 marker = L.marker(pos, { icon });
                 
+                // Guardar estado actual para comparaciones futuras
+                marker._lastRotation = v.rotation || 0;
+                marker._lastEnSeguimiento = enSeguimiento;
+
                 // Eventos
                 marker.on('click', (e) => {
                     L.DomEvent.stopPropagation(e);
@@ -60,17 +64,21 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, onVehicleClick
                 markersMapRef.current.set(id.toString(), marker);
             } else {
                 // Actualizar marcador existente
-                // Para evitar saltos bruscos, actualizamos latlng directamente
                 marker.setLatLng(pos);
                 
-                // Actualizar icono solo si el estado de selección o los datos visuales cambiaron
-                const icon = L.divIcon({
-                    className: 'bg-transparent transition-all duration-500',
-                    html: htmlMarcadorVehiculo(v, enSeguimiento),
-                    iconSize: [48, 48],
-                    iconAnchor: [24, 24],
-                });
-                marker.setIcon(icon);
+                // Solo recrear el icono si el ángulo cambió sustancialmente (>1 grado) o cambió la selección
+                const rotationDiff = Math.abs((v.rotation || 0) - (marker._lastRotation || 0));
+                if (rotationDiff > 1 || enSeguimiento !== marker._lastEnSeguimiento) {
+                    const icon = L.divIcon({
+                        className: 'bg-transparent',
+                        html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0),
+                        iconSize: [48, 48],
+                        iconAnchor: [24, 24],
+                    });
+                    marker.setIcon(icon);
+                    marker._lastRotation = v.rotation || 0;
+                    marker._lastEnSeguimiento = enSeguimiento;
+                }
             }
 
             // Actualizar Popup

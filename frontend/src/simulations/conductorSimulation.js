@@ -7,14 +7,15 @@ import { useState, useEffect, useRef } from 'react';
 export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
   const [isTesting, setIsTesting] = useState(false);
   const [simulatedPosition, setSimulatedPosition] = useState(null);
+  const [heading, setHeading] = useState(0);
   const [siguienteParada, setSiguienteParada] = useState("Calculando...");
-  
+
   // Referencia para la ruta para evitar reinicios del loop por re-renders
   const routeRef = useRef(routeLine);
   const stopsRef = useRef(stops);
 
   // Sincronizar referencias con las props más recientes
-  useEffect(() => { 
+  useEffect(() => {
     if (routeLine && routeLine.length > 0) {
       routeRef.current = routeLine;
       // Inicializar posición simulada si no existe y tenemos ruta
@@ -24,8 +25,8 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
     }
   }, [routeLine]);
 
-  useEffect(() => { 
-    stopsRef.current = stops; 
+  useEffect(() => {
+    stopsRef.current = stops;
     // Inicializar primera parada si está en espera
     if (stops && stops.length > 0 && (siguienteParada === "Calculando..." || siguienteParada === "")) {
       setSiguienteParada(stops[0].nombre);
@@ -35,9 +36,9 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
   // Estado interno para la animación fluida
   const stateRef = useRef({
     currentIndex: 0,
-    progress: 0, 
+    progress: 0,
     lastTime: 0,
-    speed: 0.002 // Velocidad optimizada para visualización clara
+    speed: 0.000025 // Aumentado para un avance más perceptible
   });
 
   // Loop de animación fluida (Reactivo a isTesting, viewMode y cambios en routeLine)
@@ -75,7 +76,7 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
       if (stateRef.current.progress >= 1) {
         stateRef.current.progress = 0;
         stateRef.current.currentIndex = (stateRef.current.currentIndex + 1) % (currentLine.length - 1);
-        
+
         // Actualizar parada más cercana al cambiar de tramo
         actualizarProximaParada(stateRef.current.currentIndex, currentLine, currentStops);
       }
@@ -89,6 +90,14 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
         const lat = p1[0] + (p2[0] - p1[0]) * stateRef.current.progress;
         const lng = p1[1] + (p2[1] - p1[1]) * stateRef.current.progress;
         setSimulatedPosition([lat, lng]);
+
+        // Calcular ángulo de rotación (heading) entre p1 y p2
+        // Solo actualizar si hay un movimiento real para evitar "vibración" de rotación
+        const distSq = Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2);
+        if (distSq > 0.00000001) {
+          const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+          setHeading(90 - angle);
+        }
       }
 
       requestRef = requestAnimationFrame(animate);
@@ -121,9 +130,9 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
 
     // Si estamos muy cerca de una parada, mostrar la siguiente
     if (minDistance < 0.1 && nearestIdx < allStops.length - 1) {
-       setSiguienteParada(allStops[nearestIdx + 1].nombre);
+      setSiguienteParada(allStops[nearestIdx + 1].nombre);
     } else {
-       setSiguienteParada(allStops[nearestIdx].nombre);
+      setSiguienteParada(allStops[nearestIdx].nombre);
     }
   };
 
@@ -132,8 +141,8 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     return R * 2 * Math.atan2(
-      Math.sqrt(Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2),
-      Math.sqrt(1 - (Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2))
+      Math.sqrt(Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2),
+      Math.sqrt(1 - (Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2))
     );
   };
 
@@ -141,6 +150,7 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
     isTesting,
     setIsTesting,
     simulatedPosition,
+    heading,
     siguienteParada,
     resetSimulation: () => {
       setIsTesting(false);

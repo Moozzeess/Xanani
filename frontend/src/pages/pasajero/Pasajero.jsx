@@ -8,12 +8,10 @@ import Mapa from "../../components/common/Mapa";
 import Navbar from "../../components/common/Navbar";
 
 // Componentes de Pasajero
-import AlertaFlotante from "../../components/pasajero/AlertaFlotante";
-import ReporteModal from "../../components/pasajero/ReporteModal";
-import UbicacionModal from "../../components/common/UbicacionModal";
 import { useAlertaGlobal } from "../../context/AlertaContext";
 import { useSocket } from "../../hooks/useSocket";
 import ModalAlerta from "../../components/common/ModalAlerta";
+import { obtenerRutaPorCalles } from "../../services/osrmService";
 import PanelPerfil from "../../components/common/PanelPerfil";
 import ModalPerfilPasajero from "../../components/pasajero/ModalPerfilPasajero";
 
@@ -69,8 +67,6 @@ const Pasajero = () => {
     const [mapCenter, setMapCenter] = useState([19.4326, -99.1332]);
     const [mapBounds, setMapBounds] = useState(null);
     const [hasNewNotifications, setHasNewNotifications] = useState(false);
-    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-    const [unidadIdParaReportar, setUnidadIdParaReportar] = useState(null);
     const [userPos, setUserPos] = useState(null);
     const [selectedRoute, setSelectedRoute] = useState(null);
     const [paradaDetectada, setParadaDetectada] = useState(null);
@@ -114,7 +110,25 @@ const Pasajero = () => {
             const newVehicles = [...prev];
             newVehicles[index] = finalData;
 
-            if (selectedVehicle?.id === id) setSelectedVehicle(finalData);
+            // Actualizar vehículo seleccionado si es el que cambió
+            if (selectedVehicle?.id === id) {
+                setSelectedVehicle(finalData);
+            }
+
+            // LÓGICA DE ACTUALIZACIÓN DE ETA EN RADAR:
+            // Si hay un radar activo para esta ruta, actualizamos su ETA
+            setParadaDetectada(prevParada => {
+                if (prevParada && (prevParada.ruta._id || prevParada.ruta.id).toString() === (finalData.rutaId || finalData.id_ruta)?.toString()) {
+                    const d = calcularDistancia(finalData.pos[0], finalData.pos[1], prevParada.parada.latitud, prevParada.parada.longitud);
+                    const nuevoEta = Math.max(1, Math.round(d / 300));
+                    // Solo actualizar si el nuevo ETA es menor que el actual o si no había ETA
+                    if (!prevParada.eta || nuevoEta < prevParada.eta) {
+                        return { ...prevParada, eta: nuevoEta };
+                    }
+                }
+                return prevParada;
+            });
+
             return newVehicles;
         });
     };
@@ -236,10 +250,10 @@ const Pasajero = () => {
         }
 
         setSelectedRoute(ruta);
-        
+
         // Cargar geometría si existe (asegurar que sea un array de coordenadas)
         if (ruta.geometria && Array.isArray(ruta.geometria)) {
-            const coords = ruta.geometria[0]?.latitud 
+            const coords = ruta.geometria[0]?.latitud
                 ? ruta.geometria.map(p => [p.latitud, p.longitud])
                 : ruta.geometria; // Ya viene formateado
             setRouteLine(coords);
@@ -255,7 +269,7 @@ const Pasajero = () => {
             const points = ruta.paradas.map(p => [parseFloat(p.latitud), parseFloat(p.longitud)]);
             setMapBounds(points);
         } else if (ruta.geometria && ruta.geometria.length > 0) {
-            const points = ruta.geometria[0]?.latitud 
+            const points = ruta.geometria[0]?.latitud
                 ? ruta.geometria.map(p => [p.latitud, p.longitud])
                 : ruta.geometria;
             setMapBounds(points);
@@ -273,72 +287,82 @@ const Pasajero = () => {
             setMapCenter([...userPos]);
             setMostrarRadar(true);
             setTimeout(() => setMostrarRadar(false), 3000); // El radar desaparece tras 3s
-            
-            // LÓGICA DE DESCUBRIMIENTO: Buscar parada más cercana
-            let paradaCercana = null;
-            let rutaAsociada = null;
-            let minDist = 1000; // Umbral de 1km
 
+            // LÓGICA DE DESCUBRIMIENTO: Buscar paradas cercanas en todas las rutas
+            const paradasCercanas = [];
             rutasDisponibles.forEach(ruta => {
                 ruta.paradas?.forEach(parada => {
                     const d = calcularDistancia(userPos[0], userPos[1], parada.latitud, parada.longitud);
-                    if (d < minDist) {
-                        minDist = d;
-                        paradaCercana = parada;
-                        rutaAsociada = ruta;
+                    if (d <= 1000) { // Umbral de 1km
+                        paradasCercanas.push({ parada, ruta, distancia: d });
                     }
                 });
             });
 
-            if (paradaCercana && rutaAsociada) {
+            if (paradasCercanas.length > 0) {
+                // Ordenar por distancia
+                paradasCercanas.sort((a, b) => a.distancia - b.distancia);
+
+                const idsSuscritos = rutasFavoritas.map(f => (f._id || f.id).toString());
+
+                // Ya no filtramos por rutas no suscritas para permitir el ETA en rutas habituales
+                const seleccionada = paradasCercanas[0];
+                const { parada: paradaCercana, ruta: rutaAsociada } = seleccionada;
+
+                // Contar rutas únicas cercanas (todas, incluso suscritas) para información
+                const rutasUnicas = new Set(paradasCercanas.map(p => (p.ruta._id || p.ruta.id).toString()));
+                const numRutas = rutasUnicas.size;
+
+                const rid = (rutaAsociada._id || rutaAsociada.id).toString();
+                const estaSuscrito = idsSuscritos.includes(rid);
+
+                setParadaDetectada({
+                    parada: paradaCercana,
+                    ruta: rutaAsociada,
+                    multiplesRutas: numRutas > 1 ? numRutas : null,
+                    estaSuscrito
+                });
+
                 // Centrar para ver ambos: usuario y parada
                 setMapBounds([[userPos[0], userPos[1]], [paradaCercana.latitud, paradaCercana.longitud]]);
-                setParadaDetectada({ parada: paradaCercana, ruta: rutaAsociada });
 
-                // Lógica de ETA: Solo si el usuario ya está suscrito a esta ruta
-                const rid = (rutaAsociada._id || rutaAsociada.id).toString();
-                const estaSuscrito = rutasFavoritas.some(f => (f._id || f.id).toString() === rid);
-                
+                // Lógica de ETA mejorada (funciona para todas las rutas si hay unidades)
                 let etaMinutos = null;
-                if (estaSuscrito) {
-                    const unidadesEnRuta = vehicles.filter(v => (v.rutaId || v.id_ruta)?.toString() === rid);
-                    if (unidadesEnRuta.length > 0) {
-                        let minDistUnidad = Infinity;
-                        unidadesEnRuta.forEach(u => {
-                            const d = calcularDistancia(u.pos[0], u.pos[1], paradaCercana.latitud, paradaCercana.longitud);
-                            if (d < minDistUnidad) {
-                                minDistUnidad = d;
-                            }
-                        });
-                        // Estimación simple: 300 metros por minuto
-                        etaMinutos = Math.max(1, Math.round(minDistUnidad / 300));
-                    }
+                const unidadesEnRuta = vehicles.filter(v => (v.rutaId || v.id_ruta)?.toString() === rid);
+                if (unidadesEnRuta.length > 0) {
+                    let minDistUnidad = Infinity;
+                    unidadesEnRuta.forEach(u => {
+                        const d = calcularDistancia(u.pos[0], u.pos[1], paradaCercana.latitud, paradaCercana.longitud);
+                        if (d < minDistUnidad) {
+                            minDistUnidad = d;
+                        }
+                    });
+                    // Estimación simple: 300 metros por minuto
+                    etaMinutos = Math.max(1, Math.round(minDistUnidad / 300));
                 }
 
                 setParadaDetectada(prev => ({ ...prev, eta: etaMinutos }));
-                
-                // Obtener trazado vial real (OSRM)
-                fetch(`https://router.project-osrm.org/route/v1/walking/${userPos[1]},${userPos[0]};${paradaCercana.longitud},${paradaCercana.latitud}?overview=full&geometries=geojson`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.routes?.[0]?.geometry?.coordinates) {
-                            const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                            setTrazoInvitacion(coords);
-                        }
-                    })
-                    .catch(err => console.error("Error obteniendo ruta peatonal:", err));
+
+                // Obtener trazado vial real (OSRM) de forma segura a través del servicio
+                obtenerRutaPorCalles(
+                    [[userPos[0], userPos[1]], [paradaCercana.latitud, paradaCercana.longitud]],
+                    'walking'
+                ).then(coords => {
+                    setTrazoInvitacion(coords);
+                });
 
                 disparar({
                     tipo: 'info',
-                    titulo: `Radar: Parada Detectada`,
-                    mensaje: `${paradaCercana.nombre}`
+                    titulo: estaSuscrito ? 'Ruta Habitual' : (numRutas > 1 ? `${numRutas} Rutas Detectadas` : `Radar: Parada Detectada`),
+                    mensaje: estaSuscrito ? `${paradaCercana.nombre} (En tu ruta)` : (numRutas > 1 ? `La más cercana es ${paradaCercana.nombre}` : `${paradaCercana.nombre}`)
                 });
             } else {
+                setParadaDetectada(null);
                 setTrazoInvitacion([]);
-                disparar({ 
-                    tipo: 'info', 
-                    titulo: 'Radar: Búsqueda Finalizada', 
-                    mensaje: `No hay paradas en un radio de 1km.` 
+                disparar({
+                    tipo: 'info',
+                    titulo: 'Radar: Búsqueda Finalizada',
+                    mensaje: `No hay paradas en un radio de 1km.`
                 });
             }
         } else {
@@ -401,11 +425,29 @@ const Pasajero = () => {
 
                         <Mapa center={mapCenter} bounds={mapBounds} onMapClick={() => seleccionarRuta(null)}>
                             <CapaGeometria routeLine={routeLine} unitPos={selectedVehicle?.pos} />
-                            <CapaParadas stops={paradas} />
-                            <CapaInvitacion 
-                                trazo={trazoInvitacion} 
-                                parada={paradaDetectada?.parada} 
+                            <CapaParadas
+                                stops={paradas}
+                                onStopClick={(p) => {
+                                    // Si la parada tiene una ruta asociada (ej. del radar)
+                                    if (p.ruta) {
+                                        seleccionarRuta(p.ruta);
+                                    } else if (selectedRoute) {
+                                        // Si ya hay una ruta seleccionada, mantenemos esa
+                                        seleccionarRuta(selectedRoute);
+                                    }
+                                }}
+                            />
+                            <CapaInvitacion
+                                trazo={trazoInvitacion}
+                                parada={paradaDetectada?.parada}
                                 eta={paradaDetectada?.eta}
+                                estaSuscrito={paradaDetectada?.estaSuscrito}
+                                onParadaClick={() => {
+                                    if (paradaDetectada?.ruta) {
+                                        seleccionarRuta(paradaDetectada.ruta);
+                                        setParadaDetectada(null);
+                                    }
+                                }}
                             />
                             <CapaVehiculos vehicles={vehicles} selectedVehicleId={selectedVehicle?.id} onVehicleClick={handleVehicleClick} />
                             {userPos && <CapaUsuario posicion={userPos} radio={mostrarRadar ? 1000 : 0} />}
@@ -417,7 +459,7 @@ const Pasajero = () => {
                             sinUnidades={vehicles.length === 0}
                             filtros={filtros}
                             onCambiarFiltros={setFiltros}
-                            onActivarAlerta={() => setIsReportModalOpen(true)}
+                            onActivarAlerta={() => disparar({ tipo: 'info', titulo: 'Reportar Incidencia', mensaje: 'Para reportar, selecciona una unidad activa en el mapa.' })}
                         />
 
                         {/* Motor de Simulación Modular */}
@@ -433,9 +475,10 @@ const Pasajero = () => {
                             <PanelRutaInteractiva
                                 vehicle={selectedVehicle}
                                 ruta={selectedRoute || rutasDisponibles.find(r => r._id.toString() === (selectedVehicle?.rutaId || selectedVehicle?.id_ruta)?.toString())}
+                                rutasFavoritas={rutasFavoritas}
+                                onToggleSuscripcion={handleToggleSuscripcion}
                                 onReport={() => {
-                                    setUnidadIdParaReportar(selectedVehicle?.id || selectedVehicle?._id);
-                                    setIsReportModalOpen(true);
+                                    // El reporte ahora se gestiona internamente en PanelRutaInteractiva
                                 }}
                                 onClose={() => seleccionarRuta(null)}
                                 onExpand={(state) => {
@@ -446,33 +489,41 @@ const Pasajero = () => {
                             />
                         )}
 
-                        <AlertaFlotante onClick={() => setIsReportModalOpen(true)} />
 
                         {/* Banner de Invitación del Radar */}
                         {paradaDetectada && (
-                            <div className="fixed top-24 left-4 right-4 z-[600] animate-in slide-in-from-top-10 duration-500">
-                                <div className="bg-white/90 backdrop-blur-xl border border-blue-100 shadow-2xl rounded-2xl p-4 flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                                        <MapPin className="w-6 h-6" />
+                            <div className="fixed top-30  z-[50] animate-in slide-in-from-top-1 duration-50">
+                                <div
+                                    onClick={() => {
+                                        seleccionarRuta(paradaDetectada.ruta);
+                                        setParadaDetectada(null);
+                                    }}
+                                    className={`bg-white/90 backdrop-blur-xl border ${paradaDetectada.estaSuscrito ? 'border-emerald-200 shadow-emerald-50' : 'border-blue-100 shadow-blue-50'} shadow-2xl rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white transition-all active:scale-[0.98]`}
+                                >
+                                    <div className={`w-12 h-12 ${paradaDetectada.estaSuscrito ? 'bg-emerald-600 shadow-emerald-100' : 'bg-blue-600 shadow-blue-100'} rounded-xl flex items-center justify-center text-white shadow-lg p-2.5`}>
+                                        <img src="/parada_bus.svg" className="w-full h-full brightness-0 invert" alt="Ubicación" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none mb-1">Cerca de ti</p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <p className={`text-[10px] font-black ${paradaDetectada.estaSuscrito ? 'text-emerald-600' : 'text-blue-600'} uppercase tracking-widest leading-none`}>
+                                                {paradaDetectada.estaSuscrito ? 'Ruta Habitual' : (paradaDetectada.multiplesRutas ? `${paradaDetectada.multiplesRutas} Rutas Cercanas` : 'Cerca de ti')}
+                                            </p>
+                                            {paradaDetectada.eta && (
+                                                <span className={`${paradaDetectada.estaSuscrito ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'} text-[9px] font-black px-2 py-0.5 rounded-full border`}>
+                                                    {paradaDetectada.eta} MIN
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-sm font-black text-slate-800 truncate">{paradaDetectada.parada.nombre}</p>
                                         <p className="text-[11px] text-slate-500 font-medium">Ruta: {paradaDetectada.ruta.nombre}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => {
-                                                seleccionarRuta(paradaDetectada.ruta);
+                                            onClick={(e) => {
+                                                e.stopPropagation();
                                                 setParadaDetectada(null);
                                             }}
-                                            className="px-4 py-2 bg-slate-900 text-white text-[11px] font-bold rounded-lg active:scale-95 transition-all"
-                                        >
-                                            Ver ruta
-                                        </button>
-                                        <button
-                                            onClick={() => setParadaDetectada(null)}
-                                            className="p-2 text-slate-400 hover:text-slate-600"
+                                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -533,13 +584,6 @@ const Pasajero = () => {
                 onActualizar={fetchPerfil}
             />
 
-            <ReporteModal
-                isOpen={isReportModalOpen}
-                onClose={() => { setIsReportModalOpen(false); setUnidadIdParaReportar(null); }}
-                unidadId={unidadIdParaReportar}
-                rutaId={selectedRoute?._id || selectedVehicle?.rutaId}
-                token={token}
-            />
         </main>
     );
 };

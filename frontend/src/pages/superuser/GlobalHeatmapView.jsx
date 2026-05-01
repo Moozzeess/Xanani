@@ -124,8 +124,15 @@ export default function GlobalHeatmapView() {
     } else {
       // markercluster
       const group = L.markerClusterGroup({ chunkedLoading: true });
+      const stopIcon = L.divIcon({
+        html: `<img src="/parada_bus.svg" style="width: 24px; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />`,
+        className: 'bg-transparent',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
       BASE_POINTS.forEach(([lat, lng]) => {
-        L.marker([lat, lng]).addTo(group);
+        L.marker([lat, lng], { icon: stopIcon }).addTo(group);
       });
       layerRef.current = group;
       mapRef.current.addLayer(group);

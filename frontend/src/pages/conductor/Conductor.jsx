@@ -45,6 +45,7 @@ const Conductor = () => {
     isTesting, 
     setIsTesting, 
     simulatedPosition, 
+    heading: simulatedHeading,
     siguienteParada: paradaSiguienteSimulada,
     resetSimulation 
   } = useConductorSimulation(routeLine, paradas, viewMode === 'conduccion');
@@ -58,27 +59,7 @@ const Conductor = () => {
   const [profileData, setProfileData] = useState(null);
   const [ubicacionReal, setUbicacionReal] = useState(null);
 
-  // Obtener ubicación real del dispositivo con seguimiento continuo
-  useEffect(() => {
-    let watchId = null;
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          setUbicacionReal([pos.coords.latitude, pos.coords.longitude]);
-        },
-        (error) => {
-          // No loguear error de permisos repetidamente, solo si es algo crítico
-          if (error.code !== 1) { // 1 = PERMISSION_DENIED
-             console.warn("Señal GPS no disponible actualmente.");
-          }
-        },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-      );
-    }
-    return () => {
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-    };
-  }, []);
+  // El GPS del dispositivo (navegador) ha sido desactivado a favor del GPS de hardware físico.
 
   // Inicializar Socket
   useEffect(() => {
@@ -208,6 +189,16 @@ const Conductor = () => {
 
       // Si recibimos datos, el hardware está activo
       setIsHardwareActive(true);
+
+      // Actualizar ubicación real desde el GPS del hardware
+      if (payload.gps && payload.gps.lat !== 0 && payload.gps.lon !== 0) {
+        setUbicacionReal([payload.gps.lat, payload.gps.lon]);
+      }
+
+      // Actualizar conteo de pasajeros desde el hardware si está disponible
+      if (payload.pasajeros && payload.pasajeros.act !== undefined) {
+        setPassengerCount(payload.pasajeros.act);
+      }
 
       // Reiniciar el temporizador de desconexión (30 segundos)
       if (hardwareTimeoutRef.current) {
@@ -394,6 +385,7 @@ const Conductor = () => {
           } 
           tileTheme="standard"
           zoom={viewMode === 'conduccion' ? 18 : 16}
+          followDuration={viewMode === 'conduccion' ? 0.3 : 1.5}
         >
           <CapaGeometria routeLine={routeLine} isDashed={false} />
           <CapaParadas stops={paradas} />
@@ -404,7 +396,8 @@ const Conductor = () => {
                    (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332])), 
               color: 'bg-emerald-500', 
               text: 'text-white',
-              eta: 'Tú'
+              eta: 'Tú',
+              rotation: isTesting ? simulatedHeading : 0
             }]} 
             selectedVehicleId="self"
           />

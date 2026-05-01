@@ -44,10 +44,9 @@ const PanelDescubrimiento = ({
   };
 
   return (
-    <div className="panel-descubrimiento absolute top-4 left-4 right-4 z-[500] flex flex-col gap-2 pointer-events-none">
-
+    <div className="flex flex-col gap-2 pointer-events-none">
       {/* Fila superior: estado del sistema + contador */}
-      <div className="flex items-center justify-between pointer-events-auto">
+      <div className="flex items-center justify-end pointer-events-auto">
         <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border border-white/60">
           {sinUnidades ? (
             <WifiOff className="w-3.5 h-3.5 text-slate-400" />
@@ -59,46 +58,6 @@ const PanelDescubrimiento = ({
           </span>
         </div>
       </div>
-
-      {/* Fila de chips de filtro */}
-      {!sinUnidades && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto pb-0.5">
-          {/* Separador visual */}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 backdrop-blur shadow text-[10px] text-slate-400 font-bold border border-slate-100 flex-shrink-0">
-            <Filter className="w-3 h-3" /> Estado
-          </div>
-
-          {ESTADOS.map((e) => (
-            <button
-              key={e.valor}
-              onClick={() => toggleEstado(e.valor)}
-              className={`chip-filtro flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-bold border transition-all active:scale-95 shadow-sm
-                ${filtrosEstado.includes(e.valor)
-                  ? e.color + ' shadow-md scale-105'
-                  : 'bg-white/90 backdrop-blur text-slate-500 border-slate-200'
-                }`}
-            >
-              {e.etiqueta}
-            </button>
-          ))}
-
-          <div className="w-px bg-slate-200 mx-1 self-stretch flex-shrink-0" />
-
-          {OCUPACIONES.map((o) => (
-            <button
-              key={o.valor}
-              onClick={() => toggleOcupacion(o.valor)}
-              className={`chip-filtro flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-bold border transition-all active:scale-95 shadow-sm
-                ${filtrosOcupacion.includes(o.valor)
-                  ? o.color + ' shadow-md scale-105'
-                  : 'bg-white/90 backdrop-blur text-slate-500 border-slate-200'
-                }`}
-            >
-              {o.etiqueta}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
