@@ -14,7 +14,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { io } from 'socket.io-client';
 import { Layers, RefreshCw, Info, Move, Wifi, WifiOff } from 'lucide-react';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? `http://${window.location.hostname}:4000`;
 
 // ─── Cuánto tiempo (ms) mantener un punto "vivo" en el mapa ──────────────────
 const PUNTO_TTL_MS = 30_000; // 30 segundos sin actualización → se elimina
