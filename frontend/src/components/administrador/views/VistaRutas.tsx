@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAlertaGlobal } from '../../../context/AlertaContext';
 import { ListaRutas } from './ListaRutas';
 import { EditorRutas } from './EditorRutas';
+import { ModalVerRuta } from './ModalVerRuta';
 import api from '../../../services/api';
 import { useAuth } from '../../../auth/useAuth';
 import '../../../Styles/VistaRutas.css';
@@ -13,6 +14,9 @@ const VistaRutas: React.FC = () => {
   // Estado para controlar la vista activa ('lista' o 'editor')
   const [estadoVista, setEstadoVista] = useState<'lista' | 'editor'>('lista');
   const [rutaSeleccionada, setRutaSeleccionada] = useState<any>(null);
+  
+  // Estado para el modal de visualización
+  const [rutaParaVer, setRutaParaVer] = useState<any>(null);
 
   // Estado para almacenar todas las rutas de la base de datos o simuladas
   const [rutas, setRutas] = useState<any[]>([]);
@@ -50,13 +54,42 @@ const VistaRutas: React.FC = () => {
     }
   };
 
+  const manejarEliminarRuta = async (rutaId: string) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta ruta? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      if (!token) return;
+      await api.delete(`/rutas/${rutaId}`, { headers: { Authorization: `Bearer ${token}` } });
+      disparar({ tipo: 'exito', titulo: 'Eliminada', mensaje: 'La ruta ha sido eliminada del sistema.' });
+      fetchRutas();
+    } catch (err) {
+      dispararError('Error al eliminar', 'No se pudo eliminar la ruta seleccionada.');
+    }
+  };
+
+  const manejarVerRuta = (ruta: any) => {
+    setRutaParaVer(ruta);
+  };
+
   if (estadoVista === 'lista') {
     return (
-      <ListaRutas
-        rutas={rutas}
-        alHacerClicCrear={() => { setRutaSeleccionada(null); setEstadoVista('editor'); }}
-        alHacerClicEditar={(ruta) => { setRutaSeleccionada(ruta); setEstadoVista('editor'); }}
-      />
+      <>
+        <ListaRutas
+          rutas={rutas}
+          alHacerClicCrear={() => { setRutaSeleccionada(null); setEstadoVista('editor'); }}
+          alHacerClicEditar={(ruta) => { setRutaSeleccionada(ruta); setEstadoVista('editor'); }}
+          alHacerClicVer={manejarVerRuta}
+          alHacerClicEliminar={manejarEliminarRuta}
+        />
+        {rutaParaVer && (
+          <ModalVerRuta 
+            ruta={rutaParaVer} 
+            alCerrar={() => setRutaParaVer(null)} 
+          />
+        )}
+      </>
     );
   }
 

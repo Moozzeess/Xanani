@@ -1,13 +1,21 @@
 import React from 'react';
-import { Plus, Navigation, MapPin, ArrowLeft, Map as MapIcon } from 'lucide-react';
+import { Plus, Navigation, MapPin, ArrowLeft, Map as MapIcon, Eye, Trash2 } from 'lucide-react';
 
 interface PropsListaRutas {
   rutas: any[];
   alHacerClicCrear: () => void;
   alHacerClicEditar: (ruta: any) => void;
+  alHacerClicVer: (ruta: any) => void;
+  alHacerClicEliminar: (rutaId: string) => void;
 }
 
-export const ListaRutas: React.FC<PropsListaRutas> = ({ rutas, alHacerClicCrear, alHacerClicEditar }) => {
+export const ListaRutas: React.FC<PropsListaRutas> = ({
+  rutas,
+  alHacerClicCrear,
+  alHacerClicEditar,
+  alHacerClicVer,
+  alHacerClicEliminar
+}) => {
   return (
     <div className="flex flex-col gap-6 fade-in">
       <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -44,26 +52,39 @@ export const ListaRutas: React.FC<PropsListaRutas> = ({ rutas, alHacerClicCrear,
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {rutas.map((ruta, index) => (
-            <div key={ruta._id || index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-blue-300 transition-colors group">
+            <div key={ruta._id || index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-blue-300 transition-colors group relative">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 group-hover:bg-blue-100 transition-all">
                   <Navigation className="w-6 h-6" />
                 </div>
-                <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${(!ruta.estado || ruta.estado === 'Activa') ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
-                  {ruta.estado || 'Activa'}
-                </span>
+                <div className="flex items-center gap-2">
+
+                  <button
+                    onClick={() => alHacerClicEliminar(ruta._id)}
+                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    title="Eliminar Ruta"
+                  >
+                    <Trash2 className="w-4.5 h-4.5" />
+                  </button>
+                </div>
               </div>
               <h3 className="font-bold text-lg text-slate-800 mb-1">{ruta.nombre}</h3>
               <div className="flex items-center gap-2 text-slate-500 text-sm mt-3 bg-slate-50 px-3 py-2 rounded-lg w-fit border border-slate-100">
                 <MapPin className="w-4 h-4 text-blue-500" />
-                <span className="font-medium text-slate-600">{Array.isArray(ruta.paradas) ? ruta.paradas.length : ruta.paradas} paradas trazadas</span>
+                <span className="font-medium text-slate-600">{Array.isArray(ruta.paradas) ? ruta.paradas.length : 0} paradas trazadas</span>
               </div>
-              <div className="mt-6 pt-5 border-t border-slate-100 flex justify-end">
+              <div className="mt-6 pt-5 border-t border-slate-100 flex justify-between gap-2">
+                <button
+                  onClick={() => alHacerClicVer(ruta)}
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors border border-blue-100"
+                >
+                  <Eye className="w-4 h-4" /> Ver Ruta
+                </button>
                 <button
                   onClick={() => alHacerClicEditar(ruta)}
-                  className="bg-slate-50 hover:bg-slate-100 text-blue-600 px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors border border-slate-200 hover:border-blue-200"
+                  className="bg-slate-50 hover:bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors border border-slate-200 hover:border-blue-200"
                 >
-                  Editar Detalles <ArrowLeft className="w-4 h-4 rotate-180" />
+                  Editar <ArrowLeft className="w-4 h-4 rotate-180" />
                 </button>
               </div>
             </div>

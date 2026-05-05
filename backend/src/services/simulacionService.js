@@ -40,6 +40,7 @@ const iniciarSimulacionPasajeros = async () => {
             capacidadMaxima: ruta.configuracionDespacho?.capacidadMaxima || 15,
             ocupacionActual: Math.floor(Math.random() * (ruta.configuracionDespacho?.capacidadMaxima || 5)),
             isSimulated: true,
+            isBackground: true,
             estado: 'en_ruta'
           });
         }
@@ -72,6 +73,7 @@ const iniciarSimulacionPasajeros = async () => {
           ocupacionActual: unidad.ocupacionActual,
           capacidadMaxima: unidad.capacidadMaxima,
           isSimulated: true,
+          isBackground: true,
           rutaId: unidad.rutaId,
           rutaNombre: unidad.rutaNombre,
           estado: unidad.estado

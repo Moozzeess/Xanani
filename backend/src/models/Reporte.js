@@ -67,6 +67,12 @@ const reporteSchema = new mongoose.Schema(
       default: null
     },
 
+    respuestaAdmin: {
+      type: String,
+      trim: true,
+      default: null
+    },
+    
     estado: {
       type: String,
       enum: ['PENDIENTE', 'REVISADO', 'RESUELTO'],

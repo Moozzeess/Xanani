@@ -199,3 +199,66 @@ exports.eliminarReporte = async (req, res) => {
     });
   }
 };
+/**
+ * Envía una respuesta administrativa a un reporte de pasajero.
+ * @param {string} req.params.id - ID del reporte.
+ * @param {string} req.body.respuesta - Texto de la respuesta.
+ */
+exports.responderReporte = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { respuesta } = req.body;
+
+    if (!respuesta || respuesta.trim() === '') {
+      return res.status(400).json({ mensaje: 'La respuesta no puede estar vacía' });
+    }
+
+    const reporte = await Reporte.findByIdAndUpdate(
+      id,
+      { 
+        respuestaAdmin: respuesta,
+        estado: 'RESUELTO' // Al responder, marcamos automáticamente como resuelto
+      },
+      { new: true }
+    ).populate('usuario', 'username email')
+     .populate('unidad', 'placa')
+     .populate('ruta', 'nombre');
+
+    if (!reporte) {
+      return res.status(404).json({ mensaje: 'Reporte no encontrado' });
+    }
+
+    // DISPARAR NOTIFICACIÓN EN TIEMPO REAL
+    socketService.emitirEvento('aviso_pasajero', {
+      titulo: 'Respuesta de Administración',
+      mensaje: `El administrador ha respondido a tu reporte: "${respuesta}"`,
+      tipo: 'EXITO',
+      usuarioDestino: reporte.usuario._id
+    }, null, reporte.usuario._id);
+
+    // PERSISTIR NOTIFICACIÓN
+    try {
+      await Notificacion.create({
+        titulo: 'Respuesta de Administración',
+        mensaje: `Respuesta: ${respuesta}`,
+        tipo: 'INFO',
+        rolDestino: 'PASAJERO',
+        usuarioDestino: reporte.usuario._id,
+        data: { reporteId: reporte._id, respuesta: respuesta }
+      });
+    } catch (notifError) {
+      console.error('Error al persistir notificación de respuesta:', notifError);
+    }
+
+    res.json({
+      mensaje: 'Respuesta enviada correctamente',
+      reporte
+    });
+  } catch (error) {
+    console.error("Error en responderReporte:", error);
+    res.status(500).json({
+      mensaje: 'Error al enviar la respuesta',
+      error: error.message
+    });
+  }
+};

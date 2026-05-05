@@ -7,15 +7,17 @@ export interface SOSModalProps {
   isOpen: boolean;
   onClose: () => void;
   incidencia?: {
+    _id?: string;
     conductor?: { nombre: string; apellido: string; username: string; foto?: string };
     unidadId?: string;
     ubicacion?: { latitud: number; longitud: number };
     descripcion?: string;
     timestamp?: string;
   };
+  onDespacharAyuda?: (idUnidad: string) => void;
 }
 
-const SOSModal: React.FC<SOSModalProps> = ({ isOpen, onClose, incidencia }) => {
+const SOSModal: React.FC<SOSModalProps> = ({ isOpen, onClose, incidencia, onDespacharAyuda }) => {
   const miniMapRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
@@ -110,9 +112,14 @@ const SOSModal: React.FC<SOSModalProps> = ({ isOpen, onClose, incidencia }) => {
             </button>
             <button
               type="button"
+              onClick={() => {
+                if (onDespacharAyuda && incidencia?.unidadId) {
+                  onDespacharAyuda(incidencia.unidadId);
+                }
+              }}
               className="bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 shadow-lg shadow-red-600/30"
             >
-              Despachar Ayuda
+              Ver mapa
             </button>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { htmlMarcadorVehiculo } from './Utils/IconosFactory';
  * Evita el lag y la vibración reutilizando instancias de marcadores y actualizando
  * sus posiciones en lugar de recrearlos en cada renderizado.
  */
-const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, onVehicleClick = (v) => {} }) => {
+const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, mostrarDetallesHw = false, onVehicleClick = (v) => {} }) => {
     const map = useMapaInstance();
     const markersGroupRef = useRef(L.layerGroup());
     const markersMapRef = useRef(new Map()); // id -> marker instance
@@ -43,7 +43,7 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, onVehicleClick
                 // Crear nuevo marcador si no existe
                 const icon = L.divIcon({
                     className: 'bg-transparent',
-                    html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0),
+                    html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0, mostrarDetallesHw),
                     iconSize: [48, 48],
                     iconAnchor: [24, 24],
                 });
@@ -71,7 +71,7 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, onVehicleClick
                 if (rotationDiff > 1 || enSeguimiento !== marker._lastEnSeguimiento) {
                     const icon = L.divIcon({
                         className: 'bg-transparent',
-                        html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0),
+                        html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0, mostrarDetallesHw),
                         iconSize: [48, 48],
                         iconAnchor: [24, 24],
                     });
@@ -82,11 +82,18 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, onVehicleClick
             }
 
             // Actualizar Popup
+            const isHwOff = v.isSimulated && !v.isBackground;
             const popupContent = `
                 <div class="text-center p-1">
                     <div class="font-bold text-slate-800">${v.placa || 'Unidad'}</div>
-                    <div class="text-[10px] text-slate-500">${v.conductor || 'Conductor asignado'}</div>
-                    ${v.isSimulated ? '<div class="mt-1 text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">SIMULACIÓN</div>' : ''}
+                    <div class="text-[10px] text-slate-500">${v.conductorNombre || v.conductor || 'Operador en Ruta'}</div>
+                    ${v.isBackground ? '<div class="mt-1 text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase">Simulación de Sistema</div>' : ''}
+                    ${isHwOff ? (
+                        mostrarDetallesHw 
+                        ? '<div class="mt-1 text-[9px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-bold uppercase">Hardware Desactivado</div>'
+                        : '<div class="mt-1 text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold uppercase">Unidad en Simulación</div>'
+                    ) : ''}
+                    ${(!v.isBackground && !isHwOff && mostrarDetallesHw) ? '<div class="mt-1 text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-bold uppercase">Hardware Activo</div>' : ''}
                 </div>
             `;
             

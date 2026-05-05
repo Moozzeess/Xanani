@@ -3,18 +3,22 @@
  * Centraliza la generación de HTML/SVG para asegurar consistencia visual entre roles.
  */
 
-export const htmlMarcadorVehiculo = (v, enSeguimiento = false, rotation = 0) => {
+export const htmlMarcadorVehiculo = (v, enSeguimiento = false, rotation = 0, mostrarDetallesHw = false) => {
   const colorClass = v.color || 'bg-blue-600';
   const txtColor = v.text || 'text-white';
   const labelEta = v.eta != null ? (v.eta < 1 ? '<1m' : `${v.eta}m`) : v.eta || 'Desc.';
   const esDemoStyle = v.esDemo ? ' opacity-90 saturate-[0.8]' : '';
 
+  const isHwOff = v.isSimulated && !v.isBackground;
+  const badgeText = v.isBackground ? 'SIM' : (isHwOff ? (mostrarDetallesHw ? 'HW OFF' : 'SIM') : labelEta);
+  const badgeClass = (isHwOff && mostrarDetallesHw) ? 'bg-orange-500 border-orange-200 text-white' : 'bg-slate-900/90 border-white/20 text-white';
+
   return `
     <div class="bus-marker-container relative w-12 h-12 flex items-center justify-center transition-transform cursor-pointer${esDemoStyle}" 
          style="transform: rotate(${rotation}deg);">
-      <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow-xl border border-white/20 z-20 whitespace-nowrap"
+      <div class="absolute -top-7 left-1/2 -translate-x-1/2 ${badgeClass} backdrop-blur px-2 py-0.5 rounded-md text-[9px] font-bold shadow-xl border z-20 whitespace-nowrap"
            style="transform: translateX(-50%) rotate(${-rotation}deg);">
-        ${v.esDemo ? ' SIM ' : ''}${labelEta}
+        ${badgeText}
       </div>
       <!-- Halo pulsante tipo Xanani Premium -->
       <div class="absolute inset-0 rounded-2xl bg-blue-500 opacity-30 animate-ping"></div>

@@ -58,6 +58,53 @@ const Conductor = () => {
   const hardwareTimeoutRef = React.useRef(null);
   const [profileData, setProfileData] = useState(null);
   const [ubicacionReal, setUbicacionReal] = useState(null);
+  const [isSOS, setIsSOS] = useState(false);
+  const wakeLockRef = React.useRef(null);
+
+  // Gestión de Screen Wake Lock para evitar que la pantalla se apague en ruta
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator && viewMode === 'conduccion') {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          console.log('Screen Wake Lock activado');
+          
+          wakeLockRef.current.addEventListener('release', () => {
+            console.log('Screen Wake Lock liberado');
+          });
+        } catch (err) {
+          console.error(`Error al activar Wake Lock: ${err.name}, ${err.message}`);
+        }
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    };
+
+    if (viewMode === 'conduccion') {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    // Re-solicitar si el documento vuelve a ser visible (ej. cambiar pestaña)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && viewMode === 'conduccion') {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      releaseWakeLock();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [viewMode]);
 
   // El GPS del dispositivo (navegador) ha sido desactivado a favor del GPS de hardware físico.
 
@@ -152,8 +199,10 @@ const Conductor = () => {
         rutaId: rawIds.rutaId,
         conductorId: rawIds.conductorProfileId,
         isSimulated: isTesting,
+        isBackground: false,
         ocupacionActual: passengerCount,
-        capacidadMaxima: capacity
+        capacidadMaxima: capacity,
+        estado: isSOS ? 'sos' : (isTesting ? 'simulado' : 'en_ruta')
       });
     }
   }, [simulatedPosition, ubicacionReal, isTesting, socket, viewMode, rawIds, unidadActual, passengerCount, capacity]);
@@ -282,6 +331,7 @@ const Conductor = () => {
 
   const handleTriggerSOS = () => {
     addToastNotification('SOS Registrado', 'Autoridades alertadas discretamente.', 'alert');
+    setIsSOS(true);
     if (socket) {
       const posActual = (isTesting && simulatedPosition) ? simulatedPosition : ubicacionReal;
       socket.emit('reporte_incidencia', {
@@ -343,6 +393,7 @@ const Conductor = () => {
 
   const ejecutarInicioRuta = (simular) => {
     setIsTesting(simular);
+    setIsSOS(false);
     setViewMode('conduccion');
     setPassengerCount(0);
     setTripStats({
@@ -357,6 +408,7 @@ const Conductor = () => {
 
   const handleStopRoute = async () => {
     resetSimulation();
+    setIsSOS(false);
     const timeEnded = Date.now();
     const durationMs = timeEnded - (tripStats.timeStarted || timeEnded);
     const durationMinutes = Math.max(1, Math.floor(durationMs / 60000));

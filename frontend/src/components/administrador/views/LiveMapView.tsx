@@ -7,7 +7,11 @@ import { useSocket } from '../../../hooks/useSocket';
 import api from '../../../services/api';
 import { useAuth } from '../../../auth/useAuth';
 
-const LiveMapView: React.FC = () => {
+interface LiveMapViewProps {
+  targetUnitId?: string | null;
+}
+
+const LiveMapView: React.FC<LiveMapViewProps> = ({ targetUnitId }) => {
   const { socket } = useSocket();
   const { token } = useAuth();
 
@@ -17,27 +21,29 @@ const LiveMapView: React.FC = () => {
   const [routeLine, setRouteLine] = useState<[number, number][]>([]);
   const [paradas, setParadas] = useState<any[]>([]);
   const [mapCenter, setMapCenter] = useState<[number, number]>([19.4326, -99.1332]);
+  const [zoom, setZoom] = useState(14);
 
   // 1. Escuchar actualizaciones de Socket.io y actualizar estado de vehículos
   useEffect(() => {
     if (!socket) return;
 
     const handleUbicacion = (datos: any) => {
-      const { unidadId, ubicacion, detalles, isSimulation, estado, rutaId } = datos;
-      if (!ubicacion?.latitud || !ubicacion?.longitud) return;
+      // Sincronizar con el formato emitido por Conductor.jsx (id, pos, placa, isSimulated, etc.)
+      const { id, pos, placa, isSimulated, isBackground, estado, rutaId } = datos;
+      if (!pos || pos.length < 2) return;
 
-      const pos: [number, number] = [ubicacion.latitud, ubicacion.longitud];
       const statusColor = estado === 'sos' ? 'bg-red-600' : 'bg-blue-600';
 
       setVehicles(prev => {
-        const index = prev.findIndex(v => v.id === unidadId);
+        const index = prev.findIndex(v => v.id === id);
         const updatedVehicle = {
-          id: unidadId,
+          id,
           pos,
           color: statusColor,
-          placa: detalles || `Unidad ${unidadId}`,
-          isSimulated: isSimulation,
-          rutaId: rutaId,
+          placa: placa || `Unidad ${id?.toString().slice(-4)}`,
+          isSimulated,
+          isBackground,
+          rutaId,
           estado
         };
 
@@ -88,6 +94,18 @@ const LiveMapView: React.FC = () => {
     }
   }, [selectedUnit, token]);
 
+  // 3. Enfoque automático en unidad objetivo (SOS / Despacho)
+  useEffect(() => {
+    if (targetUnitId && vehicles.length > 0) {
+      const target = vehicles.find(v => v.id === targetUnitId);
+      if (target && target.pos) {
+        setMapCenter(target.pos);
+        setSelectedUnit(target);
+        setZoom(18); // Zoom máximo para ver la ubicación exacta del SOS
+      }
+    }
+  }, [targetUnitId, vehicles]);
+
   return (
     <div
       id="view-map"
@@ -96,14 +114,22 @@ const LiveMapView: React.FC = () => {
       <Mapa 
         center={mapCenter} 
         tileTheme="light" 
-        zoom={14}
+        zoom={zoom}
       >
         {/* Capas modulares con estilos específicos de Administrador */}
-        <CapaGeometria routeLine={routeLine as any} isDashed={true} color="#3b82f6" />
-        <CapaParadas stops={paradas as any} />
+        <CapaGeometria 
+          routeLine={routeLine as any} 
+          unitPos={selectedUnit?.pos}
+          color="#3b82f6" 
+        />
+        <CapaParadas 
+          stops={paradas as any} 
+          onStopClick={() => {}} 
+        />
         <CapaVehiculos 
             vehicles={vehicles as any} 
             selectedVehicleId={selectedUnit?.id}
+            mostrarDetallesHw={true}
             onVehicleClick={(v: any) => setSelectedUnit(v)}
         />
       </Mapa>

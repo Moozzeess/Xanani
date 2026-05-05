@@ -83,9 +83,9 @@ const Pasajero = () => {
             const id = datos.id || datos.placa;
             const index = prev.findIndex(v => v.id === id);
 
-            // Si es una actualización de una unidad real recibida por el socket principal
+            // Si es una actualización de una unidad real (con conductor) o simulación de conductor
             let finalData = { ...datos };
-            if (!datos.isSimulated) {
+            if (!datos.isBackground) {
                 let colorClass = 'bg-blue-400';
                 let occLabel = 'Baja';
                 // 1. Determinar el número real de asientos y ocupados
@@ -109,6 +109,14 @@ const Pasajero = () => {
             if (index === -1) return [...prev, finalData];
             const newVehicles = [...prev];
             newVehicles[index] = finalData;
+
+            // LÓGICA DE LIMPIEZA: Si esta es una unidad REAL (con conductor), eliminar cualquier simulación de fondo previa de esta ruta
+            if (!finalData.isBackground) {
+                const rid = finalData.rutaId || finalData.id_ruta;
+                return newVehicles.filter(v => 
+                    !v.isBackground || (v.rutaId || v.id_ruta)?.toString() !== rid?.toString()
+                );
+            }
 
             // Actualizar vehículo seleccionado si es el que cambió
             if (selectedVehicle?.id === id) {
@@ -264,17 +272,9 @@ const Pasajero = () => {
         // Cargar paradas
         setParadas(ruta.paradas || []);
 
-        // Calcular Bounds para hacer Zoom a la ruta completa
-        if (ruta.paradas && ruta.paradas.length > 0) {
-            const points = ruta.paradas.map(p => [parseFloat(p.latitud), parseFloat(p.longitud)]);
-            setMapBounds(points);
-        } else if (ruta.geometria && ruta.geometria.length > 0) {
-            const points = ruta.geometria[0]?.latitud
-                ? ruta.geometria.map(p => [p.latitud, p.longitud])
-                : ruta.geometria;
-            setMapBounds(points);
-        }
-
+        // Zoom automático removido según requerimiento para evitar "forzar" la vista.
+        // El usuario tiene control total sobre el desplazamiento.
+        
         disparar({
             tipo: 'info',
             titulo: 'Ruta Seleccionada',
@@ -467,6 +467,7 @@ const Pasajero = () => {
                             socket={socket}
                             rutas={rutasDisponibles}
                             rutasSuscritas={rutasFavoritas.map(r => (r._id || r.id).toString())}
+                            vehicles={vehicles}
                             onUpdate={actualizarVehiculo}
                         />
 

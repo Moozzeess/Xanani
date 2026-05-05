@@ -45,6 +45,7 @@ interface Reporte {
   encontroAsiento: boolean | null;
   destinatario?: string | null;
   estado: 'PENDIENTE' | 'REVISADO' | 'RESUELTO';
+  respuestaAdmin?: string | null;
   createdAt: string;
 }
 
@@ -61,6 +62,8 @@ const ReportsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<string>('TODOS');
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS');
+  const [respuestas, setRespuestas] = useState<{[key: string]: string}>({});
+  const [enviandoRespuesta, setEnviandoRespuesta] = useState<string | null>(null);
 
   /**
    * Carga inicial de reportes desde el servidor.
@@ -138,6 +141,48 @@ const ReportsView: React.FC = () => {
       });
     } catch (error: any) {
       dispararError('Error al actualizar el estado del reporte', error.response?.data?.mensaje);
+    }
+  };
+
+  /**
+   * Envía una respuesta administrativa al pasajero.
+   */
+  const enviarRespuesta = async (id: string) => {
+    try {
+      const texto = respuestas[id];
+      if (!texto || texto.trim() === '') {
+        disparar({ tipo: 'advertencia', titulo: 'Respuesta Vacía', mensaje: 'Por favor escribe un mensaje para el pasajero.' });
+        return;
+      }
+
+      if (!token) return;
+      setEnviandoRespuesta(id);
+
+      const res = await api.post(`/reportes/${id}/respuesta`, { respuesta: texto }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setReportes(prev => 
+        prev.map(r => r._id === id ? { ...r, ...res.data.reporte } : r)
+      );
+
+      disparar({
+        tipo: 'exito',
+        titulo: 'Respuesta Enviada',
+        mensaje: 'El pasajero ha sido notificado con tu mensaje.'
+      });
+
+      // Limpiar el input local
+      setRespuestas(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+    } catch (error: any) {
+      dispararError('Error al enviar la respuesta', error.response?.data?.mensaje);
+    } finally {
+      setEnviandoRespuesta(null);
     }
   };
 
@@ -436,6 +481,42 @@ const ReportsView: React.FC = () => {
                   </button>
                 </div>
               )}
+
+              {/* Área de Respuesta Administrativa */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                {reporte.respuestaAdmin ? (
+                  <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles size={14} className="text-emerald-600" />
+                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">Tu Respuesta</span>
+                    </div>
+                    <p className="text-xs text-emerald-800 font-medium italic">"{reporte.respuestaAdmin}"</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <textarea 
+                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs font-medium focus:border-blue-500 focus:bg-white transition-all outline-none min-h-[60px] resize-none"
+                        placeholder="Escribe una respuesta para el pasajero..."
+                        value={respuestas[reporte._id] || ''}
+                        onChange={(e) => setRespuestas(prev => ({ ...prev, [reporte._id]: e.target.value }))}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => enviarRespuesta(reporte._id)}
+                      disabled={enviandoRespuesta === reporte._id}
+                      className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {enviandoRespuesta === reporte._id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <MessageSquare size={14} />
+                      )}
+                      Atender y Enviar Respuesta
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Botón de eliminar (siempre visible para admin) */}
               <button 

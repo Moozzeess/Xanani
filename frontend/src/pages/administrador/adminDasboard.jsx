@@ -31,6 +31,7 @@ const AdminDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSOSOpen, setIsSOSOpen] = useState(false);
   const [activeSOS, setActiveSOS] = useState(null);
+  const [targetUnitId, setTargetUnitId] = useState(null);
   const [notificaciones, setNotificaciones] = useState([]);
 
   // Conteo de incidentes pendientes para el Sidebar
@@ -95,6 +96,15 @@ const AdminDashboard = () => {
   const switchView = useCallback((view) => {
     setActiveView(view);
     setIsSidebarOpen(false);
+    // Limpiar el objetivo si cambiamos de vista manualmente
+    if (view !== 'map') setTargetUnitId(null);
+  }, []);
+
+  const handleDespacharAyuda = useCallback((unitId) => {
+    setTargetUnitId(unitId);
+    setActiveView('map');
+    setIsSOSOpen(false);
+    setIsSidebarOpen(false);
   }, []);
 
   return (
@@ -126,7 +136,7 @@ const AdminDashboard = () => {
 
         <main id="main-container" className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
           {activeView === 'dashboard' && <DashboardView onGoToIncidents={() => switchView('incidents')} />}
-          {activeView === 'map' && <LiveMapView />}
+          {activeView === 'map' && <LiveMapView targetUnitId={targetUnitId} />}
           {activeView === 'drivers' && <DriversView />}
           {activeView === 'routes' && <VistaRutas />}
           {activeView === 'units' && <UnitsView />}
@@ -139,6 +149,7 @@ const AdminDashboard = () => {
         isOpen={isSOSOpen} 
         onClose={() => setIsSOSOpen(false)} 
         incidencia={activeSOS} 
+        onDespacharAyuda={handleDespacharAyuda}
       />
     </div>
   );

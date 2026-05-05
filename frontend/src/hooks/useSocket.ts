@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const host = window.location.hostname;
-const SOCKET_URL = `http://${host}:4000`;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `http://${window.location.hostname}:4000`;
 
 // Singleton de socket
 let globalSocket: Socket | null = null;
