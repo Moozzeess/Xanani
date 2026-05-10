@@ -14,7 +14,7 @@ const TIPOS_INCIDENCIA = [
 /**
  * PanelRutaInteractiva (Versión Real-Time Premium)
  */
-const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSuscripcion, onExpand, onReport, onClose }) => {
+const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSuscripcion, onExpand, onCentrarParada, onReport, onClose }) => {
     const [viewState, setViewState] = useState('collapsed');
     const [mostrarReporte, setMostrarReporte] = useState(false);
     const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
@@ -274,14 +274,19 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSusc
                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Itinerario Completo</h3>
                         <div className="space-y-4">
                             {paradas.map((p, idx) => (
-                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 p-1.5">
+                                <div 
+                                    key={idx} 
+                                    onClick={() => onCentrarParada?.(p)}
+                                    className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors group"
+                                >
+                                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 p-1.5 group-hover:scale-110 transition-transform">
                                         <img src="/parada_bus.svg" className="w-full h-full" alt="Parada" />
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-sm font-black text-slate-800">{p.nombre}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Estación {idx + 1}</p>
                                     </div>
+                                    <MapPin className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             ))}
                         </div>
@@ -303,10 +308,15 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSusc
                                     }
                                     const min = estimarMinutos(distAcumulada);
                                     return (
-                                        <div key={i} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div 
+                                            key={i} 
+                                            onClick={() => onCentrarParada?.(p)}
+                                            className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors group"
+                                        >
                                             <div className={`w-3 h-3 rounded-full ${i === 0 ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-300'}`}></div>
                                             <span className="text-sm font-bold text-slate-700">{p.nombre}</span>
                                             <span className="ml-auto text-[10px] font-black text-slate-400">{distAcumulada < 50 ? 'LLEGANDO' : `LLEGA EN ${min} MIN`}</span>
+                                            <MapPin className="w-3.5 h-3.5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                     );
                                 });
@@ -348,11 +358,15 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSusc
                                         }
 
                                         return (
-                                            <div key={idx} className={`flex items-start gap-6 ${esPasada ? 'opacity-40' : 'opacity-100'}`}>
-                                                <div className={`w-6 h-6 rounded-full border-4 border-white shadow-sm z-10 shrink-0 ${esPasada ? 'bg-slate-400' : esActual ? 'bg-indigo-600 ring-4 ring-indigo-50' : 'bg-emerald-500'}`}></div>
+                                            <div 
+                                                key={idx} 
+                                                onClick={() => onCentrarParada?.(p)}
+                                                className={`flex items-start gap-6 cursor-pointer group transition-opacity ${esPasada ? 'opacity-40' : 'opacity-100'}`}
+                                            >
+                                                <div className={`w-6 h-6 rounded-full border-4 border-white shadow-sm z-10 shrink-0 group-hover:scale-125 transition-transform ${esPasada ? 'bg-slate-400' : esActual ? 'bg-indigo-600 ring-4 ring-indigo-50' : 'bg-emerald-500'}`}></div>
                                                 <div className="flex-1 -mt-0.5">
                                                     <div className="flex justify-between items-center">
-                                                        <p className="text-sm font-black text-slate-800">{p.nombre}</p>
+                                                        <p className="text-sm font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{p.nombre}</p>
                                                         {!esPasada && <span className="text-[9px] font-black text-indigo-500">{min} MIN</span>}
                                                     </div>
                                                 </div>

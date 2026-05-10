@@ -194,6 +194,14 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         is_debug: data.tema?.includes('/debug') || false
       }));
 
+      // Actualizar Configuración si el hardware la reporta
+      if (payload.config?.capacidad_maxima) {
+        setHardwareSettings(prev => ({
+          ...prev,
+          capacidadMaxima: payload.config.capacidad_maxima
+        }));
+      }
+
       // Actualizar Datos de Sensores
       const { pasajeros, celdas } = payload;
       if (pasajeros) {

@@ -79,7 +79,7 @@ const iniciarSimulacionPasajeros = async () => {
           estado: unidad.estado
         });
       });
-    }, 3000); // Frecuencia de actualización
+    }, 1000); // Frecuencia de actualización (mejorada para mayor fluidez)
 
   } catch (error) {
     console.error('Error al iniciar simulación:', error);

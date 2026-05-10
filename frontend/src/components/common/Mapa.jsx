@@ -9,18 +9,21 @@ import { MapaProvider } from './mapa/MapaContext';
  */
 const Mapa = ({
   center = [19.4326, -99.1332],
-  zoom = 15,
+  zoom = 50,
   bounds = null,
   tileTheme = 'standard', // 'standard' (color) o 'light' (claro/gris)
   children,
   onMapClick = (latlng) => {},
   onMapLongPress = (latlng) => {},
   autoFitPadding = [50, 50],
-  followDuration = 1.5 // Duración de la animación de seguimiento (por defecto 1.5s)
+  followDuration = 1, // Duración de la animación de seguimiento (por defecto 1.5s)
+  allowManualUnlock = false // Si es true, permite al usuario "liberar" la cámara al interactuar
 }) => {
   const mapContainerRef = useRef(null);
   const [mapInstance, setMapInstance] = useState(null);
+  const [isManuallyControlled, setIsManuallyControlled] = useState(false);
   const longPressTimerRef = useRef(null);
+  const lastForcedCenterRef = useRef(center);
 
   // 1. Inicialización de la instancia de Leaflet
   useEffect(() => {
@@ -36,7 +39,7 @@ const Mapa = ({
         ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(instance);
+    L.tileLayer(tileUrl, { maxZoom: 40 }).addTo(instance);
 
     // Configuración de eventos básicos del mapa
     instance.on('click', (e) => {
@@ -53,6 +56,13 @@ const Mapa = ({
         clearTimeout(longPressTimerRef.current);
     });
 
+    // Control manual: Si el usuario mueve el mapa, desactivamos el seguimiento automático
+    instance.on('dragstart zoomstart', () => {
+        if (allowManualUnlock) {
+            setIsManuallyControlled(true);
+        }
+    });
+
     setMapInstance(instance);
 
     // Invalidar tamaño para asegurar renderizado correcto en contenedores dinámicos
@@ -67,6 +77,19 @@ const Mapa = ({
   // 2. Reactividad del centro
   useEffect(() => {
     if (mapInstance && center && !bounds) {
+        // Si el centro cambió externamente de forma significativa, retomamos el control
+        const centerChangedExternally = Math.sqrt(
+            Math.pow(lastForcedCenterRef.current[0] - center[0], 2) + 
+            Math.pow(lastForcedCenterRef.current[1] - center[1], 2)
+        ) > 0.001; // Umbral para detectar un cambio de "objetivo" (no solo un pequeño ajuste de seguimiento)
+
+        if (centerChangedExternally) {
+            setIsManuallyControlled(false);
+            lastForcedCenterRef.current = center;
+        }
+
+        if (allowManualUnlock && isManuallyControlled) return;
+
         const currentCenter = mapInstance.getCenter();
         const dist = Math.sqrt(
             Math.pow(currentCenter.lat - center[0], 2) + 
@@ -88,7 +111,7 @@ const Mapa = ({
             }
         }
     }
-  }, [center, mapInstance, bounds, followDuration]);
+  }, [center, mapInstance, bounds, followDuration, allowManualUnlock, isManuallyControlled]);
 
   // 3. Reactividad de los límites (Bounds)
   useEffect(() => {
@@ -100,9 +123,12 @@ const Mapa = ({
   // 4. Reactividad del zoom
   useEffect(() => {
     if (mapInstance && zoom) {
-        mapInstance.setZoom(zoom);
+        // Solo forzamos el zoom si no estamos en control manual o si el zoom prop cambió
+        if (!allowManualUnlock || !isManuallyControlled) {
+            mapInstance.setZoom(zoom);
+        }
     }
-  }, [zoom, mapInstance]);
+  }, [zoom, mapInstance, allowManualUnlock, isManuallyControlled]);
 
   return (
     <div ref={mapContainerRef} className="absolute inset-0 z-0 h-full w-full bg-slate-100">

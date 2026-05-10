@@ -151,7 +151,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
       {/* Grid Principal de Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico de Afluencia */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[400px]">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="font-bold text-slate-800 text-lg">Demanda de Pasajeros</h3>
@@ -163,8 +163,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
             </div>
           </div>
           
-          <div className="h-72 w-full min-h-[280px]">
-            <ResponsiveContainer width="99%" aspect={2.5} minWidth={0}>
+          <div className="flex-1 w-full min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={graficos.afluencia}>
                 <defs>
                   <linearGradient id="colorPasajeros" x1="0" y1="0" x2="0" y2="1">
@@ -233,12 +233,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          {/* Gráfico de Incidentes */}
-         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[350px]">
           <h3 className="font-bold text-slate-800 mb-1">Análisis de Incidentes</h3>
           <p className="text-xs text-slate-500 mb-6">Frecuencia por tipo de reporte</p>
           
-          <div className="h-64 w-full min-h-[250px]">
-            <ResponsiveContainer width="99%" aspect={1.5} minWidth={0}>
+          <div className="flex-1 w-full min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={graficos.incidentesPorTipo} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />

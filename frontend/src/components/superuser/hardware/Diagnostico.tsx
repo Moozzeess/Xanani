@@ -31,7 +31,7 @@ interface DeviceStatusPanelProps {
 export const DeviceStatusPanel = ({ deviceStatus }: DeviceStatusPanelProps) => {
   const parseEstatusCodigo = (code?: number) => {
     switch (code) {
-      case 0: return { t: 'Sistema Operativo', c: 'text-emerald-600', bg: 'bg-emerald-100/50' };
+      case 0: return { t: 'Online', c: 'text-emerald-600', bg: 'bg-emerald-100/50' };
       case 1: return { t: 'Error en Sensores IR', c: 'text-red-600', bg: 'bg-red-100/50' };
       case 2: return { t: 'Falla Módulo GPS', c: 'text-amber-600', bg: 'bg-amber-100/50' };
       case 3: return { t: 'Sin Señal GPRS', c: 'text-rose-600', bg: 'bg-rose-100/50' };

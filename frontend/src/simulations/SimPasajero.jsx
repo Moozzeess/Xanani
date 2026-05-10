@@ -11,7 +11,7 @@ import ModalAlerta from '../components/common/ModalAlerta';
  * @param {Array} rutas - Listado de rutas disponibles para vincular paradas.
  * @param {Function} onUpdate - Callback para actualizar la lista de vehículos en el padre.
  */
-const SimPasajero = ({ socket, rutas, rutasSuscritas = [], vehicles = [], onUpdate }) => {
+const SimPasajero = ({ socket, rutas, rutasSuscritas = [], rutaSeleccionadaId = null, vehicles = [], onUpdate }) => {
     
     useEffect(() => {
         if (!socket) return;
@@ -22,7 +22,10 @@ const SimPasajero = ({ socket, rutas, rutasSuscritas = [], vehicles = [], onUpda
             // FILTRO CRÍTICO: Solo mostrar simulaciones si no hay una unidad REAL (con conductor) activa en esta ruta
             const tieneUnidadReal = vehicles.some(v => !v.isBackground && (v.rutaId || v.id_ruta)?.toString() === rid?.toString());
             
-            if (!rutasSuscritas.includes(rid?.toString()) || tieneUnidadReal) {
+            const isSelected = rutaSeleccionadaId?.toString() === rid?.toString();
+            const isSubscribed = rutasSuscritas.includes(rid?.toString());
+
+            if ((!isSubscribed && !isSelected) || tieneUnidadReal) {
                 return;
             }
 
@@ -65,7 +68,7 @@ const SimPasajero = ({ socket, rutas, rutasSuscritas = [], vehicles = [], onUpda
         return () => {
             socket.off('ubicacion_simulada');
         };
-    }, [socket, rutas, onUpdate, rutasSuscritas, vehicles]);
+    }, [socket, rutas, onUpdate, rutasSuscritas, rutaSeleccionadaId, vehicles]);
 
     return null; // Componente lógico, no renderiza UI directa
 };

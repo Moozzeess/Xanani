@@ -11,11 +11,13 @@ const MapaAsientosHardware = ({ celdasCarga, totalAsientos }: MapaProps) => {
   const seats = Array.from({ length: totalAsientos }, (_, i) => {
     const val = celdasCarga ? celdasCarga[i] : false;
     // Ahora usamos el factor de calibración para determinar la ocupación
-    const isOccupied = typeof val === 'number' ? val > 5 : val === true;
+    // Si el valor es booleano o 1, forzamos el peso a 20.0 kg para la UI
+    const isOccupied = typeof val === 'number' ? (val === 1 || val > 5) : val === true;
+    const pesoSimulado = isOccupied ? (typeof val === 'number' && val > 5 ? val : 20.0) : null;
     return {
       id: i + 1,
       ocupado: isOccupied,
-      peso: typeof val === 'number' ? val : null
+      peso: pesoSimulado
     };
   });
 
@@ -26,10 +28,10 @@ const MapaAsientosHardware = ({ celdasCarga, totalAsientos }: MapaProps) => {
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
           <Activity size={16} className="text-blue-500" />
-          Monitoreo Real de Celdas (HX711)
+          Monitoreo de Asientos (Celdas Activas)
         </h3>
         <div className="flex gap-2">
-          <span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">
+          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
             {numOcupados} Ocupados
           </span>
           <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">
@@ -45,7 +47,7 @@ const MapaAsientosHardware = ({ celdasCarga, totalAsientos }: MapaProps) => {
             <div
               key={asiento.id}
               className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all duration-300 relative group ${asiento.ocupado
-                ? 'bg-red-100 border-2 border-red-500 text-red-700 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+                ? 'bg-slate-100 border-2 border-slate-500 text-slate-700'
                 : 'bg-green-50 border-2 border-green-500 text-green-600'
                 }`}
             >
@@ -106,16 +108,17 @@ export const SensorDataPanel = ({ sensorData, capacidadMaxima }: SensorDataPanel
           </div>
 
           <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-100 text-center relative overflow-hidden">
-            <div className={`absolute inset-0 opacity-10 ${sensorData.pasajeros.actuales > capacidadMaxima ? 'bg-red-500' : 'bg-transparent'}`}></div>
+            <div className={`absolute inset-0 opacity-10 ${sensorData.pasajeros.actuales > capacidadMaxima ? 'bg-blue-500' : 'bg-transparent'}`}></div>
+            <div className={`absolute inset-0 opacity-10 ${sensorData.pasajeros.actuales > capacidadMaxima ? 'bg-blue-500' : 'bg-trans'}`}></div>
             <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1 relative z-10">
               Pasajeros a Bordo
-               </p>
+            </p>
             <p className={`text-3xl font-black relative z-10 ${sensorData.pasajeros.actuales > capacidadMaxima ? 'text-red-600' : 'text-blue-700'}`}>
               {sensorData.pasajeros.actuales}
-               </p>
-            </div>
+            </p>
           </div>
         </div>
       </div>
+    </div>
   );
 };

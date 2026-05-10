@@ -107,9 +107,7 @@ const SOSModal: React.FC<SOSModalProps> = ({ isOpen, onClose, incidencia, onDesp
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <button type="button" className="bg-slate-200 text-slate-800 py-3 rounded-xl font-bold hover:bg-slate-300">
-              Contactar Radio
-            </button>
+          
             <button
               type="button"
               onClick={() => {

@@ -42,14 +42,6 @@ const CapaParadas = ({ stops = [], onStopClick }) => {
                 if (onStopClick) onStopClick(s);
             });
 
-            marker.bindPopup(`
-                <div class="text-center p-1">
-                    <div class="text-[10px] font-black text-indigo-500 uppercase">Parada</div>
-                    <div class="font-bold text-slate-800 text-xs">${s.nombre || 'Punto de Abordaje'}</div>
-                    <div class="text-[9px] text-slate-400 mt-1 font-medium">Click para ver ruta</div>
-                </div>
-            `, { offset: [0, -5], className: 'minimal-popup' });
-
             groupRef.current.addLayer(marker);
         });
     }, [map, stops, onStopClick]);

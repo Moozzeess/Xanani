@@ -38,7 +38,7 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
     currentIndex: 0,
     progress: 0,
     lastTime: 0,
-    speed: 0.000025 // Aumentado para un avance más perceptible
+    speed: 0.0015 // Aumentado para un avance realista y perceptible (60x más rápido)
   });
 
   // Loop de animación fluida (Reactivo a isTesting, viewMode y cambios en routeLine)

@@ -6,18 +6,17 @@ const DispositivoHardware = require('../models/DispositivoHardware');
 
 /**
  * Función para desencriptar el payload de hardware.
- * Espera formato: "IV_HEX:CIPHERTEXT_HEX"
  */
 function desencriptarPayload(payload) {
   if (!MQTT_SECRET_KEY) return payload; // Fallback
   try {
     const parts = payload.split(':');
     if (parts.length !== 2) return payload; // Posible mensaje en texto plano (Legacy mode)
-    
+
     const iv = Buffer.from(parts[0], 'hex');
     const encryptedText = Buffer.from(parts[1], 'hex');
     const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(MQTT_SECRET_KEY.padEnd(32, '0').slice(0, 32)), iv);
-    
+
     let decrypted = decipher.update(encryptedText);
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString();
@@ -41,7 +40,7 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
     // Desconectar cliente previo si existe
     if (clienteActual) {
       console.log('Cerrando conexión MQTT anterior...');
-      clienteActual.end(true); 
+      clienteActual.end(true);
     }
 
     currentBroker = brokerUrl;
@@ -49,17 +48,17 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
 
     // Validación básica de URL de Broker
     if (!currentBroker) {
-        console.warn('MQTT: No se ha definido una URL de Broker válida.');
-        return null;
+      console.warn('MQTT: No se ha definido una URL de Broker válida.');
+      return null;
     }
 
     console.log(`Intentando conectar a MQTT: ${currentBroker}`);
     const cliente = mqtt.connect(currentBroker, {
-        reconnectPeriod: 5000, // Reintentar cada 5 segundos si falla
-        connectTimeout: 30 * 1000,
-        ...options
+      reconnectPeriod: 5000, // Reintentar cada 5 segundos si falla
+      connectTimeout: 30 * 1000,
+      ...options
     });
-    
+
     clienteActual = cliente;
 
     cliente.on('connect', () => {
@@ -79,12 +78,12 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
 
     cliente.on('message', async (topic, message) => {
       const mensajeCrudo = message.toString();
+      let mensajeTexto = mensajeCrudo;
       try {
         // Fase 1: Intentar Desencriptar (si falla pero es obligatorio, rechazará el paquete)
         // Por compatibilidad temporal (Legacy), si empieza con '{', asumimos texto plano.
-        let mensajeTexto = mensajeCrudo;
         if (!mensajeCrudo.trim().startsWith('{')) {
-            mensajeTexto = desencriptarPayload(mensajeCrudo);
+          mensajeTexto = desencriptarPayload(mensajeCrudo);
         }
 
         const datos = JSON.parse(mensajeTexto);
@@ -104,7 +103,7 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs }, idHardware);
         }
 
-        // Normalización de datos común (Soporte GPS NEO 6M, SIM800L y Celdas)
+        // Normalización de datos común (Soporte GPS NEO 6M, SIM800L y Celdas/Seats)
         const payloadNormalizado = {
           id: idHardware,
           // GPS NEO 6M
@@ -120,18 +119,19 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
             con: datos.sim800l?.connected !== undefined ? datos.sim800l.connected : (datos.sim_con || false),
             signal: datos.sim800l?.signalStrength !== undefined ? datos.sim800l.signalStrength : (datos.sim_signal || 0)
           },
-          // Sensores de Pasajeros (IR)
+          // Sensores de Pasajeros (IR o Conteo directo)
           pasajeros: {
             in: datos.entradas !== undefined ? datos.entradas : (datos.in || 0),
             out: datos.salidas !== undefined ? datos.salidas : (datos.out || 0),
-            act: datos.actuales !== undefined ? datos.actuales : (datos.act || 0)
+            act: datos.ocupados !== undefined ? datos.ocupados : (datos.actuales || datos.act || 0)
           },
-          // Celdas de Carga (HX711)
-          celdas: datos.celdas || [],
+          // Celdas de Carga (HX711) o Asientos (seats)
+          celdas: datos.seats || datos.celdas || [],
           // Configuración actual (si el ESP32 la reporta)
           config: {
-            capacidad_maxima: datos.capacidad_maxima || null,
+            capacidad_maxima: datos.cap !== undefined ? datos.cap : (datos.capacidad_maxima || null),
             factor_calibracion: datos.factor_calibracion || null,
+            modo: datos.modo || null,
             action: datos.action || null
           },
           // Código de estado/error de Arduino
@@ -216,7 +216,7 @@ const enviarComando = (payloadJSON, topicComandos = null) => {
     const mensajeString = typeof payloadJSON === 'string' ? payloadJSON : JSON.stringify(payloadJSON);
 
     // TODO: Encriptar comandos de salida si el ESP32 lo requiere. Por ahora se manda en plano.
-    
+
     clienteActual.publish(topicFinal, mensajeString, { qos: 1 }, (err) => {
       if (err) {
         console.error(`Error al publicar en ${topicFinal}:`, err);
@@ -241,7 +241,7 @@ const enviarPingTest = () => {
 
 const desconectarMQTT = () => {
   if (clienteActual) {
-    clienteActual.end(true); 
+    clienteActual.end(true);
     clienteActual = null;
     emitirEvento('estado_mqtt', { conectado: false, broker: currentBroker, error: null });
   }

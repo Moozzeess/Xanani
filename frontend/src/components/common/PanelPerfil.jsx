@@ -191,8 +191,11 @@ const PanelPerfil = ({
                                             key={ruta._id || ruta.id}
                                             className="w-full flex items-center gap-3 py-2 hover:bg-slate-50 rounded-xl px-2 transition-colors border border-dashed border-transparent hover:border-slate-200"
                                         >
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-slate-700 font-medium truncate">{ruta.nombre}</p>
+                                            <div 
+                                                onClick={() => onVerRuta?.(ruta)}
+                                                className="flex-1 min-w-0 cursor-pointer hover:text-blue-600 transition-colors"
+                                            >
+                                                <p className="text-sm text-slate-700 font-medium truncate group-hover:text-blue-600">{ruta.nombre}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button

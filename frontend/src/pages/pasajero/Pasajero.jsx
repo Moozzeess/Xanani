@@ -55,6 +55,7 @@ const Pasajero = () => {
     const { socket } = useSocket();
 
     const [activeTab, setActiveTab] = useState('map');
+    const [notifKey, setNotifKey] = useState(0);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [vehicles, setVehicles] = useState([]);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -65,6 +66,7 @@ const Pasajero = () => {
     const [routeLine, setRouteLine] = useState([]);
     const [paradas, setParadas] = useState([]);
     const [mapCenter, setMapCenter] = useState([19.4326, -99.1332]);
+    const [mapZoom, setMapZoom] = useState(15);
     const [mapBounds, setMapBounds] = useState(null);
     const [hasNewNotifications, setHasNewNotifications] = useState(false);
     const [userPos, setUserPos] = useState(null);
@@ -183,6 +185,7 @@ const Pasajero = () => {
                 mensaje: datos.mensaje
             });
             setHasNewNotifications(true);
+            setNotifKey(prev => prev + 1);
         });
 
         return () => socket.off('aviso_pasajero');
@@ -272,8 +275,25 @@ const Pasajero = () => {
         // Cargar paradas
         setParadas(ruta.paradas || []);
 
-        // Zoom automático removido según requerimiento para evitar "forzar" la vista.
-        // El usuario tiene control total sobre el desplazamiento.
+        // Centrado automático inteligente al seleccionar una ruta explícitamente
+        const unidadesEnRuta = vehicles.filter(v => (v.rutaId || v.id_ruta)?.toString() === (ruta._id || ruta.id).toString());
+        let posObjetivo = null;
+
+        if (unidadesEnRuta.length > 0) {
+            posObjetivo = unidadesEnRuta[0].pos;
+        } else if (ruta.paradas && ruta.paradas.length > 0) {
+            posObjetivo = [ruta.paradas[0].latitud, ruta.paradas[0].longitud];
+        }
+
+        if (posObjetivo) {
+            const dist = userPos ? calcularDistancia(userPos[0], userPos[1], posObjetivo[0], posObjetivo[1]) : 0;
+            if (dist > 3000) { // Si está a más de 3km, usamos flyTo (saltar)
+                setMapBounds([[posObjetivo[0] - 0.01, posObjetivo[1] - 0.01], [posObjetivo[0] + 0.01, posObjetivo[1] + 0.01]]);
+            } else {
+                setMapCenter(posObjetivo);
+                setMapZoom(17);
+            }
+        }
         
         disparar({
             tipo: 'info',
@@ -372,6 +392,13 @@ const Pasajero = () => {
 
     const handleCentrarEnParada = (parada) => {
         setMapCenter([parada.latitud, parada.longitud]);
+        setMapZoom(17);
+        // Activamos el radar informativo para esa parada
+        setParadaDetectada({
+            parada,
+            ruta: selectedRoute,
+            estaSuscrito: rutasFavoritas.some(f => (f._id || f.id).toString() === (selectedRoute?._id || selectedRoute?.id).toString())
+        });
     };
 
     const onLogout = () => {
@@ -423,18 +450,34 @@ const Pasajero = () => {
                             </div>
                         </div>
 
-                        <Mapa center={mapCenter} bounds={mapBounds} onMapClick={() => seleccionarRuta(null)}>
+                        <Mapa center={mapCenter} zoom={mapZoom} bounds={mapBounds} allowManualUnlock={true} onMapClick={() => seleccionarRuta(null)}>
                             <CapaGeometria routeLine={routeLine} unitPos={selectedVehicle?.pos} />
-                            <CapaParadas
-                                stops={paradas}
+                            <CapaParadas 
+                                stops={selectedRoute?.paradas || []} 
                                 onStopClick={(p) => {
-                                    // Si la parada tiene una ruta asociada (ej. del radar)
-                                    if (p.ruta) {
-                                        seleccionarRuta(p.ruta);
-                                    } else if (selectedRoute) {
-                                        // Si ya hay una ruta seleccionada, mantenemos esa
-                                        seleccionarRuta(selectedRoute);
+                                    setMapCenter([p.latitud, p.longitud]);
+                                    setMapZoom(17);
+                                    
+                                    // Cálculo de ETA Real para la parada seleccionada
+                                    let etaMin = null;
+                                    const rid = (selectedRoute?._id || selectedRoute?.id)?.toString();
+                                    const unidadesEnRuta = vehicles.filter(v => (v.rutaId || v.id_ruta)?.toString() === rid);
+                                    
+                                    if (unidadesEnRuta.length > 0) {
+                                        let minDist = Infinity;
+                                        unidadesEnRuta.forEach(u => {
+                                            const d = calcularDistancia(u.pos[0], u.pos[1], p.latitud, p.longitud);
+                                            if (d < minDist) minDist = d;
+                                        });
+                                        etaMin = Math.max(1, Math.round(minDist / 300));
                                     }
+
+                                    setParadaDetectada({
+                                        parada: p,
+                                        ruta: selectedRoute,
+                                        eta: etaMin,
+                                        estaSuscrito: rutasFavoritas.some(f => (f._id || f.id).toString() === rid)
+                                    });
                                 }}
                             />
                             <CapaInvitacion
@@ -467,6 +510,7 @@ const Pasajero = () => {
                             socket={socket}
                             rutas={rutasDisponibles}
                             rutasSuscritas={rutasFavoritas.map(r => (r._id || r.id).toString())}
+                            rutaSeleccionadaId={selectedRoute?._id}
                             vehicles={vehicles}
                             onUpdate={actualizarVehiculo}
                         />
@@ -478,6 +522,7 @@ const Pasajero = () => {
                                 ruta={selectedRoute || rutasDisponibles.find(r => r._id.toString() === (selectedVehicle?.rutaId || selectedVehicle?.id_ruta)?.toString())}
                                 rutasFavoritas={rutasFavoritas}
                                 onToggleSuscripcion={handleToggleSuscripcion}
+                                onCentrarParada={handleCentrarEnParada}
                                 onReport={() => {
                                     // El reporte ahora se gestiona internamente en PanelRutaInteractiva
                                 }}
@@ -534,7 +579,19 @@ const Pasajero = () => {
                         )}
                     </>
                 ) : activeTab === 'notifications' ? (
-                    <ListaNotificaciones onNotifUpdate={setHasNewNotifications} />
+                    <ListaNotificaciones 
+                        key={notifKey}
+                        onNotifUpdate={setHasNewNotifications} 
+                        suscripcionesIds={rutasFavoritas.map(r => r._id)}
+                        onSuscribir={handleToggleSuscripcion}
+                        onVerRuta={(id) => {
+                            const r = rutasDisponibles.find(rd => rd._id === id);
+                            if (r) {
+                                seleccionarRuta(r);
+                                setActiveTab('map');
+                            }
+                        }}
+                    />
                 ) : (
                     <PanelAfluencia onDiscover={() => setActiveTab('map')} />
                 )}

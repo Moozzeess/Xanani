@@ -310,7 +310,7 @@ const Conductor = () => {
 
   const onLogout = () => {
     cerrarSesion();
-    navigate("/", { replace: true });
+    navigate("/LandingPage", { replace: true });
   };
 
   const addToastNotification = (title, message, type = 'info') => {

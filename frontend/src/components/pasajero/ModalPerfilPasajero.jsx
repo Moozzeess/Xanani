@@ -91,10 +91,10 @@ const ModalPerfilPasajero = ({ isOpen, onClose, usuario, stats, onActualizar }) 
                 </div>
 
                 {/* Body del Perfil */}
-                <div className="px-8 pt-20 pb-8 relative">
+                <div className="px-8 pt-20 pb-8 relative max-h-[75vh] overflow-y-auto no-scrollbar">
 
                     {/* Avatar Absoluto (estilo solapado) */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <div className="sticky top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-0">
                         <div className="w-28 h-28 bg-slate-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-black text-slate-600">
                             {userInitial}
                         </div>

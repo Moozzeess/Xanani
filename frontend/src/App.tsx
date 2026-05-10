@@ -97,6 +97,8 @@ function App() {
           }
         />
 
+        <Route path="/" element={<Navigate to="/LandingPage" replace />} />
+        <Route path="/" element={<Navigate to="/LandingPage" replace />} />
         <Route path="*" element={<Navigate to="/LandingPage" replace />} />
       </Routes>
     </Router>

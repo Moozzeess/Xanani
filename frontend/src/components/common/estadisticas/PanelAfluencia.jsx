@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { Bookmark, Info, TrendingUp, Search } from 'lucide-react';
 import { estadisticasService } from '../../../services/estadisticasService';
+import { variarSerieDatos } from './simuladorEstadisticas';
 
 /**
  * PanelAfluencia: Muestra histogramas de ocupación de las rutas suscritas del pasajero.
@@ -29,6 +30,22 @@ const PanelAfluencia = ({ onDiscover }) => {
     fetchData();
   }, []);
 
+  // Efecto para simular cambios aleatorios ("Live Demo")
+  useEffect(() => {
+    if (loading || rutas.length === 0) return;
+
+    const interval = setInterval(() => {
+      setRutas(prevRutas => 
+        prevRutas.map(ruta => ({
+          ...ruta,
+          histograma: variarSerieDatos(ruta.histograma, 'ocupacion')
+        }))
+      );
+    }, 600000); // Actualizar cada 10 minutos
+
+    return () => clearInterval(interval);
+  }, [loading, rutas.length]);
+
   if (!mounted || loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-50 p-10">
@@ -48,7 +65,7 @@ const PanelAfluencia = ({ onDiscover }) => {
       {rutas.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl">
           {rutas.map((ruta) => (
-            <div key={ruta.rutaId} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex flex-col h-[400px]">
+            <div key={ruta.rutaId} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex flex-col h-[420px]">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600">
@@ -65,9 +82,9 @@ const PanelAfluencia = ({ onDiscover }) => {
                 </div>
               </div>
 
-              <div className="flex-1 w-full min-h-0">
-                <ResponsiveContainer width="99%" aspect={1.7} minWidth={0}>
-                  <BarChart data={ruta.histograma} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <div className="flex-1 w-full min-h-0 mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ruta.histograma} margin={{ top: 10, right: 10, left: -15, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
                       dataKey="hora"
@@ -80,6 +97,7 @@ const PanelAfluencia = ({ onDiscover }) => {
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      domain={[0, 100]}
                     />
                     <Tooltip
                       cursor={{ fill: '#f8fafc', radius: 4 }}
@@ -89,6 +107,7 @@ const PanelAfluencia = ({ onDiscover }) => {
                     <Bar
                       dataKey="ocupacion"
                       radius={[4, 4, 0, 0]}
+                      barSize={14}
                     >
                       {ruta.histograma.map((entry, index) => (
                         <Cell
@@ -101,7 +120,7 @@ const PanelAfluencia = ({ onDiscover }) => {
                 </ResponsiveContainer>
               </div>
 
-              <div className="mt-6 flex items-center gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="mt-auto flex items-center gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100 z-10">
                 <Info className="w-4 h-4 text-blue-500 shrink-0" />
                 <p className="text-[11px] text-slate-600 leading-tight">
                   Las barras <span className="text-red-500 font-bold">rojas</span> indican alta demanda. Recomendamos planificar tu viaje fuera de estos horarios.
