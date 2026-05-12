@@ -115,7 +115,7 @@ exports.getAllHardware = async (req, res, next) => {
 exports.getAdminHardware = async (req, res, next) => {
     try {
         // Asumiendo que req.user tiene el ID del admin autenticado
-        const adminId = req.user.id;
+        const adminId = req.auth.userId;
 
         const dispositivos = await DispositivoHardware.find({ administrador: adminId }).lean();
 

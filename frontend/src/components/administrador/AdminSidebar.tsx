@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '../../auth/useAuth';
 import {
   AlertTriangle,
   BarChart3,
@@ -48,6 +49,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onLogout,
   incidentCount = 0
 }) => {
+  const { usuario } = useAuth();
   return (
     <aside
       id="sidebar"
@@ -130,20 +132,26 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </button>
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border border-slate-600">
-            <span className="font-bold">AD</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white truncate">Admin General</p>
-            <p className="text-xs text-slate-500 truncate">admin@Xanani.com</p>
-          </div>
-          <button type="button" className="text-slate-400 hover:text-red-400" onClick={onLogout}>
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+     <div className="p-4 border-t border-slate-800">
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border border-slate-600">
+      <span className="font-bold">
+        {usuario?.username?.slice(0, 2).toUpperCase() ?? 'AD'}
+      </span>
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-bold text-white truncate">
+        {usuario?.username ?? 'Administrador'}
+      </p>
+      <p className="text-xs text-slate-500 truncate">
+        {usuario?.email ?? ''}
+      </p>
+    </div>
+    <button type="button" className="text-slate-400 hover:text-red-400" onClick={onLogout}>
+      <LogOut className="w-5 h-5" />
+    </button>
+  </div>
+</div>
     </aside>
   );
 };
