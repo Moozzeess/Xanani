@@ -10,13 +10,15 @@ const errorMiddleware = require('./src/middlewares/errorMiddleware');
 const ErrorApp = require('./src/utils/ErrorApp');
 const { corsOptions } = require('./src/config/cors');
 const logger = require('./src/utils/logger');
+const { NODE_ENV } = require('./src/config/env');
 
 const app = express();
 
 // Limitador de velocidad global para evitar abusos
+// En desarrollo se usa un límite alto para no interferir con el trabajo
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Límite de 100 peticiones por IP por ventana
+  max: NODE_ENV === 'production' ? 100 : 1000, // 1000 en dev, 100 en producción
   message: { mensaje: 'Demasiadas peticiones desde esta IP, intente de nuevo en 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,

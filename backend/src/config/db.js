@@ -34,19 +34,5 @@ module.exports = async (MONGO_URI) => {
     console.error(error.message);
     process.exit(1);
   }
-
-  const gracefulExit = async () => {
-    try {
-      await mongoose.connection.close();
-      console.log('Conexión a MongoDB cerrada por terminación de la app.');
-      process.exit(0);
-    } catch (err) {
-      console.error(`Error al cerrar MongoDB: ${err}`);
-      process.exit(1);
-    }
-  };
-
-  // Escuchar señales de terminación del sistema
-  process.on('SIGINT', gracefulExit);
-  process.on('SIGTERM', gracefulExit);
+  // El cierre ordenado de MongoDB está manejado en server.js (gracefulShutdown)
 };

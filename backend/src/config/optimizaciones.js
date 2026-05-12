@@ -10,6 +10,7 @@ module.exports = {
   db: {
     maxPoolSize: 10,
     serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
+    socketTimeoutMS: 120000,      // Subido de 45s a 120s para conexiones Atlas
+    heartbeatFrequencyMS: 10000,  // Ping cada 10s para mantener la conexión viva
   }
 };

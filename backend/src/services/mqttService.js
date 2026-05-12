@@ -61,7 +61,21 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
 
     clienteActual = cliente;
 
+    let reconnectCount = 0;
+
+    cliente.on('reconnect', () => {
+      reconnectCount++;
+      console.warn(`MQTT: Intento de reconexión #${reconnectCount}`);
+      if (reconnectCount >= 10) {
+        console.error('MQTT: Máximo de reconexiones alcanzado. Deteniendo intentos.');
+        cliente.end(true);
+        clienteActual = null;
+        emitirEvento('estado_mqtt', { conectado: false, broker: currentBroker, error: 'Máximo de reconexiones alcanzado' });
+      }
+    });
+
     cliente.on('connect', () => {
+      reconnectCount = 0; // Reset al conectar exitosamente
       console.log('>>> Conexión MQTT establecida exitosamente.');
       emitirEvento('estado_mqtt', { conectado: true, broker: currentBroker, error: null });
 
