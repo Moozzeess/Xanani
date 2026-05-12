@@ -11,7 +11,8 @@ const paradaSchema = new mongoose.Schema(
         ruta: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Ruta',
-            required: true
+            required: true,
+            index: true
         },
 
         latitud: {

@@ -8,11 +8,13 @@ const express = require('express');
 const router = express.Router();
 
 const paradaController = require('../controllers/parada.controller');
+const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
+const { USER_ROLES } = require('../models/Usuario');
 
-router.post('/', paradaController.crearParada);
+router.post('/', requireAuth, requireRole([USER_ROLES.ADMINISTRADOR, USER_ROLES.SUPERUSUARIO]), paradaController.crearParada);
 
-router.get('/', paradaController.obtenerParadas);
+router.get('/', requireAuth, paradaController.obtenerParadas);
 
-router.get('/ruta/:rutaId', paradaController.obtenerParadasPorRuta);
+router.get('/ruta/:rutaId', requireAuth, paradaController.obtenerParadasPorRuta);
 
 module.exports = router;

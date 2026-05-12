@@ -18,13 +18,15 @@ const ubicacionSchema = new mongoose.Schema(
         rutaId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Ruta',
-            default: null
+            default: null,
+            index: true
         },
 
         recorridoId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Recorrido',
-            default: null
+            default: null,
+            index: true
         },
 
         ubicacion: {
@@ -55,7 +57,8 @@ const ubicacionSchema = new mongoose.Schema(
 
         fechaRegistro: {
             type: Date,
-            default: Date.now
+            default: Date.now,
+            index: true
         }
     },
     { timestamps: true }

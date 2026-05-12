@@ -1,0 +1,11 @@
+
+> xanani-backend@1.0.0 start
+> node server.js
+
+Conexión establecida con éxito.
+Intentando conectar a MQTT: mqtt://broker.emqx.io
+[SINGLE PROCESS] Servidor Xanani corriendo en el puerto: 4000
+Conexión MQTT cerrada por el broker.
+>>> Conexión MQTT establecida exitosamente.
+Suscrito a: xanani_nava/sec_89d3f/telemetria/#
+[CORS] Bloqueado origen no permitido: http://malicious-site.com

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import "../styles/login.css";
@@ -7,8 +7,12 @@ const VerifyEmail = () => {
   const { token } = useParams<{ token: string }>();
   const [estado, setEstado] = useState<"cargando" | "exito" | "error">("cargando");
   const [mensaje, setMensaje] = useState("");
+  const llamadoRef = useRef(false);
 
   useEffect(() => {
+    if (llamadoRef.current) return;
+    llamadoRef.current = true;
+
     const decodificarToken = async () => {
       try {
         const respuesta = await api.get(`/autenticacion/verify-email/${token}`);
@@ -19,6 +23,7 @@ const VerifyEmail = () => {
         setEstado("error");
       }
     };
+
     decodificarToken();
   }, [token]);
 

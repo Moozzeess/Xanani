@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const osrmController = require('../controllers/osrm.controller');
+const { requireAuth } = require('../middlewares/auth.middleware');
 
 /**
  * Intención: Definir rutas para el servicio de mapas OSRM.
@@ -10,6 +11,6 @@ const osrmController = require('../controllers/osrm.controller');
  *    pero puede protegerse con JWT si es necesario.
  */
 
-router.post('/ruta', osrmController.obtenerRuta);
+router.post('/ruta', requireAuth, osrmController.obtenerRuta);
 
 module.exports = router;

@@ -59,18 +59,27 @@ exports.obtenerMasCercana = async (req, res) => {
     const unidades = await Unidad.find({ estado: { $ne: 'inactiva' } }).lean();
     if (!unidades.length) return res.json(null);
 
-    const conPosicion = await Promise.all(
-      unidades.map(async (u) => {
-        const ultimaUbicacion = await Ubicacion.findOne({ unidadId: u._id })
-          .sort({ fechaRegistro: -1 })
-          .select('ubicacion velocidad')
-          .lean();
-        if (!ultimaUbicacion) return null;
-        return { ...u, posicion: ultimaUbicacion.ubicacion, velocidad: ultimaUbicacion.velocidad };
-      })
-    );
+    // Optimizamos: Obtenemos la última ubicación de todas las unidades activas en una sola consulta
+    const idsUnidades = unidades.map(u => u._id);
+    const ultimasUbicaciones = await Ubicacion.aggregate([
+      { $match: { unidadId: { $in: idsUnidades } } },
+      { $sort: { fechaRegistro: -1 } },
+      { $group: {
+          _id: "$unidadId",
+          posicion: { $first: "$ubicacion" },
+          velocidad: { $first: "$velocidad" }
+      }}
+    ]);
 
-    const activas = conPosicion.filter(Boolean);
+    // Mapeamos ubicaciones a unidades de forma eficiente
+    const mapaUbicaciones = new Map(ultimasUbicaciones.map(ub => [String(ub._id), ub]));
+
+    const activas = unidades.map(u => {
+      const ubu = mapaUbicaciones.get(String(u._id));
+      if (!ubu) return null;
+      return { ...u, posicion: ubu.posicion, velocidad: ubu.velocidad };
+    }).filter(Boolean);
+
     if (!activas.length) return res.json(null);
 
     activas.sort((a, b) => {

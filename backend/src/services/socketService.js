@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const { corsOptions } = require('../config/cors');
 const Incidencia = require('../models/Incidencia');
 
 /**
@@ -15,17 +16,14 @@ const rutasNotificadas = new Set(); // Cache para evitar spam de notificaciones
  * Retorno:
  *  - {Object} Referencia viva del pool `io`.
  * Reglas de negocio:
- *  - Políticas CORS abiertas `*` para tolerar PWA y diferentes orígenes.
+ *  - Políticas CORS restringidas según el entorno para mayor seguridad.
  *  - Suscríbe listeners primarios que exponen de forma delegada métodos críticos de `mqttService.js`.
  * Casos límite (edge cases):
  *  - Fallas subyacentes o de parseo en callbacks emiten evento cautelar de error a la sala (`estado_mqtt` o `comando_enviado`).
  */
 const inicializarSocket = (server) => {
   io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
-    }
+    cors: corsOptions
   });
 
   io.on('connection', (socket) => {

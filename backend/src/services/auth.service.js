@@ -42,7 +42,7 @@ async function register({ username, email, password }) {
     passwordHash,
     role: usersCount === 0 ? USER_ROLES.SUPERUSUARIO : USER_ROLES.PASAJERO,
     verificationToken,
-    isVerified: NODE_ENV === 'development' // Auto-verificar en desarrollo
+    isVerified: false // Siempre verificar por correo, incluso en desarrollo para probar el flujo
   });
 
   // Lanzar el envío de correo de manera asíncrona (no bloqueante)
