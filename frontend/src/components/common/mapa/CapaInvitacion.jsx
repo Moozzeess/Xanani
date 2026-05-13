@@ -56,8 +56,8 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
             
             // Generar contenido del popup (se actualiza si cambia la ETA)
             const etaHtml = eta ? `
-                <div class="mt-2 flex items-center justify-center gap-1 ${estaSuscrito ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2 py-1 rounded-lg border">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <div class="mt-2 flex items-center justify-center gap-1 ${estaSuscrito ? 'bg-blue-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2 py-1 rounded-lg border">
+                    <img src="LOGO" style="width: 28px; height: 28px;" />
                     <span class="text-[10px] font-black">LLEGA EN ${eta} MIN</span>
                 </div>
             ` : '';

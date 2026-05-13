@@ -62,8 +62,8 @@ const PanelPerfil = ({
                     </button>
 
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl font-bold border border-white/10">
-                            {userInitial}
+                        <div className="w-16 h-16 bg-white rounded-2xl overflow-hidden flex items-center justify-center border border-white/20 p-1">
+                            <img src="/LOGO.png" className="w-full h-full object-contain" alt="Avatar" />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -256,8 +256,8 @@ const PanelPerfil = ({
                             </div>
                             {historial.slice(0, 5).map((viaje, i) => (
                                 <div key={i} className="flex items-center gap-3 py-2">
-                                    <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <User className="w-3.5 h-3.5 text-slate-500" />
+                                    <div className="w-7 h-7 bg-white rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100 p-0.5">
+                                        <img src="/LOGO.png" className="w-full h-full object-contain" alt="Usuario" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-bold text-slate-700 truncate">{viaje.placa}</p>

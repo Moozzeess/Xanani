@@ -472,8 +472,8 @@ const Pasajero = () => {
                                 onClick={() => setIsProfileOpen(true)}
                                 className="bg-white/80 backdrop-blur-xl p-2.5 rounded-full shadow-2xl pointer-events-auto flex items-center gap-3 pr-5 border border-white/40 cursor-pointer active:scale-95 transition-all"
                             >
-                                <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm">
-                                    {userInitial}
+                                <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 flex items-center justify-center bg-white">
+                                    <img src="/LOGO.png" className="w-full h-full object-contain" alt="Perfil" />
                                 </div>
                                 <div className="flex flex-col leading-tight">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bienvenido</span>
@@ -579,8 +579,8 @@ const Pasajero = () => {
                                     }}
                                     className={`bg-white/90 backdrop-blur-xl border ${paradaDetectada.estaSuscrito ? 'border-emerald-200 shadow-emerald-50' : 'border-blue-100 shadow-blue-50'} shadow-2xl rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white transition-all active:scale-[0.98]`}
                                 >
-                                    <div className={`w-12 h-12 ${paradaDetectada.estaSuscrito ? 'bg-emerald-600 shadow-emerald-100' : 'bg-blue-600 shadow-blue-100'} rounded-xl flex items-center justify-center text-white shadow-lg p-2.5`}>
-                                        <img src="/parada_bus.svg" className="w-full h-full brightness-0 invert" alt="Ubicación" />
+                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg p-1 border border-slate-100">
+                                        <img src="/LOGO.png" className="w-full h-full object-contain" alt="Xanani" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">

@@ -380,8 +380,8 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSusc
                         <div className="mt-12 p-6 bg-slate-900 rounded-[32px] text-white space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
-                                        <User className="w-6 h-6 text-indigo-300" />
+                                    <div className="w-12 h-12 bg-white rounded-2xl overflow-hidden flex items-center justify-center border border-white/20 p-1">
+                                        <img src="/LOGO.png" className="w-full h-full object-contain" alt="Conductor" />
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Conductor Asignado</p>

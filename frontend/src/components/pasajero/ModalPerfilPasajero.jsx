@@ -95,8 +95,8 @@ const ModalPerfilPasajero = ({ isOpen, onClose, usuario, stats, onActualizar }) 
 
                     {/* Avatar Absoluto (estilo solapado) */}
                     <div className="sticky top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-0">
-                        <div className="w-28 h-28 bg-slate-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-black text-slate-600">
-                            {userInitial}
+                        <div className="w-28 h-28 bg-white rounded-full border-4 border-white shadow-lg overflow-hidden flex items-center justify-center p-2">
+                            <img src="/LOGO.png" className="w-full h-full object-contain" alt="Perfil" />
                         </div>
                     </div>
 
