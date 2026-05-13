@@ -8,7 +8,12 @@ const Unidad = require('../models/Unidad');
  */
 exports.obtenerIncidentesAdmin = async (req, res) => {
   try {
-    const incidencias = await Incidencia.find()
+    const query = {};
+    if (req.auth?.role === 'ADMINISTRADOR' && req.auth?.flotilla) {
+      query.flotilla = req.auth.flotilla;
+    }
+
+    const incidencias = await Incidencia.find(query)
       .populate('conductor', 'nombre apellido username email')
       .populate('unidad', 'placa numeroEconomico')
       .sort({ createdAt: -1 });
@@ -59,13 +64,20 @@ exports.crearSOS = async (req, res) => {
   try {
     const { conductorId, unidadId, ubicacion, descripcion } = req.body;
 
+    let flotillaSOS = null;
+    if (unidadId) {
+      const u = await Unidad.findById(unidadId);
+      if (u) flotillaSOS = u.flotilla;
+    }
+
     const nuevaIncidencia = new Incidencia({
       conductor: conductorId,
       unidad: unidadId,
       tipo: 'SOS',
       descripcion: descripcion || 'SOS activado vía API',
       ubicacion,
-      estado: 'ACTIVO'
+      estado: 'ACTIVO',
+      flotilla: flotillaSOS
     });
 
     await nuevaIncidencia.save();
@@ -82,13 +94,20 @@ exports.crearIncidenteConductor = async (req, res) => {
   try {
     const { conductorId, unidadId, tipo, descripcion, ubicacion } = req.body;
 
+    let flotillaIncidencia = null;
+    if (unidadId) {
+      const u = await Unidad.findById(unidadId);
+      if (u) flotillaIncidencia = u.flotilla;
+    }
+
     const nuevaIncidencia = new Incidencia({
       conductor: conductorId,
       unidad: unidadId,
       tipo,
       descripcion,
       ubicacion,
-      estado: 'ACTIVO'
+      estado: 'ACTIVO',
+      flotilla: flotillaIncidencia
     });
 
     await nuevaIncidencia.save();

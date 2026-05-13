@@ -68,7 +68,8 @@ const Pasajero = () => {
     const [mapCenter, setMapCenter] = useState([19.4326, -99.1332]);
     const [mapZoom, setMapZoom] = useState(15);
     const [mapBounds, setMapBounds] = useState(null);
-    const [hasNewNotifications, setHasNewNotifications] = useState(false);
+    const [notificacionesLocales, setNotificacionesLocales] = useState([]);
+    const [notifUnreadCount, setNotifUnreadCount] = useState(0);
     const [userPos, setUserPos] = useState(null);
     const [selectedRoute, setSelectedRoute] = useState(null);
     const [paradaDetectada, setParadaDetectada] = useState(null);
@@ -173,22 +174,53 @@ const Pasajero = () => {
             socket.emit('suscribir_usuario', usuario._id);
         }
 
+        // Listener para avisos específicos de pasajero
         socket.on('aviso_pasajero', (datos) => {
-            // SEGURIDAD: Validar si la notificación es global o específica para este usuario
-            if (datos.usuarioDestino && datos.usuarioDestino !== usuario?._id) {
-                return; // Ignorar si no es para nosotros
-            }
+            if (datos.usuarioDestino && datos.usuarioDestino !== usuario?._id) return;
+
+            const nuevaNotif = {
+                _id: Date.now().toString(),
+                ...datos,
+                createdAt: new Date().toISOString(),
+                leida: false
+            };
 
             disparar({
                 tipo: datos.tipo || 'info',
                 titulo: datos.titulo || 'Aviso Oficial',
                 mensaje: datos.mensaje
             });
-            setHasNewNotifications(true);
-            setNotifKey(prev => prev + 1);
+
+            setNotificacionesLocales(prev => [nuevaNotif, ...prev]);
+            setNotifUnreadCount(prev => prev + 1);
         });
 
-        return () => socket.off('aviso_pasajero');
+        // Listener para notificaciones generales del sistema (NUEVO)
+        socket.on('notificacion_sistema', (datos) => {
+            // Filtrar por usuario si es específico
+            if (datos.usuarioDestino && datos.usuarioDestino !== usuario?._id) return;
+
+            const nuevaNotif = {
+                _id: Date.now().toString(),
+                ...datos,
+                createdAt: new Date().toISOString(),
+                leida: false
+            };
+
+            disparar({
+                tipo: datos.tipo || 'info',
+                titulo: datos.titulo || 'Xanani',
+                mensaje: datos.mensaje
+            });
+
+            setNotificacionesLocales(prev => [nuevaNotif, ...prev]);
+            setNotifUnreadCount(prev => prev + 1);
+        });
+
+        return () => {
+            socket.off('aviso_pasajero');
+            socket.off('notificacion_sistema');
+        };
     }, [socket, disparar, usuario]);
 
     // Listeners de Unidades Reales
@@ -454,6 +486,7 @@ const Pasajero = () => {
                             <CapaGeometria routeLine={routeLine} unitPos={selectedVehicle?.pos} />
                             <CapaParadas 
                                 stops={selectedRoute?.paradas || []} 
+                                selectedStopId={paradaDetectada?.parada?._id || paradaDetectada?.parada?.id}
                                 onStopClick={(p) => {
                                     setMapCenter([p.latitud, p.longitud]);
                                     setMapZoom(17);
@@ -581,7 +614,8 @@ const Pasajero = () => {
                 ) : activeTab === 'notifications' ? (
                     <ListaNotificaciones 
                         key={notifKey}
-                        onNotifUpdate={setHasNewNotifications} 
+                        notificacionesExternas={notificacionesLocales}
+                        onNotifUpdate={(count) => setNotifUnreadCount(count)} 
                         suscripcionesIds={rutasFavoritas.map(r => r._id)}
                         onSuscribir={handleToggleSuscripcion}
                         onVerRuta={(id) => {
@@ -601,12 +635,15 @@ const Pasajero = () => {
                 tabActivo={activeTab === 'map' ? 'mapa' : activeTab === 'notifications' ? 'alertas' : (activeTab === 'afluencia' ? 'rutas' : 'perfil')}
                 onCambiarTab={(tab) => {
                     if (tab === 'mapa') setActiveTab('map');
-                    else if (tab === 'alertas') setActiveTab('notifications');
+                    else if (tab === 'alertas') {
+                        setActiveTab('notifications');
+                        setNotifUnreadCount(0);
+                    }
                     else if (tab === 'rutas') setActiveTab('afluencia');
                     else if (tab === 'perfil') setIsProfileOpen(true);
                 }}
                 onCentrarUbicacion={handleCentrarUsuario}
-                badgeAlertas={hasNewNotifications ? 1 : 0}
+                badgeAlertas={notifUnreadCount}
             />
 
             <PanelPerfil

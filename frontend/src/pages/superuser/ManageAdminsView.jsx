@@ -106,7 +106,7 @@ export default function ManageAdminsView() {
   const filtered = admins.filter(a =>
     a.username?.toLowerCase().includes(search.toLowerCase()) ||
     a.email?.toLowerCase().includes(search.toLowerCase()) ||
-    a.nacionalidad?.toLowerCase().includes(search.toLowerCase())
+    a.flotilla?.toLowerCase().includes(search.toLowerCase())
   );
 
   // ── Acciones ────────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ export default function ManageAdminsView() {
     setSelected(null); setShowPwd(false); setModal('create');
   };
   const openEdit = (a) => {
-    setForm({ username: a.username, email: a.email, flotilla: a.nacionalidad ?? '', password: '' });
+    setForm({ username: a.username, email: a.email, flotilla: a.flotilla ?? '', password: '' });
     setSelected(a); setModal('edit');
   };
   const openReset  = (a) => { setSelected(a); setResetPwd(''); setShowPwd(false); setModal('reset'); };
@@ -264,7 +264,7 @@ export default function ManageAdminsView() {
                         <div className="font-bold text-slate-700">{admin.username}</div>
                         <div className="text-xs text-slate-400">{admin.email}</div>
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500 text-xs">{admin.nacionalidad || '—'}</td>
+                      <td className="px-5 py-3.5 text-slate-500 text-xs">{admin.flotilla || '—'}</td>
                       <td className="px-5 py-3.5 text-slate-400 text-xs">
                         {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString('es-MX') : '—'}
                       </td>

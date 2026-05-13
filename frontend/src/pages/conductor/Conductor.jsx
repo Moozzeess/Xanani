@@ -36,6 +36,7 @@ const Conductor = () => {
   const [rawIds, setRawIds] = useState({ unidadId: null, rutaId: null, conductorProfileId: null });
   const [capacity, setCapacity] = useState(15);
   const [notificaciones, setNotificaciones] = useState([]);
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
 
   // Estados de gestión de viaje y simulación
   const [socket, setSocket] = useState(null);
@@ -207,14 +208,25 @@ const Conductor = () => {
     }
   }, [simulatedPosition, ubicacionReal, isTesting, socket, viewMode, rawIds, unidadActual, passengerCount, capacity]);
   
-  // Listener para Avisos del Administrador en Tiempo Real
+  // Listeners de Avisos del Administrador
   useEffect(() => {
     if (!socket) return;
 
     socket.on('aviso_conductor', (datos) => {
       // Mostrar toast inmediato
       addToastNotification('Aviso de Administración', datos.mensaje, 'info');
+      setNotifUnreadCount(prev => prev + 1);
+      
       // Recargar notificaciones si estamos en la vista de avisos
+      if (viewMode === 'avisos') {
+        cargarNotificaciones();
+      }
+    });
+
+    socket.on('notificacion_sistema', (datos) => {
+      addToastNotification('Xanani', datos.mensaje, 'info');
+      setNotifUnreadCount(prev => prev + 1);
+
       if (viewMode === 'avisos') {
         cargarNotificaciones();
       }
@@ -222,6 +234,7 @@ const Conductor = () => {
 
     return () => {
       socket.off('aviso_conductor');
+      socket.off('notificacion_sistema');
     };
   }, [socket, viewMode]);
 
@@ -297,6 +310,7 @@ const Conductor = () => {
   useEffect(() => {
     if (viewMode === 'avisos') {
       cargarNotificaciones();
+      setNotifUnreadCount(0); // Resetear contador al entrar
     }
   }, [viewMode]);
 
@@ -618,6 +632,7 @@ const Conductor = () => {
               viewMode === 'avisos' ? 'notifications' :
               isProfileOpen ? 'profile' : ''
             }
+            hasNewNotifications={notifUnreadCount}
           />
         </div>
       )}

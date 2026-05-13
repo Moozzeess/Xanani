@@ -47,6 +47,12 @@ const unidadSchema = new mongoose.Schema(
         dispositivoHardware: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'DispositivoHardware'
+        },
+        flotilla: {
+            type: String,
+            required: true,
+            default: 'ESCOM',
+            index: true
         }
 
 

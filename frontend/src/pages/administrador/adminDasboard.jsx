@@ -64,8 +64,23 @@ const AdminDashboard = () => {
     };
 
     socket.on('reporte_incidencia', handleGlobalIncidencia);
+
+    // NUEVO: Escuchar notificaciones del sistema (Bienvenida, etc.)
+    socket.on('notificacion_sistema', (notif) => {
+      setNotificaciones(prev => [
+        {
+          tipo: 'SISTEMA',
+          descripcion: notif.mensaje,
+          timestamp: new Date().toISOString(),
+          ...notif
+        },
+        ...prev
+      ].slice(0, 20));
+    });
+
     return () => {
       socket.off('reporte_incidencia', handleGlobalIncidencia);
+      socket.off('notificacion_sistema');
     };
   }, [socket]);
 

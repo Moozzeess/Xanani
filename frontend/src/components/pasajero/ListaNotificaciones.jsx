@@ -13,7 +13,8 @@ const ListaNotificaciones = ({
     onSuscribir, 
     onVerRuta, 
     suscripcionesIds = [],
-    onNotifUpdate // Callback para avisar al Navbar si hay pendientes
+    onNotifUpdate, // Callback para avisar al Navbar si hay pendientes
+    notificacionesExternas = [] // Nuevas notificaciones volátiles
 }) => {
     const { token } = useAuth();
     const { disparar } = useAlertaGlobal();
@@ -29,16 +30,24 @@ const ListaNotificaciones = ({
             });
             setReportes(resReportes.data);
 
-            // Obtener notificaciones del sistema
+            // Obtener notificaciones del sistema (historial de sesión o persistentes si hubiera)
             const resNotificaciones = await api.get('/notificaciones', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const data = resNotificaciones.data.data;
-            setNotificaciones(data);
+            const dataAPI = resNotificaciones.data.data || [];
             
-            // Informar al padre si hay alguna no leída
-            const hayPendientes = data.some(n => !n.leida);
-            onNotifUpdate?.(hayPendientes);
+            // Combinar con las externas (volátiles) evitando duplicados
+            setNotificaciones(prev => {
+                const combined = [...notificacionesExternas, ...dataAPI];
+                // Filtrar duplicados por ID
+                const unique = Array.from(new Map(combined.map(item => [item._id, item])).values());
+                
+                // Informar al padre sobre el conteo de no leídas
+                const unreadCount = unique.filter(n => !n.leida).length;
+                onNotifUpdate?.(unreadCount);
+                
+                return unique;
+            });
 
         } catch (error) {
             console.error("Error al obtener datos", error);
@@ -58,8 +67,9 @@ const ListaNotificaciones = ({
             });
             // Actualizar localmente eliminando de la lista para dar efecto de "limpieza"
             setNotificaciones(prev => {
-                const updated = prev.filter(n => n._id !== id);
-                onNotifUpdate?.(updated.some(un => !un.leida));
+                const updated = prev.map(n => n._id === id ? { ...n, leida: true } : n);
+                const unreadCount = updated.filter(un => !un.leida).length;
+                onNotifUpdate?.(unreadCount);
                 return updated;
             });
         } catch (error) {

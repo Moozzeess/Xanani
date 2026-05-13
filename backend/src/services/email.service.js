@@ -71,7 +71,25 @@ async function enviarCorreoRecuperacion(to, username, token) {
   await sendEmail({ to, subject: 'Recupera tu contraseña - Xanani', html });
 }
 
+/**
+ * Plantilla: Respuesta a reporte de pasajero
+ */
+async function enviarCorreoRespuestaReporte(to, username, folio, respuesta) {
+  const html = `
+    <h2>Atención a tu Reporte - Xanani</h2>
+    <p>Hola ${username},</p>
+    <p>Queremos informarte que un administrador ha respondido a tu reporte con folio <strong>#${folio}</strong>:</p>
+    <div style="padding: 15px; background-color: #f3f4f6; border-left: 4px solid #2563eb; margin: 20px 0;">
+      <em>"${respuesta}"</em>
+    </div>
+    <p>Agradecemos tu retroalimentación para seguir mejorando nuestro servicio.</p>
+    <p>Atentamente,<br>El equipo de Xanani</p>
+  `;
+  await sendEmail({ to, subject: `Respuesta a tu reporte #${folio} - Xanani`, html });
+}
+
 module.exports = {
   enviarCorreoVerificacion,
-  enviarCorreoRecuperacion
+  enviarCorreoRecuperacion,
+  enviarCorreoRespuestaReporte
 };

@@ -40,6 +40,10 @@ const recorridoSchema = new mongoose.Schema(
             type: String,
             trim: true,
             default: ''
+        },
+        flotilla: {
+            type: String,
+            index: true
         }
     },
     { timestamps: true }

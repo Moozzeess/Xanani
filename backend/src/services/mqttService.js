@@ -166,7 +166,18 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           fecha: payloadNormalizado.fecha
         }, idHardware);
 
-        // Emitir también de forma global para permitir el "Descubrimiento" en el panel de pruebas
+        // Emitir a la sala de la flotilla (Administradores)
+        const hw = await DispositivoHardware.findOne({ Id_Dispositivo_Hardware: idHardware }).select('flotilla');
+        if (hw && hw.flotilla) {
+          emitirEvento('datos_esp32', {
+            tema: topic,
+            payload: payloadNormalizado,
+            fecha: payloadNormalizado.fecha,
+            flotilla: hw.flotilla
+          }, null, null, `fleet_${hw.flotilla}`);
+        }
+
+        // Emitir también de forma global (Legacy/Debug/Pasajeros)
         emitirEvento('datos_esp32', {
           tema: topic,
           payload: payloadNormalizado,

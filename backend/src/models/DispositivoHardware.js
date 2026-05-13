@@ -34,7 +34,12 @@ const dispositivoHardwareSchema = new mongoose.Schema({
     password_mqtt: { type: String, default: '', hash: true },
     capacidadMaxima: { type: Number, default: 15 },
     factorCalibracion: { type: Number, default: 10 },
-    ultimaConexion: { type: Date, default: null }
+    ultimaConexion: { type: Date, default: null },
+    flotilla: {
+        type: String,
+        default: 'ESCOM',
+        index: true
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('DispositivoHardware', dispositivoHardwareSchema);

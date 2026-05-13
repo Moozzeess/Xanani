@@ -22,7 +22,8 @@ function requireAuth(req, res, next) {
       userId: payload.sub,
       role: payload.role,
       username: payload.username,
-      email: payload.email
+      email: payload.email,
+      flotilla: payload.flotilla || null
     };
 
     return next();

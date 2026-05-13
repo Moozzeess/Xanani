@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { Usuario, USER_ROLES } = require('../models/Usuario');
+const Administrador = require('../models/Administrador');
 const { signAccessToken } = require('../utils/jwt');
 const ErrorApp = require('../utils/ErrorApp');
 const emailService = require('./email.service');
@@ -48,11 +49,35 @@ async function register({ username, email, password }) {
   // Lanzar el envío de correo de manera asíncrona (no bloqueante)
   emailService.enviarCorreoVerificacion(user.email, user.username, verificationToken);
 
+  // Enviar notificación de bienvenida (Volátil)
+  try {
+    const notificacionController = require('../controllers/notificacion.controller');
+    let mensajeBienvenida = '¡Bienvenido a Xanani! Estamos felices de tenerte con nosotros.';
+    
+    if (user.role === USER_ROLES.PASAJERO) {
+      mensajeBienvenida = '¡Bienvenido a Xanani! Explora las rutas disponibles y suscríbete a tu favorita para recibir actualizaciones en tiempo real.';
+    } else if (user.role === USER_ROLES.CONDUCTOR) {
+      mensajeBienvenida = '¡Bienvenido al equipo de Xanani! Estamos listos para que realices tu primer viaje y mejores la movilidad de la ciudad.';
+    } else if (user.role === USER_ROLES.ADMINISTRADOR || user.role === USER_ROLES.SUPERUSUARIO) {
+      mensajeBienvenida = '¡Bienvenido al panel de control de Xanani! Te invitamos a explorar cada módulo para gestionar la flota de manera eficiente.';
+    }
+
+    notificacionController.crearNotificacionInterna({
+      titulo: '¡Bienvenido a Xanani!',
+      mensaje: mensajeBienvenida,
+      tipo: 'EXITO',
+      usuarioDestino: user._id
+    });
+  } catch (notifError) {
+    console.error('Error al enviar notificación de bienvenida:', notifError);
+  }
+
   const token = signAccessToken({
     id: user._id.toString(),
     role: user.role,
     username: user.username,
-    email: user.email
+    email: user.email,
+    flotilla: user.flotilla || null
   });
 
   return {
@@ -66,7 +91,8 @@ async function register({ username, email, password }) {
       nacionalidad: user.nacionalidad,
       fechaNacimiento: user.fechaNacimiento,
       foto: user.foto,
-      rutasFavoritas: user.rutasFavoritas
+      rutasFavoritas: user.rutasFavoritas,
+      flotilla: user.flotilla || null
     }
   };
 }
@@ -106,11 +132,18 @@ async function login({ usernameOrEmail, password }) {
     throw new ErrorApp('Inicio de sesión fallido: Contraseña o datos incorrectos.', 401, 'Fallo en la comparación de hash de contraseña (bcrypt).');
   }
 
+  let flotilla = user.flotilla || null;
+  if (user.role === USER_ROLES.ADMINISTRADOR) {
+    const adminProfile = await Administrador.findOne({ user: user._id });
+    if (adminProfile) flotilla = adminProfile.flotilla;
+  }
+
   const token = signAccessToken({
     id: user._id.toString(),
     role: user.role,
     username: user.username,
-    email: user.email
+    email: user.email,
+    flotilla: flotilla
   });
 
   return {
@@ -124,7 +157,8 @@ async function login({ usernameOrEmail, password }) {
       nacionalidad: user.nacionalidad,
       fechaNacimiento: user.fechaNacimiento,
       foto: user.foto,
-      rutasFavoritas: user.rutasFavoritas
+      rutasFavoritas: user.rutasFavoritas,
+      flotilla: flotilla
     }
   };
 }

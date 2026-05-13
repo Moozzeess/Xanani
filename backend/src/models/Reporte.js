@@ -77,6 +77,10 @@ const reporteSchema = new mongoose.Schema(
       type: String,
       enum: ['PENDIENTE', 'REVISADO', 'RESUELTO'],
       default: 'PENDIENTE'
+    },
+    flotilla: {
+      type: String,
+      index: true
     }
   },
   { timestamps: true }

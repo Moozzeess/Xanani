@@ -38,7 +38,8 @@ const crearUsuario = catchAsync(async (req, res, next) => {
     username,
     email: email.toLowerCase(),
     passwordHash,
-    role
+    role,
+    flotilla: req.auth?.flotilla || null
   });
 
   if (role === USER_ROLES.CONDUCTOR) {

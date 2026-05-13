@@ -40,6 +40,10 @@ const incidenciaSchema = new mongoose.Schema(
     ubicacion: {
       latitud: Number,
       longitud: Number
+    },
+    flotilla: {
+      type: String,
+      index: true
     }
   },
   { timestamps: true }

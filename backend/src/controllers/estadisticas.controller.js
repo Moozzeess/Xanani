@@ -56,11 +56,28 @@ exports.obtenerAfluenciaPorRuta = async (req, res) => {
  */
 exports.obtenerResumenGeneral = async (req, res) => {
     try {
-        const resumen = [
-            { nombre: 'Ruta Centro', afluenciaMedia: '75%', color: 'text-red-500' },
-            { nombre: 'Ruta Hospitales', afluenciaMedia: '40%', color: 'text-yellow-500' },
-            { nombre: 'Ruta Sur', afluenciaMedia: '15%', color: 'text-green-500' }
-        ];
+        const query = {};
+        if (req.auth && String(req.auth.role).toUpperCase() === 'ADMINISTRADOR' && req.auth.flotilla) {
+            query.flotilla = req.auth.flotilla;
+        }
+
+        const rutas = await Ruta.find(query).lean();
+        
+        // Calcular afluencia media (Simulado por ahora pero basado en las rutas reales de la flota)
+        const resumen = rutas.map(ruta => {
+            // Lógica para determinar color basado en un valor aleatorio determinista por ahora
+            const afluenciaNum = Math.floor(Math.random() * 100);
+            let color = 'text-green-500';
+            if (afluenciaNum > 70) color = 'text-red-500';
+            else if (afluenciaNum > 40) color = 'text-yellow-500';
+
+            return {
+                nombre: ruta.nombre,
+                afluenciaMedia: `${afluenciaNum}%`,
+                color
+            };
+        });
+
         res.status(200).json(resumen);
     } catch (error) {
         res.status(500).json({ mensaje: 'Error al obtener resumen informativo', error: error.message });
@@ -76,23 +93,29 @@ exports.obtenerDashboardAdmin = async (req, res) => {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
 
+        const query = {};
+        if (req.auth && String(req.auth.role).toUpperCase() === 'ADMINISTRADOR' && req.auth.flotilla) {
+            query.flotilla = req.auth.flotilla;
+        }
+
         // 1. Resumen de tarjetas
         const [totalUnidades, unidadesActivas, incidentesActivos, pasajerosHoy] = await Promise.all([
-            Unidad.countDocuments(),
-            Unidad.countDocuments({ estado: { $in: ['activa', 'en_ruta'] } }),
-            Incidencia.countDocuments({ estado: 'ACTIVO' }),
-            HistorialViaje.countDocuments({ createdAt: { $gte: hoy } })
+            Unidad.countDocuments(query),
+            Unidad.countDocuments({ ...query, estado: { $in: ['activa', 'en_ruta'] } }),
+            Incidencia.countDocuments({ ...query, estado: 'ACTIVO' }),
+            HistorialViaje.countDocuments({ ...query, createdAt: { $gte: hoy } })
         ]);
 
         // 2. Distribución de Unidades por Estado
         const distribucionUnidades = await Unidad.aggregate([
+            { $match: query },
             { $group: { _id: '$estado', cantidad: { $sum: 1 } } },
             { $project: { estado: '$_id', cantidad: 1, _id: 0 } }
         ]);
 
         // 3. Histograma de Afluencia (Pasajeros por hora hoy)
         const afluenciaHoy = await HistorialViaje.aggregate([
-            { $match: { createdAt: { $gte: hoy } } },
+            { $match: { ...query, createdAt: { $gte: hoy } } },
             {
                 $group: {
                     _id: { $hour: '$createdAt' },
@@ -105,12 +128,13 @@ exports.obtenerDashboardAdmin = async (req, res) => {
 
         // 4. Incidentes por Tipo (Análisis de problemas)
         const incidentesPorTipo = await Incidencia.aggregate([
+            { $match: query },
             { $group: { _id: '$tipo', cantidad: { $sum: 1 } } },
             { $project: { tipo: '$_id', cantidad: 1, _id: 0 } }
         ]);
 
         // 5. Últimas 5 Alertas Críticas
-        const alertasRecientes = await Incidencia.find({ estado: 'ACTIVO' })
+        const alertasRecientes = await Incidencia.find({ ...query, estado: 'ACTIVO' })
             .sort({ createdAt: -1 })
             .limit(5)
             .populate('unidad', 'placa')

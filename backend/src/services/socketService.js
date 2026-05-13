@@ -91,7 +91,13 @@ const inicializarSocket = (server) => {
       enviarPingTest();
     });
 
-    // --- NUEVA LÓGICA DE GESTIÓN DE FLOTILLA ---
+    // Suscribir usuario a su sala de flotilla (para administradores y conductores)
+    socket.on('suscribir_flotilla', (flotilla) => {
+      if (flotilla) {
+        socket.join(`fleet_${flotilla}`);
+        // console.log(`Socket ${socket.id} unido a sala de flota: fleet_${flotilla}`);
+      }
+    });
 
     // Suscribir usuario a su sala privada (para notificaciones personales)
     socket.on('suscribir_usuario', (userId) => {
@@ -103,20 +109,26 @@ const inicializarSocket = (server) => {
 
     // 1. Ubicación en tiempo real de los conductores
     socket.on('ubicacion_conductor', async (datos) => {
-      // Retransmitir al panel de administración y pasajeros
+      // Retransmitir a la sala de la flotilla (Administradores) y global (Pasajeros)
+      if (datos.flotilla) {
+        io.to(`fleet_${datos.flotilla}`).emit('ubicacion_conductor', datos);
+      }
+      
+      // Los pasajeros siguen recibiendo todo para la landing page (o se puede segmentar por ruta)
       socket.broadcast.emit('ubicacion_conductor', datos);
 
       // Si es una ruta que no hemos marcado como activa en esta sesión
-      const { rutaId, rutaNombre } = datos;
+      const { rutaId, rutaNombre, flotilla } = datos;
       if (rutaId && !rutasNotificadas.has(rutaId.toString())) {
         rutasNotificadas.add(rutaId.toString());
 
         const notificacionController = require('../controllers/notificacion.controller');
         await notificacionController.crearNotificacionInterna({
           titulo: '¡Ruta en Movimiento!',
-          mensaje: `Unidades reales han comenzado a circular en la ruta "${rutaNombre || 'Suscrita'}".`,
+          mensaje: `Se ha detectado actividad en la ruta "${rutaNombre || 'Suscrita'}". ¡Consulta el mapa para ver la ubicación de las unidades en tiempo real!`,
           tipo: 'INFO',
           rolDestino: 'PASAJERO',
+          flotilla: flotilla || null,
           data: { rutaId }
         });
 
@@ -125,46 +137,59 @@ const inicializarSocket = (server) => {
           rutaId, 
           rutaNombre, 
           pos: datos.pos, 
-          unidadId: datos.id 
+          unidadId: datos.id,
+          flotilla: flotilla || null
         });
       }
     });
 
     // 2. Avisos globales o específicos desde Admin hacia Conductores y Pasajeros
     socket.on('aviso_conductor', (datos) => {
-      // datos = { mensaje, severidad, conductorId? }
-      socket.broadcast.emit('aviso_conductor', datos);
+      // datos = { mensaje, severidad, conductorId?, flotilla }
+      if (datos.flotilla) {
+        io.to(`fleet_${datos.flotilla}`).emit('aviso_conductor', datos);
+      } else {
+        socket.broadcast.emit('aviso_conductor', datos);
+      }
     });
 
     socket.on('aviso_pasajero', (datos) => {
       // Si el aviso tiene un destinatario específico, enviarlo solo a su sala
       if (datos.usuarioDestino) {
         io.to(`user_${datos.usuarioDestino}`).emit('aviso_pasajero', datos);
+      } else if (datos.flotilla) {
+        // Aviso global por flota
+        io.to(`fleet_${datos.flotilla}`).emit('aviso_pasajero', datos);
       } else {
         // De lo contrario, retransmitir a todos los pasajeros (Aviso Global)
         socket.broadcast.emit('aviso_pasajero', datos);
       }
     });
 
-    // 3. Reportes de incidencias desde Conductores hacia Admin
+    // 3. Reportes de incidencias desde Conductores hacia Admin (SEGMENTADO POR FLOTA)
     socket.on('reporte_incidencia', async (datos) => {
       try {
-        console.log(`Reporte de incidencia recibido:`, datos);
+        // console.log(`Reporte de incidencia recibido:`, datos);
         // Guardar de forma persistente con TTL
         const nuevaIncidencia = new Incidencia({
           conductor: datos.conductorId,
           unidad: datos.unidadId,
           tipo: datos.tipo, // Ej: SOS, FALLA_MECANICA
           descripcion: datos.descripcion,
-          ubicacion: datos.ubicacion
+          ubicacion: datos.ubicacion,
+          flotilla: datos.flotilla || null
         });
         await nuevaIncidencia.save();
 
         // Enriquecer datos con el ID generado para el frontend
         const payload = { ...datos, _id: nuevaIncidencia._id };
         
-        // Propagar al administrador
-        socket.broadcast.emit('reporte_incidencia', payload);
+        // Propagar SOLO al administrador de la flotilla correspondiente
+        if (datos.flotilla) {
+          io.to(`fleet_${datos.flotilla}`).emit('reporte_incidencia', payload);
+        } else {
+          socket.broadcast.emit('reporte_incidencia', payload);
+        }
       } catch (error) {
         console.error('Error al guardar incidencia:', error);
       }
@@ -193,10 +218,11 @@ const inicializarSocket = (server) => {
  *  - {Object} datos - Carga útil (Payload JSON).
  *  - {string} idHardware - Opcional. ID para sala de dispositivo.
  *  - {string} usuarioId - Opcional. ID para sala privada de usuario.
+ *  - {string} sala - Opcional. Nombre de sala genérica (ej. fleet_ESCOM).
  * Retorno:
  *  - {void} Fuego y olvido (Broadcast).
  */
-const emitirEvento = (evento, datos, idHardware = null, usuarioId = null) => {
+const emitirEvento = (evento, datos, idHardware = null, usuarioId = null, sala = null) => {
   if (io) {
     if (idHardware) {
       // Emitir solo a los interesados en este dispositivo específico (Aislamiento)
@@ -204,6 +230,9 @@ const emitirEvento = (evento, datos, idHardware = null, usuarioId = null) => {
     } else if (usuarioId) {
       // Emitir solo al usuario específico (Sala Privada)
       io.to(`user_${usuarioId}`).emit(evento, datos);
+    } else if (sala) {
+      // Emitir a una sala genérica (ej. Flotilla)
+      io.to(sala).emit(evento, datos);
     } else {
       // Emitir globalmente si no hay ID específico
       io.emit(evento, datos);

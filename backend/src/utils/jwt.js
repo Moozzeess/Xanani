@@ -16,7 +16,8 @@ function signAccessToken(payload) {
       sub: payload.id,
       role: payload.role,
       username: payload.username,
-      email: payload.email
+      email: payload.email,
+      flotilla: payload.flotilla || null
     },
     JWT_SECRET,
     { expiresIn: '7d' }

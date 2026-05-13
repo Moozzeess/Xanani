@@ -80,7 +80,12 @@ const userSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Ruta'
       }
-    ]
+    ],
+    flotilla: {
+      type: String,
+      default: null,
+      index: true
+    }
   },
   { timestamps: true }
 );

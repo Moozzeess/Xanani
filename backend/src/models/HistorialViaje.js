@@ -51,6 +51,10 @@ const historialViajeSchema = new mongoose.Schema(
     esSimulacion: {
       type: Boolean,
       default: false // Solo guardaremos reales por defecto, pero el campo permite flexibilidad
+    },
+    flotilla: {
+      type: String,
+      index: true
     }
   },
   { timestamps: true }

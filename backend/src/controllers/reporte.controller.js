@@ -1,6 +1,7 @@
 const Reporte = require('../models/Reporte');
-const Notificacion = require('../models/Notificacion');
 const socketService = require('../services/socketService');
+const notificacionController = require('./notificacion.controller');
+const emailService = require('../services/email.service');
 
 /**
  * Crea un reporte enviado por un pasajero.
@@ -10,6 +11,15 @@ exports.crearReporte = async (req, res) => {
   try {
     console.log("Cuerpo del reporte recibido:", req.body);
     const { unidadId, rutaId, tipo, descripcion, calificacion, encontroAsiento, destinatario, estado } = req.body;
+    
+    let flotillaReporte = null;
+    if (unidadId) {
+      const u = await require('../models/Unidad').findById(unidadId);
+      if (u) flotillaReporte = u.flotilla;
+    } else if (rutaId) {
+      const r = await require('../models/Ruta').findById(rutaId);
+      if (r) flotillaReporte = r.flotilla;
+    }
 
     const nuevoReporte = new Reporte({
       usuario: req.auth.userId,
@@ -20,7 +30,8 @@ exports.crearReporte = async (req, res) => {
       calificacion: calificacion || null,
       encontroAsiento: encontroAsiento ?? null,
       destinatario: destinatario || null,
-      estado: estado || 'PENDIENTE'
+      estado: estado || 'PENDIENTE',
+      flotilla: flotillaReporte
     });
 
     await nuevoReporte.save();
@@ -28,14 +39,14 @@ exports.crearReporte = async (req, res) => {
     // Si es un ANUNCIO, crear también una Notificación persistente para los destinatarios (Solo ADMIN o SUPERUSER)
     if (tipo === 'ANUNCIO' && descripcion && ['ADMINISTRADOR', 'SUPERUSER'].includes(req.auth.role)) {
       try {
-        await Notificacion.create({
+        await notificacionController.crearNotificacionInterna({
           titulo: 'Aviso del Administrador',
           mensaje: descripcion,
           tipo: 'SISTEMA',
           rolDestino: destinatario === 'TODOS' ? 'TODOS' : (destinatario === 'CONDUCTORES' ? 'CONDUCTOR' : 'PASAJERO')
         });
       } catch (notifError) {
-        console.error("Error al crear la notificación persistente:", notifError);
+        console.error("Error al emitir la notificación volátil:", notifError);
       }
     }
 
@@ -70,7 +81,12 @@ exports.crearReporte = async (req, res) => {
  */
 exports.obtenerReportes = async (req, res) => {
   try {
-    const reportes = await Reporte.find()
+    const query = {};
+    if (req.auth?.role === 'ADMINISTRADOR' && req.auth?.flotilla) {
+      query.flotilla = req.auth.flotilla;
+    }
+
+    const reportes = await Reporte.find(query)
       .populate('usuario', 'username email')
       .populate('unidad', 'placa')
       .populate('ruta', 'nombre')
@@ -147,9 +163,9 @@ exports.actualizarEstadoReporte = async (req, res) => {
       usuarioDestino: reporteActualizado.usuario._id
     }, null, reporteActualizado.usuario._id);
 
-    // PERSISTIR NOTIFICACIÓN EN BD para el historial del pasajero
+    // EMITIR NOTIFICACIÓN EN TIEMPO REAL (Volátil)
     try {
-      await Notificacion.create({
+      await notificacionController.crearNotificacionInterna({
         titulo: 'Reporte Actualizado',
         mensaje: `El administrador ha marcado tu reporte como ${estado.toLowerCase()}.`,
         tipo: 'INFO',
@@ -158,7 +174,7 @@ exports.actualizarEstadoReporte = async (req, res) => {
         data: { reporteId: reporteActualizado._id }
       });
     } catch (notifError) {
-      console.error('Error al persistir notificación de reporte:', notifError);
+      console.error('Error al emitir notificación de reporte:', notifError);
     }
 
     res.json({
@@ -236,9 +252,9 @@ exports.responderReporte = async (req, res) => {
       usuarioDestino: reporte.usuario._id
     }, null, reporte.usuario._id);
 
-    // PERSISTIR NOTIFICACIÓN
+    // EMITIR NOTIFICACIÓN EN TIEMPO REAL (Volátil)
     try {
-      await Notificacion.create({
+      await notificacionController.crearNotificacionInterna({
         titulo: 'Respuesta de Administración',
         mensaje: `Respuesta: ${respuesta}`,
         tipo: 'INFO',
@@ -246,8 +262,18 @@ exports.responderReporte = async (req, res) => {
         usuarioDestino: reporte.usuario._id,
         data: { reporteId: reporte._id, respuesta: respuesta }
       });
+
+      // ENVIAR CORREO ELECTRÓNICO AL PASAJERO
+      if (reporte.usuario.email) {
+        emailService.enviarCorreoRespuestaReporte(
+          reporte.usuario.email,
+          reporte.usuario.username,
+          reporte._id.toString().slice(-6).toUpperCase(), // Usar últimos 6 caracteres como folio amigable
+          respuesta
+        );
+      }
     } catch (notifError) {
-      console.error('Error al persistir notificación de respuesta:', notifError);
+      console.error('Error al procesar avisos de respuesta:', notifError);
     }
 
     res.json({

@@ -3,6 +3,7 @@ const os = require('os');
 const mongoose = require('mongoose');
 const { Usuario, USER_ROLES } = require('../models/Usuario');
 const Conductor = require('../models/Conductor');
+const Administrador = require('../models/Administrador');
 const Unidad = require('../models/Unidad');
 const DispositivoHardware = require('../models/DispositivoHardware');
 const catchAsync = require('../utils/catchAsync');
@@ -88,8 +89,19 @@ const listarAdmins = catchAsync(async (req, res) => {
     .sort({ createdAt: -1 })
     .lean();
 
-  // Enriquecer con cantidad de conductores bajo cada admin (si aplica en tu modelo)
-  res.status(200).json({ admins });
+  // Enriquecer con datos del perfil de Administrador (flotilla)
+  const adminsEnriquecidos = await Promise.all(
+    admins.map(async (admin) => {
+      const perfil = await Administrador.findOne({ user: admin._id }).lean();
+      return {
+        ...admin,
+        flotilla: perfil ? perfil.flotilla : 'Sin asignar',
+        descripcion: perfil ? perfil.descripcion : ''
+      };
+    })
+  );
+
+  res.status(200).json({ admins: adminsEnriquecidos });
 });
 
 /**
@@ -118,9 +130,13 @@ const crearAdmin = catchAsync(async (req, res) => {
     email: email.toLowerCase(),
     passwordHash,
     role: USER_ROLES.ADMINISTRADOR,
-    // Guardamos la flotilla en nacionalidad como campo auxiliar hasta que
-    // exista un modelo Administrador dedicado. Cámbialo cuando lo tengas.
-    nacionalidad: flotilla || '',
+    flotilla: flotilla || null // Duplicamos en Usuario para filtros rápidos
+  });
+
+  // Crear el perfil de Administrador
+  await Administrador.create({
+    user: nuevoAdmin._id,
+    flotilla: flotilla || 'ESCOM'
   });
 
   res.status(201).json({
@@ -129,7 +145,7 @@ const crearAdmin = catchAsync(async (req, res) => {
       username: nuevoAdmin.username,
       email: nuevoAdmin.email,
       role: nuevoAdmin.role,
-      flotilla: nuevoAdmin.nacionalidad,
+      flotilla: flotilla || 'ESCOM',
       isActive: nuevoAdmin.isActive,
       createdAt: nuevoAdmin.createdAt,
     },
@@ -150,7 +166,15 @@ const editarAdmin = catchAsync(async (req, res) => {
 
   if (username) admin.username = username;
   if (email) admin.email = email.toLowerCase();
-  if (flotilla !== undefined) admin.nacionalidad = flotilla;
+  
+  if (flotilla !== undefined) {
+    admin.flotilla = flotilla;
+    await Administrador.findOneAndUpdate(
+      { user: id },
+      { flotilla },
+      { upsert: true }
+    );
+  }
 
   await admin.save();
 
@@ -159,7 +183,7 @@ const editarAdmin = catchAsync(async (req, res) => {
       id: admin._id,
       username: admin.username,
       email: admin.email,
-      flotilla: admin.nacionalidad,
+      flotilla: flotilla || admin.flotilla,
       isActive: admin.isActive,
     },
   });
@@ -219,6 +243,9 @@ const eliminarAdmin = catchAsync(async (req, res) => {
 
   const admin = await Usuario.findOneAndDelete({ _id: id, role: USER_ROLES.ADMINISTRADOR });
   if (!admin) throw new ErrorApp('Administrador no encontrado.', 404);
+
+  // Eliminar perfil asociado
+  await Administrador.findOneAndDelete({ user: id });
 
   res.status(200).json({ mensaje: 'Administrador eliminado correctamente.' });
 });

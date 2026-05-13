@@ -58,8 +58,10 @@ const Navbar = ({
                 >
                     <div className="relative">
                         <Bell className="w-6 h-6" />
-                        {hasNewNotifications && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                        {hasNewNotifications > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-in zoom-in duration-300">
+                                {hasNewNotifications > 9 ? '9+' : hasNewNotifications}
+                            </span>
                         )}
                     </div>
                     <span className="text-[10px] font-medium">

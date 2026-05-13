@@ -3,6 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapaProvider } from './mapa/MapaContext';
 
+const DEFAULT_PADDING = [50, 50];
+
 /**
  * Componente de Mapa Padre.
  * Inicializa el lienzo de Leaflet y provee el contexto para las capas hijas.
@@ -15,7 +17,7 @@ const Mapa = ({
   children,
   onMapClick = (latlng) => {},
   onMapLongPress = (latlng) => {},
-  autoFitPadding = [50, 50],
+  autoFitPadding = DEFAULT_PADDING,
   followDuration = 1, // Duración de la animación de seguimiento (por defecto 1.5s)
   allowManualUnlock = false // Si es true, permite al usuario "liberar" la cámara al interactuar
 }) => {
@@ -24,6 +26,7 @@ const Mapa = ({
   const [isManuallyControlled, setIsManuallyControlled] = useState(false);
   const longPressTimerRef = useRef(null);
   const lastForcedCenterRef = useRef(center);
+  const lastForcedBoundsRef = useRef(null);
 
   // 1. Inicialización de la instancia de Leaflet
   useEffect(() => {
@@ -116,9 +119,24 @@ const Mapa = ({
   // 3. Reactividad de los límites (Bounds)
   useEffect(() => {
     if (mapInstance && bounds && bounds.length > 0) {
+        // Detectar si los límites cambiaron externamente (nuevo objetivo)
+        const boundsStr = JSON.stringify(bounds);
+        const boundsChangedExternally = !lastForcedBoundsRef.current || lastForcedBoundsRef.current !== boundsStr;
+
+        if (boundsChangedExternally) {
+            setIsManuallyControlled(false);
+            lastForcedBoundsRef.current = boundsStr;
+        }
+
+        // Si el usuario tiene el control manual, no forzamos el ajuste de límites
+        if (allowManualUnlock && isManuallyControlled) return;
+
         mapInstance.fitBounds(bounds, { padding: autoFitPadding });
+    } else if (mapInstance && !bounds) {
+        // Si se limpian los límites, limpiamos la referencia
+        lastForcedBoundsRef.current = null;
     }
-  }, [bounds, mapInstance, autoFitPadding]);
+  }, [bounds, mapInstance, autoFitPadding, allowManualUnlock, isManuallyControlled]);
 
   // 4. Reactividad del zoom
   useEffect(() => {

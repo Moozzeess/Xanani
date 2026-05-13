@@ -16,8 +16,11 @@ const notificacionController = require('./notificacion.controller');
  */
 exports.crearRuta = async (req, res) => {
     try {
-        const nuevaRuta = new Ruta(req.body);
-
+        const datosRuta = { ...req.body };
+        if (req.auth?.role === 'ADMINISTRADOR' && req.auth?.flotilla) {
+            datosRuta.flotilla = req.auth.flotilla;
+        }
+        const nuevaRuta = new Ruta(datosRuta);
         const rutaGuardada = await nuevaRuta.save();
 
         // Disparar notificación de nueva ruta
@@ -55,7 +58,13 @@ exports.crearRuta = async (req, res) => {
  */
 exports.obtenerRutas = async (req, res) => {
     try {
-        const rutas = await Ruta.find();
+        const query = {};
+        // Filtrar por flotilla si es ADMINISTRADOR
+        if (req.auth && String(req.auth.role).toUpperCase() === 'ADMINISTRADOR' && req.auth.flotilla) {
+            query.flotilla = req.auth.flotilla;
+        }
+
+        const rutas = await Ruta.find(query);
 
         res.json(rutas);
     } catch (error) {

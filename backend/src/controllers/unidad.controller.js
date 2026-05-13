@@ -19,7 +19,14 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 exports.crearUnidad = async (req, res) => {
   try {
-    const nuevaUnidad = new Unidad(req.body);
+    const datosUnidad = { ...req.body };
+
+    // Si es administrador, forzar su flotilla
+    if (req.auth?.role === 'ADMINISTRADOR' && req.auth?.flotilla) {
+      datosUnidad.flotilla = req.auth.flotilla;
+    }
+
+    const nuevaUnidad = new Unidad(datosUnidad);
     await nuevaUnidad.save();
 
     if (nuevaUnidad.conductor) {
@@ -38,7 +45,13 @@ exports.crearUnidad = async (req, res) => {
 
 exports.obtenerUnidades = async (req, res) => {
     try {
-        const unidades = await Unidad.find()
+        const query = {};
+        // Filtrar por flotilla si es ADMINISTRADOR
+        if (req.auth && String(req.auth.role).toUpperCase() === 'ADMINISTRADOR' && req.auth.flotilla) {
+            query.flotilla = req.auth.flotilla;
+        }
+
+        const unidades = await Unidad.find(query)
             .populate('conductor', 'username email')
             .populate('dispositivoHardware')
             .lean();

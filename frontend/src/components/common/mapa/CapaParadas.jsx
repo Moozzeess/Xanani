@@ -6,7 +6,7 @@ import { useMapaInstance } from './MapaContext';
  * Capa para renderizar los puntos de parada como círculos minimalistas.
  * Optimizado para una visualización premium sin ruido visual.
  */
-const CapaParadas = ({ stops = [], onStopClick }) => {
+const CapaParadas = ({ stops = [], selectedStopId = null, onStopClick }) => {
     const map = useMapaInstance();
     const groupRef = useRef(L.layerGroup());
 
@@ -27,12 +27,14 @@ const CapaParadas = ({ stops = [], onStopClick }) => {
             const lng = parseFloat(s.longitud);
             if (isNaN(lat) || isNaN(lng)) return;
 
-            // Renderizar como punto pequeño minimalista
+            const isSelected = selectedStopId && (s._id === selectedStopId || s.id === selectedStopId);
+
+            // Renderizar como punto pequeño minimalista (o resaltado si está seleccionada)
             const marker = L.circleMarker([lat, lng], {
-                radius: 6,
+                radius: isSelected ? 10 : 6,
                 fillColor: '#ffffff',
-                color: '#3b82f6',
-                weight: 2,
+                color: isSelected ? '#3b82f6' : '#cbd5e1', // Azul si está seleccionada, gris suave si no
+                weight: isSelected ? 4 : 2,
                 opacity: 1,
                 fillOpacity: 1,
                 pane: 'markerPane'
@@ -44,7 +46,7 @@ const CapaParadas = ({ stops = [], onStopClick }) => {
 
             groupRef.current.addLayer(marker);
         });
-    }, [map, stops, onStopClick]);
+    }, [map, stops, selectedStopId, onStopClick]);
 
     return null;
 };

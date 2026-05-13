@@ -55,6 +55,12 @@ const rutaSchema = new mongoose.Schema(
         creadoPor: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Usuario'
+        },
+        flotilla: {
+            type: String,
+            required: true,
+            default: 'ESCOM',
+            index: true
         }
     },
     { timestamps: true }

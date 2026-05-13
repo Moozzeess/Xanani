@@ -49,9 +49,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
         // Validar datos mínimos antes de operar con Leaflet
         const tieneDatosValidos = parada && 
                                  !isNaN(parseFloat(parada.latitud)) && 
-                                 !isNaN(parseFloat(parada.longitud)) && 
-                                 Array.isArray(trazo) && 
-                                 trazo.length > 0;
+                                 !isNaN(parseFloat(parada.longitud));
 
         if (tieneDatosValidos) {
             const pos = [parseFloat(parada.latitud), parseFloat(parada.longitud)];
@@ -78,7 +76,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
                         <div class="invitation-stop-marker ${estaSuscrito ? 'is-subscribed' : ''}">
                             <div class="pulse-invitation"></div>
                             <div class="stop-icon-container">
-                                <img src="/parada_bus.svg" style="width: 28px; height: 28px;" />
+                                <img src="/bus_parada.svg" style="width: 28px; height: 28px;" />
                             </div>
                         </div>
                     `,

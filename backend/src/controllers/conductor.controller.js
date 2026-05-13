@@ -24,7 +24,19 @@ const calcularEdad = (fechaNacimiento) => {
  * Intención: Obtener todos los conductores para el panel administrativo.
  */
 const obtenerConductores = catchAsync(async (req, res, next) => {
-  const conductores = await Conductor.find().populate({
+  const query = {};
+  
+  // Filtrar por flotilla si es ADMINISTRADOR
+  // Usamos comparación de cadenas para evitar problemas de tipos
+  if (req.auth && String(req.auth.role).toUpperCase() === 'ADMINISTRADOR' && req.auth.flotilla) {
+    const usuariosFlotaIds = await Usuario.find({ 
+      role: 'CONDUCTOR', 
+      flotilla: req.auth.flotilla 
+    }).distinct('_id');
+    query.user = { $in: usuariosFlotaIds };
+  }
+
+  const conductores = await Conductor.find(query).populate({
     path: 'user',
     select: '-passwordHash'
   }).populate('rutaAsignadaId').lean();
@@ -70,7 +82,8 @@ const crearConductor = catchAsync(async (req, res, next) => {
     username,
     email: email.toLowerCase(),
     passwordHash,
-    role: USER_ROLES.CONDUCTOR
+    role: USER_ROLES.CONDUCTOR,
+    flotilla: req.auth?.flotilla || null
   });
 
   const conductor = await Conductor.create({

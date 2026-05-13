@@ -35,12 +35,19 @@ exports.iniciarRecorrido = async (req, res) => {
       });
     }
 
+    // Obtener flotilla de la unidad
+    const unidad = await Unidad.findById(unidadId);
+    if (!unidad) {
+      return res.status(404).json({ mensaje: 'Unidad no encontrada' });
+    }
+
     const nuevoRecorrido = new Recorrido({
       conductorId,
       unidadId,
       rutaId,
       estado: 'en_curso',
-      horaInicio: Date.now()
+      horaInicio: Date.now(),
+      flotilla: unidad.flotilla
     });
 
     await nuevoRecorrido.save();
@@ -220,6 +227,11 @@ exports.obtenerHistorialAdmin = async (req, res) => {
     try {
         const { conductorId, unidadId, estado, limit = 100 } = req.query;
         const filtro = {};
+
+        // Filtrar por flotilla si es ADMINISTRADOR
+        if (req.auth && String(req.auth.role).toUpperCase() === 'ADMINISTRADOR' && req.auth.flotilla) {
+            filtro.flotilla = req.auth.flotilla;
+        }
 
         if (conductorId) filtro.conductorId = conductorId;
         if (unidadId) filtro.unidadId = unidadId;
