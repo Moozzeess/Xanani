@@ -16,24 +16,21 @@ const whitelist = [
  */
 const corsOptions = {
   origin: function (origin, callback) {
-    // Definimos los orígenes permitidos limpiando posibles barras diagonales al final
+    // Definimos los orígenes permitidos
     const cleanFrontendUrl = FRONTEND_URL ? FRONTEND_URL.replace(/\/$/, '') : null;
-    const cleanWhitelist = [
-      cleanFrontendUrl,
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173' // A veces el navegador usa la IP en lugar de localhost
-    ].filter(Boolean);
-
-    // Limpiamos el origen de la petición también
     const cleanOrigin = origin ? origin.replace(/\/$/, '') : null;
 
-    console.log(`[CORS DEBUG] Origen Recibido: "${origin}" -> Limpio: "${cleanOrigin}"`);
-    console.log(`[CORS DEBUG] Whitelist Activa:`, cleanWhitelist);
+    console.log(`[CORS DEBUG] Intento de conexión desde: "${origin}"`);
 
-    // Si no hay origen (Postman/Server-to-Server) o está en la whitelist
-    if (!origin || cleanWhitelist.includes(cleanOrigin)) {
+    // Regla de validación:
+    // 1. No hay origen (Postman, Server-side)
+    // 2. Coincide exactamente con la whitelist
+    // 3. Es un origen local (localhost o 127.0.0.1) para facilitar desarrollo
+    const esLocal = origin && (origin.includes('localhost') || origin.includes('127.0.0.1'));
+    const enWhitelist = cleanFrontendUrl && cleanOrigin === cleanFrontendUrl;
+
+    if (!origin || esLocal || enWhitelist) {
+      console.log(`[CORS OK] Permitido origen: ${origin || 'Sin Origen'}`);
       callback(null, true);
     } else {
       console.warn(`[CORS BLOQUEADO] Origen no permitido: "${origin}"`);
@@ -41,7 +38,7 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   credentials: true,
   optionsSuccessStatus: 200
 };

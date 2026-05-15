@@ -39,6 +39,14 @@ app.use(morgan(
   { stream: { write: (message) => logger.http(message.trim()) } }
 ));
 
+// Middleware diagnóstico para ver qué está llegando antes que CORS
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    logger.debug(`[PREFLIGHT DEBUG] OPTIONS ${req.url} - Origin: ${req.get('origin')}`);
+  }
+  next();
+});
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
