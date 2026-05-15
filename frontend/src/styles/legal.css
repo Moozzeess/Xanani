@@ -1,0 +1,159 @@
+/**
+ * Estilos para las páginas legales (Privacidad, Seguridad, etc.)
+ * Proporciona un diseño coherente con el logo de Xanani,
+ * utilizando tonos carbón, gris oscuro y acentos en azul claro.
+ */
+
+.legal-container {
+    min-height: 100vh;
+    background-color: #0f172a; /* Fondo oscuro carbón */
+    color: #f8fafc;
+    font-family: 'Inter', sans-serif;
+    padding: 3rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-image: radial-gradient(circle at top right, rgba(78, 215, 249, 0.05), transparent),
+                      radial-gradient(circle at bottom left, rgba(30, 58, 138, 0.05), transparent);
+}
+
+.legal-logo-container {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.legal-logo {
+    width: 220px;
+    height: auto;
+    filter: drop-shadow(0 0 15px rgba(78, 215, 249, 0.3));
+    border-radius: 1.5rem;
+}
+
+.legal-card {
+    width: 100%;
+    max-width: 850px;
+    background: rgba(30, 41, 59, 0.7); /* Gris oscuro del logo */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 2rem;
+    padding: 4rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    margin-bottom: 2rem;
+}
+
+.legal-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.legal-title {
+    font-size: 3rem;
+    font-weight: 900;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(to right, #4ed7f9, #2563eb); /* Degradado del logo */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+}
+
+.legal-subtitle {
+    color: #94a3b8;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.legal-section {
+    margin-bottom: 3rem;
+}
+
+.legal-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #4ed7f9; /* Azul claro del logo */
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-left: 4px solid #4ed7f9;
+    padding-left: 1rem;
+}
+
+.legal-text {
+    line-height: 1.8;
+    color: #cbd5e1;
+    margin-bottom: 1.25rem;
+    font-size: 1.05rem;
+}
+
+.legal-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 1.5rem;
+}
+
+.legal-list li {
+    margin-bottom: 0.75rem;
+    position: relative;
+    padding-left: 1.5rem;
+    color: #cbd5e1;
+}
+
+.legal-list li::before {
+    content: "•";
+    color: #4ed7f9;
+    font-weight: bold;
+    display: inline-block;
+    width: 1rem;
+    margin-left: -1.5rem;
+    position: absolute;
+}
+
+.legal-footer {
+    width: 100%;
+    max-width: 850px;
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.btn-back {
+    padding: 1rem 2rem;
+    border-radius: 1rem;
+    background: #1e293b; /* Color carbón del logo */
+    color: #f8fafc;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-back:hover {
+    background: #334155;
+    transform: translateY(-3px) scale(1.02);
+    border-color: #4ed7f9;
+    box-shadow: 0 10px 20px -5px rgba(78, 215, 249, 0.2);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .legal-card {
+        padding: 2.5rem 1.5rem;
+        border-radius: 1.5rem;
+    }
+    
+    .legal-title {
+        font-size: 2.2rem;
+    }
+
+    .legal-section-title {
+        font-size: 1.25rem;
+    }
+}
+

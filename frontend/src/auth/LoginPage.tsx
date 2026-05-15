@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "../styles/login.css";
 import { useAuth } from "./useAuth";
 import type { Role } from "../types/auth";
@@ -153,9 +153,9 @@ const PaginaLogin = () => {
             </div>
 
             <div className="card-legal-footer">
-              <a href="/privacidad" className="legal-link">Privacidad</a>
+              <Link to="/privacidad" className="legal-link">Privacidad</Link>
               <span className="legal-divider">•</span>
-              <a href="/seguridad" className="legal-link">Seguridad</a>
+              <Link to="/seguridad" className="legal-link">Seguridad</Link>
             </div>
           </div>
 

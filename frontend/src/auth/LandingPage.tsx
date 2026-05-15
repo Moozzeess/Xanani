@@ -4,8 +4,6 @@ import 'leaflet/dist/leaflet.css';
 import '../styles/pasajero.css';
 import { EstadoBus } from '../components/common/MarcadorBus';
 import TarjetaInformativa from '../components/pasajero/TarjetaInformativa';
-import UbicacionModal from '../components/common/UbicacionModal';
-import { useAlertaGlobal } from '../context/AlertaContext';
 import { io, Socket } from 'socket.io-client';
 import Mapa from '../components/common/Mapa';
 import CapaVehiculos from '../components/common/mapa/CapaVehiculos';

@@ -12,6 +12,8 @@ import SuperusuarioPage from "./pages/superuser/superuser";
 import AdminDashboard from "./pages/administrador/adminDasboard";
 import Conductor from "./pages/conductor/Conductor";
 import Pasajero from "./pages/pasajero/Pasajero";
+import PrivacidadPage from "./pages/legal/PrivacidadPage";
+import SeguridadPage from "./pages/legal/SeguridadPage";
 
 /**
  * Determina la ruta por defecto según el rol del usuario.
@@ -63,6 +65,8 @@ function App() {
         <Route path="/login" element={<PaginaLogin />} />
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/privacidad" element={<PrivacidadPage />} />
+        <Route path="/seguridad" element={<SeguridadPage />} />
 
         <Route
           path="/superuser"

@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Menu, Megaphone, Send, X, Siren, Users, User, Info } from 'lucide-react';
-import api from '../../services/api';
-import { useSocket } from '../../hooks/useSocket';
-import { useAlerta } from '../../hooks/useAlerta';
+import { Bell, Menu, Megaphone, Send, X, Siren } from 'lucide-react';
 import FormularioAnuncio from './FormularioAnuncio';
 
 export interface AdminHeaderProps {
