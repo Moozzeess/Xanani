@@ -2,6 +2,7 @@ const { FRONTEND_URL } = require('./env');
 
 /**
  * Whitelist de orígenes permitidos.
+ * Incluye la URL de producción y puertos comunes de desarrollo local.
  */
 const whitelist = [
   FRONTEND_URL,
@@ -10,19 +11,14 @@ const whitelist = [
   'http://localhost:3000'
 ];
 
-
-const corsOptions = {
-  origin: true,
-  credentials: true
-};
-
-module.exports = {
-  corsOptions
-};
-/*
+/**
+ * Configuración dinámica de CORS.
+ */
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || whitelist.indexOf(origin) !== -1) {
+    // Si no hay origen (como en Postman o peticiones entre servidores)
+    // O si el origen está en la whitelist, permitimos el acceso.
+    if (!origin || whitelist.includes(origin)) {
       callback(null, true);
     } else {
       console.warn(`[CORS] Bloqueado origen no permitido: ${origin}`);
@@ -31,10 +27,11 @@ const corsOptions = {
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 module.exports = {
   whitelist,
   corsOptions
-};*/
+};
