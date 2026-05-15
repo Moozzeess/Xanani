@@ -1,20 +1,17 @@
-const { FRONTEND_URL, NODE_ENV } = require('./env');
+const { FRONTEND_URL } = require('./env');
 
 /**
  * Whitelist de orígenes permitidos.
  */
-const whitelist = [FRONTEND_URL];
-
-if (NODE_ENV === 'development') {
-  whitelist.push('http://localhost:5173');
-  whitelist.push('http://localhost:5174');
-  whitelist.push('http://localhost:3000'); // Por si se usa otro puerto común
-}
+const whitelist = [
+  FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000'
+];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Si no hay origen (como en Postman o peticiones entre servidores)
-    // O si el origen está en la whitelist, permitimos el acceso.
     if (!origin || whitelist.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
