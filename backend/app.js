@@ -13,6 +13,7 @@ const logger = require('./src/utils/logger');
 const { NODE_ENV } = require('./src/config/env');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Limitador de velocidad global para evitar abusos
 // En desarrollo se usa un límite alto para no interferir con el trabajo
