@@ -13,11 +13,11 @@ const logger = require('./src/utils/logger');
 const optimizaciones = require('./src/config/optimizaciones');
 
 // Determinamos si debemos usar cluster (Solo en producción)
-const USE_CLUSTER = NODE_ENV === 'production';
+const USE_CLUSTER = false;
 // Intentar usar availableParallelism (Node 19.4+) o fallback a cpus().length
 const getWorkerCount = () => {
-    if (os.availableParallelism) return os.availableParallelism();
-    return os.cpus().length;
+  if (os.availableParallelism) return os.availableParallelism();
+  return os.cpus().length;
 };
 
 const numCPUs = getWorkerCount();
@@ -77,7 +77,7 @@ if (USE_CLUSTER && cluster.isPrimary) {
 
 } else {
   const server = http.createServer(app);
-  
+
   server.timeout = optimizaciones.server.timeout;
   server.keepAliveTimeout = optimizaciones.server.keepAliveTimeout;
   server.headersTimeout = optimizaciones.server.headersTimeout;
@@ -85,10 +85,10 @@ if (USE_CLUSTER && cluster.isPrimary) {
   (async () => {
     try {
       await connectDB(MONGO_URI);
-      
+
       inicializarSocket(server);
       conectarMQTT();
-    
+
       server.listen(PORT, () => {
         const mode = USE_CLUSTER ? `WORKER ${process.pid}` : 'SINGLE PROCESS';
         logger.info(`[${mode}] Servidor Xanani corriendo en el puerto: ${PORT}`);

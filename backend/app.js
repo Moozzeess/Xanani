@@ -13,6 +13,7 @@ const logger = require('./src/utils/logger');
 const { NODE_ENV } = require('./src/config/env');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Limitador de velocidad global para evitar abusos
 // En desarrollo se usa un límite alto para no interferir con el trabajo
@@ -39,7 +40,17 @@ app.use(morgan(
   { stream: { write: (message) => logger.http(message.trim()) } }
 ));
 
+// Middleware diagnóstico para ver qué está llegando antes que CORS
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    logger.debug(`[PREFLIGHT DEBUG] OPTIONS ${req.url} - Origin: ${req.get('origin')}`);
+  }
+  next();
+});
+
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(compression()); // Optimizacion de payload
