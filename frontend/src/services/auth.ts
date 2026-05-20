@@ -10,3 +10,8 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
   const { data } = await api.post<AuthResponse>('/autenticacion/registro', payload);
   return data;
 }
+
+export async function resendVerification(usernameOrEmail: string): Promise<{ mensaje: string }> {
+  const { data } = await api.post<{ mensaje: string }>('/autenticacion/resend-verification', { usernameOrEmail });
+  return data;
+}

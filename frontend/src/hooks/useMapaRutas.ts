@@ -18,7 +18,7 @@ const crearIconoMarcador = (indice: number, total: number) => {
     className: 'marcador-parada-custom',
     html: `
       <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-         <img src="/parada_bus.svg" style="width: 32px; height: 32px; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));" />
+         <img src="/bus_parada.svg" style="width: 32px; height: 32px; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));" />
          <div style="position: absolute; top: -8px; right: -8px; background-color: ${color}; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 11px; font-family: sans-serif;">
            ${indice + 1}
          </div>

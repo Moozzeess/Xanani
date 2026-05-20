@@ -243,21 +243,26 @@ const PanelPerfil = ({
                     )}
 
                     {/* Historial de viajes */}
-                    {historial.length > 0 && (
-                        <div className="px-5 py-4 border-b border-slate-100">
-                            <div className="flex items-center justify-between mb-3">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Historial</p>
+                    <div className="px-5 py-4 border-b border-slate-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Historial de Viajes</p>
+                            {isConductor && historial.length > 0 && (
                                 <button
                                     onClick={onLimpiarHistorial}
                                     className="text-[10px] text-red-400 font-bold hover:text-red-600 flex items-center gap-1"
                                 >
                                     <Trash2 className="w-3 h-3" /> Limpiar
                                 </button>
-                            </div>
-                            {historial.slice(0, 5).map((viaje, i) => (
+                            )}
+                        </div>
+                        
+                        {historial.length === 0 ? (
+                            <p className="text-[10px] text-slate-400 italic text-center py-4 bg-slate-50 rounded-xl">No tienes viajes registrados aún.</p>
+                        ) : (
+                            historial.slice(0, 5).map((viaje, i) => (
                                 <div key={i} className="flex items-center gap-3 py-2">
                                     <div className="w-7 h-7 bg-white rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100 p-0.5">
-                                        <img src="/LOGO.png" className="w-full h-full object-contain" alt="Usuario" />
+                                        <img src="/LOGO.png" className="w-full h-full object-contain" alt="Unidad" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-bold text-slate-700 truncate">{viaje.placa}</p>
@@ -270,9 +275,9 @@ const PanelPerfil = ({
                                         </div>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        )}
+                    </div>
 
 
                 </div>

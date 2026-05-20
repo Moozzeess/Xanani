@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import "../styles/login.css";
 import { useAuth } from "./useAuth";
 import type { Role } from "../types/auth";
@@ -48,16 +49,22 @@ const PaginaLogin = () => {
   // Estados del formulario de login
   const [usuarioOEmail, setUsuarioOEmail] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [mostrarContrasenaLogin, setMostrarContrasenaLogin] = useState(false);
 
   // Estados del formulario de registro
   const [emailRegistro, setEmailRegistro] = useState("");
   const [usuarioRegistro, setUsuarioRegistro] = useState("");
   const [contrasenaRegistro, setContrasenaRegistro] = useState("");
   const [confirmarContrasenaRegistro, setConfirmarContrasenaRegistro] = useState("");
+  const [mostrarContrasenaRegistro, setMostrarContrasenaRegistro] = useState(false);
+  const [mostrarConfirmarContrasena, setMostrarConfirmarContrasena] = useState(false);
 
   // Recuperar contraseña
   const [emailRecuperacion, setEmailRecuperacion] = useState("");
   const [estadoRecuperacion, setEstadoRecuperacion] = useState<string | null>(null);
+
+  // Reenvío de confirmación
+  const [necesitaVerificacion, setNecesitaVerificacion] = useState(false);
 
   const [estaEnviando, setEstaEnviando] = useState(false);
 
@@ -93,9 +100,36 @@ const PaginaLogin = () => {
   const alEnviarLogin = async () => {
     try {
       setEstaEnviando(true);
+      setNecesitaVerificacion(false);
       await iniciarSesion({ usernameOrEmail: usuarioOEmail.trim(), password: contrasena });
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Error Login:", e);
+      // Soporte para distintos formatos de respuesta de error del backend
+      const errorMsg = e.response?.data?.mensaje || e.response?.data?.message || String(e);
+      
+      // Detectamos si el error es de cuenta no verificada (Código HTTP 403 o la palabra clave)
+      if (e.response?.status === 403 || errorMsg.toLowerCase().includes('verific')) {
+        setNecesitaVerificacion(true);
+      }
+      alert(errorMsg);
+    } finally {
+      setEstaEnviando(false);
+    }
+  };
+
+  /**
+   * Maneja el reenvío manual de correo de verificación.
+   */
+  const alReenviarVerificacion = async () => {
+    try {
+      setEstaEnviando(true);
+      const authApi = await import("../services/auth");
+      const result = await authApi.resendVerification(usuarioOEmail.trim());
+      alert(result.mensaje || "Se ha enviado un nuevo enlace a tu correo.");
+      setNecesitaVerificacion(false);
+    } catch (e: any) {
+      console.error("Error reenvío:", e);
+      alert(e.response?.data?.mensaje || e.response?.data?.message || String(e));
     } finally {
       setEstaEnviando(false);
     }
@@ -170,7 +204,13 @@ const PaginaLogin = () => {
               <div className={`form-wrapper-animated phase-${formularioActivo}`}>
                 {/* LOGIN */}
                 {formularioActivo === "login" && (
-                  <div className="auth-form">
+                  <form 
+                    className="auth-form" 
+                    onSubmit={(e) => { 
+                      e.preventDefault(); 
+                      if (puedeEnviarLogin && !estaEnviando) alEnviarLogin(); 
+                    }}
+                  >
                     <div className="input-group">
                       <input
                         className="input-style"
@@ -182,14 +222,24 @@ const PaginaLogin = () => {
                       />
                     </div>
                     <div className="input-group">
-                      <input
-                        className="input-style"
-                        placeholder="Contraseña"
-                        type="password"
-                        value={contrasena}
-                        onChange={(e) => setContrasena(e.target.value)}
-                        onKeyDown={(e) => alPresionarTecla(e, alEnviarLogin, puedeEnviarLogin)}
-                      />
+                      <div className="password-input-wrapper">
+                        <input
+                          className="input-style"
+                          placeholder="Contraseña"
+                          type={mostrarContrasenaLogin ? "text" : "password"}
+                          value={contrasena}
+                          onChange={(e) => setContrasena(e.target.value)}
+                          onKeyDown={(e) => alPresionarTecla(e, alEnviarLogin, puedeEnviarLogin)}
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setMostrarContrasenaLogin(!mostrarContrasenaLogin)}
+                          title={mostrarContrasenaLogin ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        >
+                          {mostrarContrasenaLogin ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
                     </div>
                     <button
                       className="btn-auth-submit"
@@ -198,16 +248,33 @@ const PaginaLogin = () => {
                     >
                       {estaEnviando ? "Cargando..." : "Iniciar Sesión"}
                     </button>
+                    {necesitaVerificacion && (
+                      <button
+                        type="button"
+                        className="btn-auth-submit"
+                        style={{ marginTop: '10px' }}
+                        onClick={alReenviarVerificacion}
+                        disabled={estaEnviando}
+                      >
+                        ¿No recibiste el correo? Reenviar confirmación
+                      </button>
+                    )}
                     <div className="auth-footer-options">
-                      <button onClick={() => setFormularioActivo("register")} className="option-link">Crear cuenta</button>
-                      <button onClick={() => setFormularioActivo("recover")} className="option-link">Olvidé mi contraseña</button>
+                      <button type="button" onClick={() => setFormularioActivo("register")} className="option-link">Crear cuenta</button>
+                      <button type="button" onClick={() => setFormularioActivo("recover")} className="option-link">Olvidé mi contraseña</button>
                     </div>
-                  </div>
+                  </form>
                 )}
 
                 {/* REGISTER */}
                 {formularioActivo === "register" && (
-                  <div className="auth-form">
+                  <form 
+                    className="auth-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (puedeEnviarRegistro && !estaEnviando) alEnviarRegistro();
+                    }}
+                  >
                     <input
                       className="input-style"
                       placeholder="Email"
@@ -222,21 +289,41 @@ const PaginaLogin = () => {
                       value={usuarioRegistro}
                       onChange={(e) => setUsuarioRegistro(e.target.value)}
                     />
-                    <input
-                      className="input-style"
-                      placeholder="Contraseña (8+ caracteres y especial)"
-                      type="password"
-                      value={contrasenaRegistro}
-                      onChange={(e) => setContrasenaRegistro(e.target.value)}
-                    />
-                    <input
-                      className="input-style"
-                      placeholder="Confirmar contraseña"
-                      type="password"
-                      value={confirmarContrasenaRegistro}
-                      onChange={(e) => setConfirmarContrasenaRegistro(e.target.value)}
-                      onKeyDown={(e) => alPresionarTecla(e, alEnviarRegistro, puedeEnviarRegistro)}
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        className="input-style"
+                        placeholder="Contraseña (8+ caracteres y especial)"
+                        type={mostrarContrasenaRegistro ? "text" : "password"}
+                        value={contrasenaRegistro}
+                        onChange={(e) => setContrasenaRegistro(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setMostrarContrasenaRegistro(!mostrarContrasenaRegistro)}
+                        title={mostrarContrasenaRegistro ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {mostrarContrasenaRegistro ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                    <div className="password-input-wrapper">
+                      <input
+                        className="input-style"
+                        placeholder="Confirmar contraseña"
+                        type={mostrarConfirmarContrasena ? "text" : "password"}
+                        value={confirmarContrasenaRegistro}
+                        onChange={(e) => setConfirmarContrasenaRegistro(e.target.value)}
+                        onKeyDown={(e) => alPresionarTecla(e, alEnviarRegistro, puedeEnviarRegistro)}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setMostrarConfirmarContrasena(!mostrarConfirmarContrasena)}
+                        title={mostrarConfirmarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {mostrarConfirmarContrasena ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
                     <button
                       className="btn-auth-submit"
                       onClick={alEnviarRegistro}
@@ -244,13 +331,19 @@ const PaginaLogin = () => {
                     >
                       Registrarme
                     </button>
-                    <button onClick={() => setFormularioActivo("login")} className="option-link-back">Volver al inicio</button>
-                  </div>
+                    <button type="button" onClick={() => setFormularioActivo("login")} className="option-link-back">Volver al inicio</button>
+                  </form>
                 )}
 
                 {/* RECOVER */}
                 {formularioActivo === "recover" && (
-                  <div className="auth-form">
+                  <form 
+                    className="auth-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!estaEnviando && emailRecuperacion) alEnviarRecuperacion();
+                    }}
+                  >
                     <p className="recover-info">Se enviará un enlace a tu correo.</p>
                     <input 
                       className="input-style" 
@@ -269,8 +362,8 @@ const PaginaLogin = () => {
                     >
                       {estaEnviando ? "Enviando..." : "Enviar Enlace"}
                     </button>
-                    <button onClick={() => setFormularioActivo("login")} className="option-link-back">Volver al inicio</button>
-                  </div>
+                    <button type="button" onClick={() => setFormularioActivo("login")} className="option-link-back">Volver al inicio</button>
+                  </form>
                 )}
               </div>
             </div>

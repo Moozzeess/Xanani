@@ -14,7 +14,7 @@ const TIPOS_INCIDENCIA = [
 /**
  * PanelRutaInteractiva (Versión Real-Time Premium)
  */
-const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSuscripcion, onExpand, onCentrarParada, onReport, onClose }) => {
+const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = false, onToggleSuscripcion, onExpand, onCentrarParada, onReport, onClose }) => {
     const [viewState, setViewState] = useState('collapsed');
     const [mostrarReporte, setMostrarReporte] = useState(false);
     const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
@@ -136,7 +136,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSusc
     };
 
     return (
-        <div className={`fixed inset-x-0 bottom-0 bg-white rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] z-[2000] transition-all duration-500 ease-in-out flex flex-col ${getPanelHeight()}`}>
+        <div className={`fixed inset-x-0 bottom-0 bg-white rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] z-[2000] transition-all duration-500 ease-in-out flex flex-col ${getPanelHeight()} ${isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
 
             {/* ESTADO 1: COLLAPSED (Telemetría Real) */}
             <div onClick={handleToggle} className="w-full pt-4 pb-4 px-8 shrink-0 cursor-pointer bg-white">
@@ -280,7 +280,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], onToggleSusc
                                     className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors group"
                                 >
                                     <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 p-1.5 group-hover:scale-110 transition-transform">
-                                        <img src="/parada_bus.svg" className="w-full h-full" alt="Parada" />
+                                        <img src="/bus_parada.svg" className="w-full h-full" alt="Parada" />
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-sm font-black text-slate-800">{p.nombre}</p>

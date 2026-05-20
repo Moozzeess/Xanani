@@ -55,6 +55,16 @@ const verificarCorreo = catchAsync(async (req, res) => {
   res.status(200).json(result);
 });
 
+const reenviarVerificacion = catchAsync(async (req, res) => {
+  const { usernameOrEmail } = req.body;
+  if (!usernameOrEmail) {
+    throw new ErrorApp('Datos incompletos: El usuario/correo es obligatorio.', 400);
+  }
+
+  const result = await authService.resendVerificationEmail(usernameOrEmail);
+  res.status(200).json(result);
+});
+
 const solicitarRecuperacion = catchAsync(async (req, res) => {
   const { email } = req.body;
   if (!email) throw new ErrorApp('Datos incompletos: El correo es obligatorio.', 400);
@@ -76,6 +86,7 @@ module.exports = {
   registrar,
   iniciarSesion,
   verificarCorreo,
+  reenviarVerificacion,
   solicitarRecuperacion,
   restablecerContrasena
 };

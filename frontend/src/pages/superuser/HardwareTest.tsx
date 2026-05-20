@@ -174,9 +174,10 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         statusCode: payload.st !== undefined ? payload.st : prev.statusCode,
         errorMsg: payload.err || '',
         sim800l: {
-          connected: payload.sim?.con || false,
-          signalStrength: payload.sim?.signal || 0,
-          dataPlanActive: payload.sim?.con || false
+          connected:      payload.sim?.con    ?? false,
+          signalStrength: payload.sim?.signal ? 
+                          Math.round((payload.sim.signal / 31) * 100) : 0, // convierte 0-31 a %
+          dataPlanActive: payload.sim?.con    ?? false
         },
         gps: {
           conectado: payload.gps?.con || false,

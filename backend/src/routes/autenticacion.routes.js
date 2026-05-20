@@ -12,6 +12,7 @@ router.post('/login', autenticacionController.iniciarSesion);
 
 // Nuevas rutas de seguridad
 router.get('/verify-email/:token', autenticacionController.verificarCorreo);
+router.post('/resend-verification', autenticacionController.reenviarVerificacion);
 router.post('/forgot-password', autenticacionController.solicitarRecuperacion);
 router.post('/reset-password/:token', autenticacionController.restablecerContrasena);
 

@@ -165,7 +165,7 @@ const ModalPerfilPasajero = ({ isOpen, onClose, usuario, stats, onActualizar }) 
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1">Ciudad de origen</label>
+                            <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1">Recidencia</label>
                             <div className="relative">
                                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <input

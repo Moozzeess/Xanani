@@ -47,17 +47,17 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
         if (!map) return;
 
         // Validar datos mínimos antes de operar con Leaflet
-        const tieneDatosValidos = parada && 
-                                 !isNaN(parseFloat(parada.latitud)) && 
-                                 !isNaN(parseFloat(parada.longitud));
+        const tieneDatosValidos = parada &&
+            !isNaN(parseFloat(parada.latitud)) &&
+            !isNaN(parseFloat(parada.longitud));
 
         if (tieneDatosValidos) {
             const pos = [parseFloat(parada.latitud), parseFloat(parada.longitud)];
-            
+
             // Generar contenido del popup (se actualiza si cambia la ETA)
             const etaHtml = eta ? `
                 <div class="mt-2 flex items-center justify-center gap-1 ${estaSuscrito ? 'bg-blue-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2 py-1 rounded-lg border">
-                    <img src="LOGO" style="width: 28px; height: 28px;" />
+                    <img src="LOGO.png" style="width: 28px; height: 28px;" />
                     <span class="text-[10px] font-black">LLEGA EN ${eta} MIN</span>
                 </div>
             ` : '';
@@ -76,7 +76,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
                         <div class="invitation-stop-marker ${estaSuscrito ? 'is-subscribed' : ''}">
                             <div class="pulse-invitation"></div>
                             <div class="stop-icon-container">
-                                <img src="/bus_parada.svg" style="width: 28px; height: 28px;" />
+                                <img src="bus_parada.svg" style="width: 28px; height: 28px;" />
                             </div>
                         </div>
                     `,
@@ -86,13 +86,13 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
                 });
 
                 markerRef.current = L.marker(pos, { icon, zIndexOffset: 900 }).addTo(map);
-                
+
                 markerRef.current.on('click', () => {
                     if (onParadaClick) onParadaClick(parada);
                 });
 
-                markerRef.current.bindPopup(popupContent, { 
-                    closeButton: false, 
+                markerRef.current.bindPopup(popupContent, {
+                    closeButton: false,
                     className: 'minimal-popup',
                     offset: [0, -10]
                 }).openPopup();
@@ -100,7 +100,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
                 // Actualizar posición y contenido si ya existe
                 markerRef.current.setLatLng(pos);
                 markerRef.current.setPopupContent(popupContent);
-                
+
                 // Asegurar que el popup esté abierto si hay cambios importantes
                 if (!markerRef.current.isPopupOpen()) {
                     markerRef.current.openPopup();
