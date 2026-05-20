@@ -215,6 +215,35 @@
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.password-input-wrapper .input-style {
+    padding-right: 3rem;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s;
+}
+
+.password-toggle-btn:hover {
+    color: white;
+}
+
 .input-hint {
     font-size: 0.7rem;
     color: #f87171;

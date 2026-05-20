@@ -117,39 +117,34 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs }, idHardware);
         }
 
-        // Normalización de datos común (Soporte GPS NEO 6M, SIM800L y Celdas/Seats)
+        // Normalización de datos
         const payloadNormalizado = {
           id: idHardware,
-          // GPS NEO 6M
           gps: {
-            con: datos.gps?.con !== undefined ? datos.gps.con : (datos.gps_status === 'OK'),
+            con: datos.gps?.con || false,
             lat: datos.gps?.lat || 0,
             lon: datos.gps?.lon || 0,
             sat: datos.gps?.sat || 0,
             spd: datos.gps?.spd || 0
           },
-          // SIM800L
+          // Ahora sim viene directo del ESP32
           sim: {
-            con: datos.sim800l?.connected !== undefined ? datos.sim800l.connected : (datos.sim_con || false),
-            signal: datos.sim800l?.signalStrength !== undefined ? datos.sim800l.signalStrength : (datos.sim_signal || 0)
+            con:    datos.sim?.con    ?? false,
+            signal: datos.sim?.signal ?? 0
           },
-          // Sensores de Pasajeros (IR o Conteo directo)
           pasajeros: {
-            in: datos.entradas !== undefined ? datos.entradas : (datos.in || 0),
-            out: datos.salidas !== undefined ? datos.salidas : (datos.out || 0),
-            act: datos.ocupados !== undefined ? datos.ocupados : (datos.actuales || datos.act || 0)
+            in:  datos.pasajeros?.in  ?? (datos.in  || 0),
+            out: datos.pasajeros?.out ?? (datos.out || 0),
+            act: datos.pasajeros?.act ?? (datos.act || datos.ocupados || 0)
           },
-          // Celdas de Carga (HX711) o Asientos (seats)
+          // seats viene directo - tu ESP32 ya lo serializa bien
           celdas: datos.seats || datos.celdas || [],
-          // Configuración actual (si el ESP32 la reporta)
           config: {
-            capacidad_maxima: datos.cap !== undefined ? datos.cap : (datos.capacidad_maxima || null),
-            factor_calibracion: datos.factor_calibracion || null,
-            modo: datos.modo || null,
-            action: datos.action || null
+            capacidad_maxima: datos.cap ?? null,
+            modo: datos.modo || null
           },
-          // Código de estado/error de Arduino
-          st: datos.st !== undefined ? datos.st : -1,
+          // st y err ya los mandas correctamente
+          st:  datos.st  ?? -1,
           err: datos.err || null,
           fecha: new Date().toISOString()
         };

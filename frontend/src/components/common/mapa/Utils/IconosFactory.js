@@ -34,7 +34,7 @@ export const htmlMarcadorParada = (indice) => {
     <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translateY(-50%);">
        <!-- Icono de escudo de parada -->
        <div style="background-color: white; border: 2px solid #3b82f6; border-radius: 8px; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
-         <img src="/parada_bus.svg" style="width: 22px; height: 22px;" />
+         <img src="/bus_parada.svg" style="width: 22px; height: 22px;" />
        </div>
        <!-- Badge de número lateral -->
        <div style="position: absolute; top: -10px; right: -10px; background-color: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 10px; font-family: 'Inter', sans-serif; z-index: 10;">

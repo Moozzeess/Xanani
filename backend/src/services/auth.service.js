@@ -122,8 +122,8 @@ async function login({ usernameOrEmail, password }) {
     throw new ErrorApp('Inicio de sesión fallido: Contraseña o datos incorrectos.', 401, 'Usuario no encontrado o inactivo.');
   }
 
-  // Verificar que el usuario haya confirmado su correo (Omitir en desarrollo para facilitar pruebas locales)
-  if (!user.isVerified && NODE_ENV !== 'development') {
+  // Verificar que el usuario haya confirmado su correo (Forzado en desarrollo por ahora)
+  if (!user.isVerified) {
     throw new ErrorApp('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.', 403, 'Cuenta no verificada.');
   }
 
@@ -182,6 +182,38 @@ async function verifyEmail(token) {
 }
 
 /**
+ * REENVIAR CORREO DE VERIFICACIÓN
+ */
+async function resendVerificationEmail(usernameOrEmail) {
+  const query = {
+    $or: [
+      { username: usernameOrEmail },
+      { email: usernameOrEmail.toLowerCase() }
+    ]
+  };
+
+  const user = await Usuario.findOne(query);
+  
+  if (!user || !user.isActive) {
+    throw new ErrorApp('Usuario no encontrado o inactivo.', 404);
+  }
+
+  if (user.isVerified) {
+    throw new ErrorApp('Esta cuenta ya ha sido verificada.', 400);
+  }
+
+  // Generar nuevo token
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+  user.verificationToken = verificationToken;
+  await user.save();
+
+  // Enviar correo
+  emailService.enviarCorreoVerificacion(user.email, user.username, verificationToken);
+
+  return { mensaje: 'Se ha reenviado el correo de verificación. Revisa tu bandeja de entrada o SPAM.' };
+}
+
+/**
  * OLVIDÉ MI CONTRASEÑA
  */
 async function forgotPassword(email) {
@@ -229,6 +261,7 @@ module.exports = {
   register,
   login,
   verifyEmail,
+  resendVerificationEmail,
   forgotPassword,
   resetPassword
 };

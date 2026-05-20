@@ -8,7 +8,7 @@ import { io, Socket } from 'socket.io-client';
 import Mapa from '../components/common/Mapa';
 import CapaVehiculos from '../components/common/mapa/CapaVehiculos';
 
-const SOCKET_URL = 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
 
 /**
  * Página de aterrizaje (Landing) para pasajeros en modo invitado.

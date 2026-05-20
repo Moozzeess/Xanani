@@ -61,6 +61,7 @@ const Pasajero = () => {
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [rutasDisponibles, setRutasDisponibles] = useState([]);
     const [rutasFavoritas, setRutasFavoritas] = useState([]);
+    const [historialViajes, setHistorialViajes] = useState([]);
     const [perfilCompleto, setPerfilCompleto] = useState(null);
     const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
     const [routeLine, setRouteLine] = useState([]);
@@ -256,8 +257,31 @@ const Pasajero = () => {
     };
 
     useEffect(() => {
-        if (token) fetchPerfil();
+        if (token) {
+            fetchPerfil();
+            fetchHistorial();
+        }
     }, [token]);
+
+    const fetchHistorial = async () => {
+        try {
+            const res = await api.get('/reportes/usuario');
+            if (Array.isArray(res.data)) {
+                const reportes = res.data
+                    .filter(r => r.tipo === 'EXPERIENCIA')
+                    .map(r => ({
+                        id: r._id,
+                        placa: r.unidad?.placa || 'Unidad',
+                        ruta: r.ruta?.nombre || '',
+                        fecha: new Date(r.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+                        calificacion: r.calificacion
+                    }));
+                setHistorialViajes(reportes);
+            }
+        } catch (e) {
+            console.error("Error cargando historial de viajes", e);
+        }
+    };
 
     const handleVehicleClick = (v) => {
         if (selectedVehicle?.id === v.id) {
@@ -423,6 +447,7 @@ const Pasajero = () => {
     };
 
     const handleCentrarEnParada = (parada) => {
+        setMapBounds(null);
         setMapCenter([parada.latitud, parada.longitud]);
         setMapZoom(17);
         // Activamos el radar informativo para esa parada
@@ -488,6 +513,7 @@ const Pasajero = () => {
                                 stops={selectedRoute?.paradas || []} 
                                 selectedStopId={paradaDetectada?.parada?._id || paradaDetectada?.parada?.id}
                                 onStopClick={(p) => {
+                                    setMapBounds(null);
                                     setMapCenter([p.latitud, p.longitud]);
                                     setMapZoom(17);
                                     
@@ -530,13 +556,15 @@ const Pasajero = () => {
                         </Mapa>
 
                         {/* Radar de Descubrimiento */}
-                        <PanelDescubrimiento
-                            totalUnidades={vehicles.length}
-                            sinUnidades={vehicles.length === 0}
-                            filtros={filtros}
-                            onCambiarFiltros={setFiltros}
-                            onActivarAlerta={() => disparar({ tipo: 'info', titulo: 'Reportar Incidencia', mensaje: 'Para reportar, selecciona una unidad activa en el mapa.' })}
-                        />
+                        {!paradaDetectada && (
+                            <PanelDescubrimiento
+                                totalUnidades={vehicles.length}
+                                sinUnidades={vehicles.length === 0}
+                                filtros={filtros}
+                                onCambiarFiltros={setFiltros}
+                                onActivarAlerta={() => disparar({ tipo: 'info', titulo: 'Reportar Incidencia', mensaje: 'Para reportar, selecciona una unidad activa en el mapa.' })}
+                            />
+                        )}
 
                         {/* Motor de Simulación Modular */}
                         <SimPasajero
@@ -551,6 +579,7 @@ const Pasajero = () => {
                         {/* PANEL EVOLUTIVO: Se activa al seleccionar unidad o ruta */}
                         {(selectedVehicle || selectedRoute) && (
                             <PanelRutaInteractiva
+                                isHidden={!!paradaDetectada}
                                 vehicle={selectedVehicle}
                                 ruta={selectedRoute || rutasDisponibles.find(r => r._id.toString() === (selectedVehicle?.rutaId || selectedVehicle?.id_ruta)?.toString())}
                                 rutasFavoritas={rutasFavoritas}
@@ -652,6 +681,7 @@ const Pasajero = () => {
                 usuario={{ ...perfilCompleto, role: 'PASAJERO' }}
                 rutasFavoritas={rutasFavoritas}
                 rutasDisponibles={rutasDisponibles}
+                historial={historialViajes}
                 onToggleSuscripcion={handleToggleSuscripcion}
                 onVerRutaFavorita={(r) => {
                     setIsProfileOpen(false);

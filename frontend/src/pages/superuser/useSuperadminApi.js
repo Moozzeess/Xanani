@@ -4,7 +4,7 @@
  * a cada petición hacia /api/superadmin/*
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:4000/api`;
+const BASE_URL = import.meta.env.VITE_API_URL ?? `https://${window.location.hostname}:/api`;
 
 function getToken() {
   return localStorage.getItem('xanani_token');
