@@ -112,7 +112,7 @@ const Conductor = () => {
   // Inicializar Socket
   useEffect(() => {
     const host = window.location.hostname;
-    const newSocket = io(`http://${host}:4000`);
+    const newSocket = io(`import.meta.env.VITE_SOCKET_URL`);
     setSocket(newSocket);
     return () => newSocket.disconnect();
   }, []);
