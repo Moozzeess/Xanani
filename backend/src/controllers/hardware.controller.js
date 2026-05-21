@@ -1,4 +1,5 @@
 const DispositivoHardware = require('../models/DispositivoHardware');
+const { Usuario } = require('../models/Usuario');
 const ErrorApp = require('../utils/ErrorApp');
 
 /**
@@ -163,7 +164,17 @@ exports.assignAdmin = async (req, res, next) => {
             return next(new ErrorApp('Dispositivo no encontrado', 404));
         }
 
-        if (adminId !== undefined) dispositivo.administrador = adminId || null;
+        if (adminId !== undefined) {
+            dispositivo.administrador = adminId || null;
+            if (adminId) {
+                const adminUser = await Usuario.findById(adminId);
+                if (adminUser) {
+                    dispositivo.flotilla = adminUser.flotilla;
+                }
+            } else {
+                dispositivo.flotilla = 'ESCOM'; // Default o null si se desasigna
+            }
+        }
         if (topico !== undefined) dispositivo.topico = topico;
         if (broker !== undefined) dispositivo.broker = broker;
         if (puerto !== undefined) dispositivo.puerto = puerto;

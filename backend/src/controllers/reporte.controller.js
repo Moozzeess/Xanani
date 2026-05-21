@@ -173,6 +173,16 @@ exports.actualizarEstadoReporte = async (req, res) => {
         usuarioDestino: reporteActualizado.usuario._id,
         data: { reporteId: reporteActualizado._id }
       });
+
+      // ENVIAR CORREO ELECTRÓNICO AL PASAJERO
+      if (reporteActualizado.usuario.email) {
+        emailService.enviarCorreoEstadoReporte(
+          reporteActualizado.usuario.email,
+          reporteActualizado.usuario.username,
+          reporteActualizado._id.toString().slice(-6).toUpperCase(), // Usar últimos 6 caracteres como folio amigable
+          estado
+        );
+      }
     } catch (notifError) {
       console.error('Error al emitir notificación de reporte:', notifError);
     }

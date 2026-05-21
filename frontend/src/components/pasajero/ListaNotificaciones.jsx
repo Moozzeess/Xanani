@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useAuth } from '../../auth/useAuth';
 import { Bell, MessageSquare, AlertTriangle, CheckCircle, Route, Eye, Heart, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAlertaGlobal } from '../../context/AlertaContext';
+import DetalleReporteModal from './DetalleReporteModal';
 
 /**
  * Panel de Notificaciones y Seguimiento de Reportes.
@@ -21,6 +22,7 @@ const ListaNotificaciones = ({
     const [reportes, setReportes] = useState([]);
     const [notificaciones, setNotificaciones] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [reporteSeleccionado, setReporteSeleccionado] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -232,13 +234,17 @@ const ListaNotificaciones = ({
                     ) : (
                         <div className="space-y-3">
                             {reportes.map((rep) => (
-                                <div key={rep._id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-start hover:shadow-md transition-all duration-300">
+                                <div 
+                                    key={rep._id} 
+                                    onClick={() => setReporteSeleccionado(rep)}
+                                    className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-start hover:shadow-md hover:border-indigo-100 cursor-pointer transition-all duration-300 active:scale-[0.99]"
+                                >
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">{rep.tipo}</span>
+                                            <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">{rep.tipo.replace('_', ' ')}</span>
                                             <span className="text-[9px] text-slate-400 font-medium">{new Date(rep.createdAt).toLocaleDateString()}</span>
                                         </div>
-                                        <p className="text-sm font-bold text-slate-700 mt-2 leading-tight">{rep.descripcion || 'Sin descripción'}</p>
+                                        <p className="text-sm font-bold text-slate-700 mt-2 leading-tight line-clamp-1">{rep.descripcion || 'Sin descripción'}</p>
                                     </div>
                                     <div className={`text-[9px] font-black px-2.5 py-1 rounded-full border shadow-sm ${getStatusStyles(rep.estado)}`}>
                                         {rep.estado}
@@ -249,6 +255,13 @@ const ListaNotificaciones = ({
                     )}
                 </section>
             </div>
+
+            {/* Modal de Detalles del Reporte */}
+            <DetalleReporteModal 
+                isOpen={!!reporteSeleccionado} 
+                onClose={() => setReporteSeleccionado(null)} 
+                reporte={reporteSeleccionado} 
+            />
         </div>
     );
 };

@@ -61,6 +61,10 @@ const Conductor = () => {
   const [ubicacionReal, setUbicacionReal] = useState(null);
   const [isSOS, setIsSOS] = useState(false);
   const wakeLockRef = React.useRef(null);
+  
+  // Estado para suavizar la velocidad de la interfaz
+  const [targetSpeed, setTargetSpeed] = useState(0);
+  const [displaySpeed, setDisplaySpeed] = useState(0);
 
   // Gestión de Screen Wake Lock para evitar que la pantalla se apague en ruta
   useEffect(() => {
@@ -107,7 +111,37 @@ const Conductor = () => {
     };
   }, [viewMode]);
 
-  // El GPS del dispositivo (navegador) ha sido desactivado a favor del GPS de hardware físico.
+  // Efecto para suavizar los saltos de velocidad en la interfaz (Efecto velocímetro)
+  useEffect(() => {
+    if (viewMode !== 'conduccion') return;
+    
+    const interval = setInterval(() => {
+      setDisplaySpeed(prev => {
+        if (prev === targetSpeed) return prev;
+        const diff = targetSpeed - prev;
+        // Ajusta gradualmente hacia el objetivo (10% por ciclo o mínimo 1 unidad)
+        const step = Math.sign(diff) * Math.max(1, Math.floor(Math.abs(diff) * 0.15));
+        const next = prev + step;
+        // Evita pasarse del objetivo
+        return (diff > 0 && next > targetSpeed) || (diff < 0 && next < targetSpeed) ? targetSpeed : next;
+      });
+    }, 150); // Actualiza la UI a ~6fps para un efecto fluido
+
+    return () => clearInterval(interval);
+  }, [targetSpeed, viewMode]);
+
+  // Efecto para simular la velocidad cambiando de forma más realista (cada 3 segundos)
+  useEffect(() => {
+    if (isTesting && viewMode === 'conduccion') {
+      const interval = setInterval(() => {
+        setTargetSpeed(Math.floor(Math.random() * 10) + 35); // 35 - 44 km/h
+      }, 3000);
+      return () => clearInterval(interval);
+    } else if (!isTesting && viewMode !== 'conduccion') {
+      setTargetSpeed(0);
+      setDisplaySpeed(0);
+    }
+  }, [isTesting, viewMode]);
 
   // Inicializar Socket
   useEffect(() => {
@@ -132,7 +166,8 @@ const Conductor = () => {
           // Configurar datos de la unidad asignada desde el objeto unidadAsignada
           const unidadInfo = conductor.unidadAsignada;
           setUnidadActual(unidadInfo?.placa || conductor.unidad || "Sin Unidad");
-          setCapacity(unidadInfo?.capacidad || 15);
+          // Leer la capacidad configurada (capacidadMaxima o capacidad, evitando el fallback a 15 si existe un valor real)
+          setCapacity(unidadInfo?.capacidadMaxima || unidadInfo?.capacidad || 15);
           
           setRutaActual(conductor.rutaAsignadaId?.nombre || "Sin Ruta");
           setRawIds({
@@ -255,11 +290,22 @@ const Conductor = () => {
       // Actualizar ubicación real desde el GPS del hardware
       if (payload.gps && payload.gps.lat !== 0 && payload.gps.lon !== 0) {
         setUbicacionReal([payload.gps.lat, payload.gps.lon]);
+        
+        // Actualizar velocidad objetivo si el hardware lo envía
+        const speed = payload.gps.velocidad !== undefined ? payload.gps.velocidad : payload.gps.speed;
+        if (speed !== undefined) {
+          setTargetSpeed(Math.round(speed));
+        }
       }
 
       // Actualizar conteo de pasajeros desde el hardware si está disponible
-      if (payload.pasajeros && payload.pasajeros.act !== undefined) {
-        setPassengerCount(payload.pasajeros.act);
+      if (payload.pasajeros) {
+        if (payload.pasajeros.act !== undefined) {
+          setPassengerCount(payload.pasajeros.act);
+        }
+        if (payload.pasajeros.max !== undefined) {
+          setCapacity(payload.pasajeros.max);
+        }
       }
 
       // Reiniciar el temporizador de desconexión (30 segundos)
@@ -499,7 +545,7 @@ const Conductor = () => {
             onTriggerSOS={handleTriggerSOS}
             onStopRoute={handleStopRoute}
             siguienteParada={paradaSiguienteSimulada}
-            velocidad={isTesting ? (Math.floor(Math.random() * 5) + 38).toString() : "0"}
+            velocidad={displaySpeed.toString()}
             tiempoRestante="12"
           />
         )}

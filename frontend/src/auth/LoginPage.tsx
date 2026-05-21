@@ -5,6 +5,7 @@ import "../styles/login.css";
 import { useAuth } from "./useAuth";
 import type { Role } from "../types/auth";
 import api from "../services/api";
+import { useAlertaGlobal } from "../context/AlertaContext";
 
 type FormType = "login" | "register" | "recover";
 
@@ -37,6 +38,7 @@ const PaginaLogin = () => {
   const [formularioActivo, setFormularioActivo] = useState<FormType>("login");
   const navegar = useNavigate();
   const { iniciarSesion, registrarUsuario, estaAutenticado, usuario, estaCargando } = useAuth();
+  const { disparar, dispararError } = useAlertaGlobal();
 
   // Efecto para redirigir si el usuario ya está autenticado
   useEffect(() => {
@@ -101,17 +103,37 @@ const PaginaLogin = () => {
     try {
       setEstaEnviando(true);
       setNecesitaVerificacion(false);
-      await iniciarSesion({ usernameOrEmail: usuarioOEmail.trim(), password: contrasena });
+      const usuarioAuth = await iniciarSesion({ usernameOrEmail: usuarioOEmail.trim(), password: contrasena });
+      
+      // Mostrar modal de bienvenida dependiendo del rol
+      let mensajeBienvenida = 'Nos alegra verte de nuevo. ¡Empecemos!';
+      if (usuarioAuth?.role === 'PASAJERO') {
+        mensajeBienvenida = 'Explora las rutas disponibles y suscríbete a tu favorita para recibir actualizaciones en tiempo real.';
+      } else if (usuarioAuth?.role === 'CONDUCTOR') {
+        mensajeBienvenida = 'Estamos listos para que realices tu primer viaje y mejores la movilidad de la ciudad.';
+      } else if (usuarioAuth?.role === 'ADMINISTRADOR' || usuarioAuth?.role === 'SUPERUSUARIO') {
+        mensajeBienvenida = 'Te invitamos a explorar cada módulo para gestionar la flota de manera eficiente.';
+      }
+
+      disparar({
+        tipo: 'info',
+        titulo: `¡Bienvenido a Xanani, ${usuarioAuth?.username || ''}!`,
+        mensaje: mensajeBienvenida
+      });
+      
     } catch (e: any) {
       console.error("Error Login:", e);
-      // Soporte para distintos formatos de respuesta de error del backend
+      // El interceptor global ya maneja la alerta si la API devuelve error estándar
       const errorMsg = e.response?.data?.mensaje || e.response?.data?.message || String(e);
       
-      // Detectamos si el error es de cuenta no verificada (Código HTTP 403 o la palabra clave)
       if (e.response?.status === 403 || errorMsg.toLowerCase().includes('verific')) {
         setNecesitaVerificacion(true);
       }
-      alert(errorMsg);
+      
+      // Si fue error de red u otro, dispararError
+      if (!e.response) {
+        dispararError(errorMsg);
+      }
     } finally {
       setEstaEnviando(false);
     }
@@ -125,11 +147,16 @@ const PaginaLogin = () => {
       setEstaEnviando(true);
       const authApi = await import("../services/auth");
       const result = await authApi.resendVerification(usuarioOEmail.trim());
-      alert(result.mensaje || "Se ha enviado un nuevo enlace a tu correo.");
+      disparar({
+        tipo: 'exito',
+        titulo: 'Correo Enviado',
+        mensaje: result.mensaje || "Se ha enviado un nuevo enlace a tu correo."
+      });
       setNecesitaVerificacion(false);
     } catch (e: any) {
       console.error("Error reenvío:", e);
-      alert(e.response?.data?.mensaje || e.response?.data?.message || String(e));
+      // Interceptor maneja las de API
+      if (!e.response) dispararError(String(e));
     } finally {
       setEstaEnviando(false);
     }
@@ -146,10 +173,15 @@ const PaginaLogin = () => {
         email: emailRegistro.trim(),
         password: contrasenaRegistro
       });
-      alert("¡Cuenta creada con éxito! Por favor revisa la bandeja de entrada de tu correo electrónico (o la consola del servidor) para verificar tu cuenta.");
-    } catch (e) {
+      disparar({
+        tipo: 'exito',
+        titulo: '¡Cuenta Creada!',
+        mensaje: "Por favor revisa la bandeja de entrada de tu correo electrónico (o la consola del servidor) para verificar tu cuenta."
+      });
+      setFormularioActivo("login");
+    } catch (e: any) {
       console.error(e);
-      alert(String(e));
+      if (!e.response) dispararError(String(e));
     } finally {
       setEstaEnviando(false);
     }
