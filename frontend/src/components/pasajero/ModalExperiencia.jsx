@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Star, CheckCircle } from 'lucide-react';
 import { useAlertaGlobal } from '../../context/AlertaContext';
 
-const API_URL = `http://${window.location.hostname}:4000/api`;
+const API_URL = `import.meta.env.VITE_API_BASE_URL`;
 
 /**
  * Modal de experiencia post-viaje activado automáticamente por el sistema

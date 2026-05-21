@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = `http://${window.location.hostname}:4000`;
-const API_URL = `http://${window.location.hostname}:4000/api`;
+const SOCKET_URL = `import.meta.env.VITE_SOCKET_URL`;
+const API_URL = `import.meta.env.VITE_API_BASE_URL`;
 
 /**
  * Niveles de ocupación calculados a partir del porcentaje de llenado.

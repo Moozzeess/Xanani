@@ -1,5 +1,6 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+//import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import PaginaLogin from "./auth/LoginPage";
 import LandingPasajero from "./auth/LandingPage";
 import VerifyEmail from "./auth/VerifyEmail";

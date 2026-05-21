@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const API_URL = `http://${window.location.hostname}:4000/api`;
+const API_URL = `import.meta.env.VITE_API_BASE_URL`;
 
 /**
  * Umbral de distancia en metros para inferir que el pasajero abordó la unidad.

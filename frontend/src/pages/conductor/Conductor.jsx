@@ -27,8 +27,8 @@ const Conductor = () => {
   const { cerrarSesion, token, usuario } = useAuth();
 
   const [routeLine, setRouteLine] = useState([]);
-  const [paradas, setParadas] = useState([]); 
-  const [viewMode, setViewMode] = useState('espera'); 
+  const [paradas, setParadas] = useState([]);
+  const [viewMode, setViewMode] = useState('espera');
 
   const [passengerCount, setPassengerCount] = useState(0);
   const [unidadActual, setUnidadActual] = useState("Sin Asignar");
@@ -40,15 +40,15 @@ const Conductor = () => {
 
   // Estados de gestión de viaje y simulación
   const [socket, setSocket] = useState(null);
-  
+
   // Integración del Hook de Simulación Profunda
-  const { 
-    isTesting, 
-    setIsTesting, 
-    simulatedPosition, 
+  const {
+    isTesting,
+    setIsTesting,
+    simulatedPosition,
     heading: simulatedHeading,
     siguienteParada: paradaSiguienteSimulada,
-    resetSimulation 
+    resetSimulation
   } = useConductorSimulation(routeLine, paradas, viewMode === 'conduccion');
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -73,7 +73,7 @@ const Conductor = () => {
         try {
           wakeLockRef.current = await navigator.wakeLock.request('screen');
           console.log('Screen Wake Lock activado');
-          
+
           wakeLockRef.current.addEventListener('release', () => {
             console.log('Screen Wake Lock liberado');
           });
@@ -146,7 +146,7 @@ const Conductor = () => {
   // Inicializar Socket
   useEffect(() => {
     const host = window.location.hostname;
-    const newSocket = io(`http://${host}:4000`);
+    const newSocket = io(`import.meta.env.VITE_SOCKET_URL`);
     setSocket(newSocket);
     return () => newSocket.disconnect();
   }, []);
@@ -158,11 +158,11 @@ const Conductor = () => {
         const res = await api.get('/conductores/perfil', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         const { conductor } = res.data.data;
         if (conductor && conductor.rutaAsignadaId) {
           setProfileData(conductor);
-          
+
           // Configurar datos de la unidad asignada desde el objeto unidadAsignada
           const unidadInfo = conductor.unidadAsignada;
           setUnidadActual(unidadInfo?.placa || conductor.unidad || "Sin Unidad");
@@ -181,7 +181,7 @@ const Conductor = () => {
           if (hwId) {
             setHardwareId(hwId);
           }
-          
+
           // 1. Mapear paradas primero (son la fuente de verdad de la ruta)
           let paradasMapeadas = [];
           if (conductor.rutaAsignadaId.paradas && Array.isArray(conductor.rutaAsignadaId.paradas)) {
@@ -206,7 +206,7 @@ const Conductor = () => {
             console.warn("Geometría vacía detectada, usando paradas como respaldo.");
             geometriaValidada = paradasMapeadas.map(p => [p.latitud, p.longitud]);
           }
-          
+
           if (geometriaValidada.length > 0) {
             setRouteLine(prev => {
               if (JSON.stringify(prev) === JSON.stringify(geometriaValidada)) return prev;
@@ -218,7 +218,7 @@ const Conductor = () => {
         console.error("Error al cargar asignación:", error);
       }
     };
-    
+
     if (token) cargarAsignacion();
   }, [token, usuario]);
 
@@ -242,7 +242,7 @@ const Conductor = () => {
       });
     }
   }, [simulatedPosition, ubicacionReal, isTesting, socket, viewMode, rawIds, unidadActual, passengerCount, capacity]);
-  
+
   // Listeners de Avisos del Administrador
   useEffect(() => {
     if (!socket) return;
@@ -251,7 +251,7 @@ const Conductor = () => {
       // Mostrar toast inmediato
       addToastNotification('Aviso de Administración', datos.mensaje, 'info');
       setNotifUnreadCount(prev => prev + 1);
-      
+
       // Recargar notificaciones si estamos en la vista de avisos
       if (viewMode === 'avisos') {
         cargarNotificaciones();
@@ -490,27 +490,27 @@ const Conductor = () => {
 
       {/* MAPA BASE (Omnipresente) */}
       <div className="absolute inset-0 z-0">
-        <Mapa 
+        <Mapa
           center={
-            (isTesting && simulatedPosition) ? simulatedPosition : 
-            (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332]))
-          } 
+            (isTesting && simulatedPosition) ? simulatedPosition :
+              (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332]))
+          }
           tileTheme="standard"
           zoom={viewMode === 'conduccion' ? 18 : 16}
           followDuration={viewMode === 'conduccion' ? 0.3 : 1.5}
         >
           <CapaGeometria routeLine={routeLine} isDashed={false} />
           <CapaParadas stops={paradas} />
-          <CapaVehiculos 
-            vehicles={[{ 
-              id: 'self', 
-              pos: (isTesting && simulatedPosition) ? simulatedPosition : 
-                   (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332])), 
-              color: 'bg-emerald-500', 
+          <CapaVehiculos
+            vehicles={[{
+              id: 'self',
+              pos: (isTesting && simulatedPosition) ? simulatedPosition :
+                (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332])),
+              color: 'bg-emerald-500',
               text: 'text-white',
               eta: 'Tú',
               rotation: isTesting ? simulatedHeading : 0
-            }]} 
+            }]}
             selectedVehicleId="self"
           />
         </Mapa>
@@ -520,7 +520,7 @@ const Conductor = () => {
 
       {/* CAPAS DE UI (Sobre el mapa) */}
       <div className="relative z-10 h-full w-full pointer-events-none">
-        
+
         {/* VISTA DE INICIO (Overlay) */}
         {viewMode === 'espera' && (
           <div className="pointer-events-auto h-full w-full bg-slate-900/40 backdrop-blur-[2px]">
@@ -563,99 +563,99 @@ const Conductor = () => {
         {/* VISTA DE AVISOS / NOTIFICACIONES */}
         {viewMode === 'avisos' && (
           <div className="pointer-events-auto h-full w-full bg-[#0f172a] p-6 overflow-y-auto">
-             <header className="mb-6 flex items-center justify-between">
+            <header className="mb-6 flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Bell className="w-6 h-6 text-blue-400" />
+                  Avisos y Reportes
+                </h1>
+                <p className="text-slate-400 text-sm">Mensajes del administrador y estado de incidencias.</p>
+              </div>
+            </header>
+
+            <div className="space-y-4 max-w-2xl mx-auto">
+              {/* Mensaje de Bienvenida / Estado */}
+              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-4">
+                <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 text-blue-400">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
                 <div>
-                   <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                      <Bell className="w-6 h-6 text-blue-400" />
-                      Avisos y Reportes
-                   </h1>
-                   <p className="text-slate-400 text-sm">Mensajes del administrador y estado de incidencias.</p>
+                  <h4 className="font-bold text-blue-100 text-sm">Sistema Operativo</h4>
+                  <p className="text-blue-200/70 text-xs">No hay incidencias críticas reportadas en tu ruta actual. ¡Buen viaje!</p>
+                  <span className="text-[10px] text-blue-400 mt-1 block">Ahora</span>
                 </div>
-             </header>
- 
-             <div className="space-y-4 max-w-2xl mx-auto">
-                {/* Mensaje de Bienvenida / Estado */}
-                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-4">
-                   <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 text-blue-400">
-                      <CheckCircle className="w-5 h-5" />
-                   </div>
-                   <div>
-                      <h4 className="font-bold text-blue-100 text-sm">Sistema Operativo</h4>
-                      <p className="text-blue-200/70 text-xs">No hay incidencias críticas reportadas en tu ruta actual. ¡Buen viaje!</p>
-                      <span className="text-[10px] text-blue-400 mt-1 block">Ahora</span>
-                   </div>
+              </div>
+
+              <div className="border-b border-white/10 my-6"></div>
+
+              <h3 className="font-bold text-white/80 mb-2 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Historial de Avisos
+              </h3>
+
+              {notificaciones.length === 0 ? (
+                <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                  <Bell className="w-12 h-12 text-white/10 mx-auto mb-3" />
+                  <p className="text-slate-500 text-sm">No tienes avisos o notificaciones pendientes.</p>
                 </div>
- 
-                <div className="border-b border-white/10 my-6"></div>
- 
-                <h3 className="font-bold text-white/80 mb-2 flex items-center gap-2">
-                   <MessageSquare className="w-4 h-4" />
-                   Historial de Avisos
-                </h3>
- 
-                {notificaciones.length === 0 ? (
-                   <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                      <Bell className="w-12 h-12 text-white/10 mx-auto mb-3" />
-                      <p className="text-slate-500 text-sm">No tienes avisos o notificaciones pendientes.</p>
-                   </div>
-                ) : (
-                   <div className="space-y-3">
-                      {notificaciones.map((n) => (
-                         <div key={n.id} className="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-start pointer-events-auto">
-                            <div className="flex-1">
-                               <div className="flex items-center gap-2">
-                                  <span className={`w-2 h-2 rounded-full ${n.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{n.title}</span>
-                               </div>
-                               <p className="text-sm text-slate-200 mt-1">{n.message}</p>
-                            </div>
-                            <button 
-                               onClick={() => removeNotification(n.id)}
-                               className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                               title="Marcar como leído"
-                            >
-                               <Trash2 className="w-4 h-4" />
-                            </button>
-                         </div>
-                      ))}
-                      
-                      <button 
-                         onClick={() => {
-                            // Marcar todas como leídas (limpiar pantalla)
-                            notificaciones.forEach(n => removeNotification(n.id));
-                         }}
-                         className="w-full py-4 text-xs font-bold text-slate-400 hover:text-white transition-colors border-t border-white/5 pointer-events-auto"
+              ) : (
+                <div className="space-y-3">
+                  {notificaciones.map((n) => (
+                    <div key={n.id} className="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-start pointer-events-auto">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${n.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{n.title}</span>
+                        </div>
+                        <p className="text-sm text-slate-200 mt-1">{n.message}</p>
+                      </div>
+                      <button
+                        onClick={() => removeNotification(n.id)}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                        title="Marcar como leído"
                       >
-                         Limpiar todos los avisos
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                   </div>
-                )}
-             </div>
- 
-             <button 
-                onClick={() => setViewMode('espera')}
-                className="fixed bottom-24 right-6 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl z-[100] font-bold active:scale-95 transition-transform"
-             >
-                Volver al Inicio
-             </button>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => {
+                      // Marcar todas como leídas (limpiar pantalla)
+                      notificaciones.forEach(n => removeNotification(n.id));
+                    }}
+                    className="w-full py-4 text-xs font-bold text-slate-400 hover:text-white transition-colors border-t border-white/5 pointer-events-auto"
+                  >
+                    Limpiar todos los avisos
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setViewMode('espera')}
+              className="fixed bottom-24 right-6 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl z-[100] font-bold active:scale-95 transition-transform"
+            >
+              Volver al Inicio
+            </button>
           </div>
         )}
 
         {/* VISTA DE HISTORIAL */}
         {viewMode === 'historial' && (
           <div className="pointer-events-auto h-full w-full bg-[#0f172a]">
-             <HistorialGeneral rol="CONDUCTOR" />
-             <button 
-                onClick={() => setViewMode('espera')}
-                className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-2xl z-[100]"
-             >
-                Volver al Mapa
-             </button>
+            <HistorialGeneral rol="CONDUCTOR" />
+            <button
+              onClick={() => setViewMode('espera')}
+              className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-2xl z-[100]"
+            >
+              Volver al Mapa
+            </button>
           </div>
         )}
-        
+
         {/* COMPONENTE DE REPORTES (Discreto) */}
-        <Reportes 
+        <Reportes
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
           onSubmit={handleSubmitReport}
@@ -673,10 +673,10 @@ const Conductor = () => {
             onMapClick={() => setViewMode('espera')}
             onProfileClick={() => setIsProfileOpen(true)}
             activeTab={
-              viewMode === 'espera' ? 'map' : 
-              viewMode === 'historial' ? 'afluencia' : 
-              viewMode === 'avisos' ? 'notifications' :
-              isProfileOpen ? 'profile' : ''
+              viewMode === 'espera' ? 'map' :
+                viewMode === 'historial' ? 'afluencia' :
+                  viewMode === 'avisos' ? 'notifications' :
+                    isProfileOpen ? 'profile' : ''
             }
             hasNewNotifications={notifUnreadCount}
           />
@@ -684,7 +684,7 @@ const Conductor = () => {
       )}
 
       {/* PANEL DE PERFIL */}
-      <PanelPerfil 
+      <PanelPerfil
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         usuario={usuario}
@@ -693,7 +693,7 @@ const Conductor = () => {
       />
 
       {/* MODAL DE SIMULACIÓN AUTOMÁTICA */}
-      <ModalAlerta 
+      <ModalAlerta
         mostrar={showSimModal}
         tipo="advertencia"
         titulo="Hardware no detectado"
