@@ -11,7 +11,7 @@ type ValorContextoAuth = {
   usuario: AuthUser | null;
   estaAutenticado: boolean;
   estaCargando: boolean;
-  iniciarSesion: (datos: LoginRequest) => Promise<void>;
+  iniciarSesion: (datos: LoginRequest) => Promise<AuthUser>;
   registrarUsuario: (datos: RegisterRequest) => Promise<void>;
   cerrarSesion: () => void;
   tieneRol: (rol: Role) => boolean;
@@ -99,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         guardarAuth(auth);
         setToken(auth.token);
         setUsuario(auth.user);
+        return auth.user;
       },
       registrarUsuario: async (datos) => {
         const auth = await authApi.register(datos);

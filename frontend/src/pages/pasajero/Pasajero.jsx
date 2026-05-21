@@ -14,6 +14,7 @@ import ModalAlerta from "../../components/common/ModalAlerta";
 import { obtenerRutaPorCalles } from "../../services/osrmService";
 import PanelPerfil from "../../components/common/PanelPerfil";
 import ModalPerfilPasajero from "../../components/pasajero/ModalPerfilPasajero";
+import UbicacionModal from "../../components/common/UbicacionModal";
 
 // Capas de Mapa (Modular Premium)
 import CapaGeometria from "../../components/common/mapa/CapaGeometria";
@@ -77,6 +78,7 @@ const Pasajero = () => {
     const [trazoInvitacion, setTrazoInvitacion] = useState([]);
     const [mostrarRadar, setMostrarRadar] = useState(false);
     const [filtros, setFiltros] = useState({});
+    const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
 
     const username = usuario?.username || 'Pasajero';
     const userInitial = username.charAt(0).toUpperCase();
@@ -93,8 +95,8 @@ const Pasajero = () => {
                 let colorClass = 'bg-blue-400';
                 let occLabel = 'Baja';
                 // 1. Determinar el número real de asientos y ocupados
-                // Se limita a un máximo de 15 según requerimiento de diseño, o se usa el valor configurado
-                const totalAsientos = Math.min(datos.capacidadMaxima || 15, 15);
+                // Se utiliza el valor real configurado de la unidad
+                const totalAsientos = datos.capacidadMaxima || 15;
                 const pct = (datos.ocupacionActual / totalAsientos) * 100;
                 if (pct < 33) colorClass = 'bg-green-400';
                 else if (pct < 66) { colorClass = 'bg-yellow-400'; occLabel = 'Media'; }
@@ -152,8 +154,8 @@ const Pasajero = () => {
         }
     }, [socket]);
 
-    // Geolocalización Inicial
-    useEffect(() => {
+    // Obtener la ubicación directamente
+    const obtenerUbicacion = () => {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -161,8 +163,34 @@ const Pasajero = () => {
                     setUserPos(coords);
                     setMapCenter(coords);
                 },
-                (err) => console.warn("Geolocalización denegada", err)
+                (err) => {
+                    console.warn("Geolocalización denegada", err);
+                    dispararError("Geolocalización denegada", "Debes otorgar permisos desde el navegador para usar esta función.");
+                }
             );
+        }
+    };
+
+    // Geolocalización Inicial controlada por modal
+    useEffect(() => {
+        if ("geolocation" in navigator) {
+            if (navigator.permissions) {
+                navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                    if (result.state === 'granted') {
+                        obtenerUbicacion(); // Si ya dio permiso, la obtenemos directo
+                    } else if (result.state === 'prompt') {
+                        setIsUbicacionModalOpen(true); // Mostrar nuestro modal custom
+                    } else {
+                        console.warn("Permiso de geolocalización denegado previamente");
+                    }
+                }).catch(() => {
+                    // Fallback si la query falla
+                    setIsUbicacionModalOpen(true);
+                });
+            } else {
+                // Fallback para navegadores sin navigator.permissions
+                setIsUbicacionModalOpen(true);
+            }
         }
     }, []);
 
@@ -598,47 +626,7 @@ const Pasajero = () => {
                         )}
 
 
-                        {/* Banner de Invitación del Radar */}
-                        {paradaDetectada && (
-                            <div className="fixed top-30  z-[50] animate-in slide-in-from-top-1 duration-50">
-                                <div
-                                    onClick={() => {
-                                        seleccionarRuta(paradaDetectada.ruta);
-                                        setParadaDetectada(null);
-                                    }}
-                                    className={`bg-white/90 backdrop-blur-xl border ${paradaDetectada.estaSuscrito ? 'border-emerald-200 shadow-emerald-50' : 'border-blue-100 shadow-blue-50'} shadow-2xl rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white transition-all active:scale-[0.98]`}
-                                >
-                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg p-1 border border-slate-100">
-                                        <img src="/LOGO.png" className="w-full h-full object-contain" alt="Xanani" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <p className={`text-[10px] font-black ${paradaDetectada.estaSuscrito ? 'text-emerald-600' : 'text-blue-600'} uppercase tracking-widest leading-none`}>
-                                                {paradaDetectada.estaSuscrito ? 'Ruta Habitual' : (paradaDetectada.multiplesRutas ? `${paradaDetectada.multiplesRutas} Rutas Cercanas` : 'Cerca de ti')}
-                                            </p>
-                                            {paradaDetectada.eta && (
-                                                <span className={`${paradaDetectada.estaSuscrito ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'} text-[9px] font-black px-2 py-0.5 rounded-full border`}>
-                                                    {paradaDetectada.eta} MIN
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-sm font-black text-slate-800 truncate">{paradaDetectada.parada.nombre}</p>
-                                        <p className="text-[11px] text-slate-500 font-medium">Ruta: {paradaDetectada.ruta.nombre}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setParadaDetectada(null);
-                                            }}
-                                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* El Banner de Invitación ha sido eliminado según los requerimientos */}
                     </>
                 ) : activeTab === 'notifications' ? (
                     <ListaNotificaciones 
@@ -702,11 +690,20 @@ const Pasajero = () => {
                 onClose={() => setIsProfileEditOpen(false)}
                 usuario={perfilCompleto || usuario}
                 stats={{
-                    viajes: 0, // Por ahora estático según diseño
+                    viajes: historialViajes.length,
                     favoritos: rutasFavoritas.length,
                     puntos: '—'
                 }}
                 onActualizar={fetchPerfil}
+            />
+
+            <UbicacionModal 
+                isOpen={isUbicacionModalOpen}
+                onClose={() => setIsUbicacionModalOpen(false)}
+                onAccept={() => {
+                    setIsUbicacionModalOpen(false);
+                    obtenerUbicacion();
+                }}
             />
 
         </main>

@@ -34,7 +34,7 @@ export default function unidadesView() {
 
       const [resUnidades, resHardware, resConductores] = await Promise.all([
         api.get('/unidades', { headers }),
-        api.get('/hardware', { headers }),
+        api.get('/hardware/admin', { headers }),
         api.get('/conductores', { headers }).catch(() => ({ data: { data: [] } }))
       ]);
 

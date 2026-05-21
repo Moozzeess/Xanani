@@ -13,33 +13,13 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
     const markerRef = useRef(null);
 
     // 1. Gestión del Trazado (Línea punteada)
+    // El trazo de invitación ha sido eliminado según los requerimientos
     useEffect(() => {
         if (!map) return;
-
-        if (Array.isArray(trazo) && trazo.length > 1) {
-            if (!lineRef.current) {
-                lineRef.current = L.polyline(trazo, {
-                    color: estaSuscrito ? '#10b981' : '#3b82f6',
-                    weight: 4,
-                    opacity: 0.8,
-                    dashArray: '8, 12',
-                    lineCap: 'round',
-                    interactive: false
-                }).addTo(map);
-            } else {
-                lineRef.current.setLatLngs(trazo);
-            }
-        } else if (lineRef.current) {
+        if (lineRef.current) {
             lineRef.current.remove();
             lineRef.current = null;
         }
-
-        return () => {
-            if (lineRef.current) {
-                lineRef.current.remove();
-                lineRef.current = null;
-            }
-        };
     }, [map, trazo]);
 
     // 2. Gestión del Marcador y Popup de ETA
@@ -56,7 +36,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
 
             // Generar contenido del popup (se actualiza si cambia la ETA)
             const etaHtml = eta ? `
-                <div class="mt-2 flex items-center justify-center gap-1 ${estaSuscrito ? 'bg-blue-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'} px-2 py-1 rounded-lg border">
+                <div class="mt-2 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 border-blue-100 px-2 py-1 rounded-lg border">
                     <img src="LOGO.png" style="width: 28px; height: 28px;" />
                     <span class="text-[10px] font-black">LLEGA EN ${eta} MIN</span>
                 </div>
@@ -64,7 +44,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
 
             const popupContent = `
                 <div class="text-center p-2 min-w-[120px]">
-                    <p class="text-[10px] font-black ${estaSuscrito ? 'text-emerald-600' : 'text-blue-600'} uppercase mb-1 tracking-wider">${estaSuscrito ? 'Tu parada habitual' : 'Tu parada cercana'}</p>
+                    <p class="text-[10px] font-black text-blue-600 uppercase mb-1 tracking-wider">${estaSuscrito ? 'Tu parada habitual' : 'Tu parada cercana'}</p>
                     <p class="text-sm font-bold text-slate-800 leading-tight">${parada.nombre || 'Parada detectada'}</p>
                     ${etaHtml}
                 </div>
@@ -73,7 +53,7 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
             if (!markerRef.current) {
                 const icon = L.divIcon({
                     html: `
-                        <div class="invitation-stop-marker ${estaSuscrito ? 'is-subscribed' : ''}">
+                        <div class="invitation-stop-marker">
                             <div class="pulse-invitation"></div>
                             <div class="stop-icon-container">
                                 <img src="bus_parada.svg" style="width: 28px; height: 28px;" />
