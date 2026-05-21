@@ -261,11 +261,7 @@ module.exports = {
   register,
   login,
   verifyEmail,
-<<<<<<< HEAD
-  resendVerificationEmail,
-=======
   resendVerification,
->>>>>>> 9a832ee (cambios de reenvio)
   forgotPassword,
   resetPassword
 };
