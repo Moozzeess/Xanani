@@ -63,5 +63,5 @@ const ubicacionSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
-
+//sin ubicacions
 module.exports = mongoose.model('Ubicacion', ubicacionSchema);
