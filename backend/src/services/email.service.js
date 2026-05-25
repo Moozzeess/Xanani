@@ -47,12 +47,12 @@ async function sendEmail({ to, subject, html }) {
  */
 function basePlantilla(tituloH1, username, cuerpoHtml, urlBoton, textoBoton) {
   const btnYFallbackHtml = urlBoton ? `
-    <div class="btn-container">
-        <a href="${urlBoton}" class="btn" target="_blank">${textoBoton}</a>
+    <div style="text-align: center; margin: 35px 0;">
+        <a href="${urlBoton}" target="_blank" style="background-color: #00b4d8; color: #ffffff; text-decoration: none; padding: 14px 35px; font-size: 16px; font-weight: bold; border-radius: 25px; display: inline-block; box-shadow: 0 3px 10px rgba(0, 180, 216, 0.3); border: 1px solid #00b4d8;">${textoBoton}</a>
     </div>
-    <div class="link-fallback">
-        <p>Si el botón no funciona, copia y pega esto en tu navegador web:</p>
-        <a href="${urlBoton}" target="_blank">${urlBoton}</a>
+    <div style="background-color: #f8fafc; border-left: 4px solid #00b4d8; padding: 15px; border-radius: 0 8px 8px 0; margin-top: 30px; word-break: break-all;">
+        <p style="font-size: 13px; color: #666666; margin: 0 0 8px 0;">Si el botón no funciona, copia y pega este enlace en tu navegador web:</p>
+        <a href="${urlBoton}" target="_blank" style="color: #1c529b; text-decoration: underline; font-size: 13px; font-weight: 500;">${urlBoton}</a>
     </div>
   ` : '';
 

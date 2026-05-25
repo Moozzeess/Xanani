@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
 import "../styles/login.css";
 
@@ -40,28 +40,40 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-visual-section">
-        <div className="visual-overlay"></div>
-      </div>
+    <div className="login-page-container">
+      <div id="map-bg"></div>
+      <div id="map-overlay"></div>
       
-      <div className="login-form-section">
-        <div className="auth-container">
-          <div className="auth-content">
-            <div className="auth-header text-center">
-              <h2>Cambiar Contraseña</h2>
-              <p className="recover-info">Escribe tu nueva contraseña segura.</p>
+      <div className="auth-card-divided">
+        <div className="card-identity-side">
+            <div className="logo-wrapper">
+              <img src="/LOGO.png" alt="XANANI" className="logo-main" />
+              <h1 className="brand-name">XANANI</h1>
+              <p className="brand-tagline">Movilidad Inteligente</p>
             </div>
+            <div className="card-legal-footer">
+              <Link to="/privacidad" className="legal-link">Privacidad</Link>
+              <span className="legal-divider">•</span>
+              <Link to="/seguridad" className="legal-link">Seguridad</Link>
+            </div>
+        </div>
+
+        <div className="card-form-side">
+          <div className="form-content">
+            <h2 className="form-status-title">Cambiar Contraseña</h2>
             
-            <div className="auth-form mt-4">
+            <div className="auth-form text-center mt-6">
               {mensajeExito ? (
                 <>
-                  <p className="text-green-600 font-medium text-center mb-4">{mensajeExito}</p>
-                  <p className="text-gray-500 text-center text-sm">Serás redirigido al inicio web...</p>
+                  <p className="text-emerald-600 font-medium mb-4" style={{ marginBottom: '20px' }}>{mensajeExito}</p>
+                  <p className="text-slate-600 font-medium mb-4">Serás redirigido al inicio web...</p>
                 </>
               ) : (
                 <>
-                  {mensajeError && <p className="text-red-500 text-sm mb-4">{mensajeError}</p>}
+                  <p className="text-slate-600 font-medium mb-4" style={{ marginBottom: '20px' }}>
+                    Escribe tu nueva contraseña segura.
+                  </p>
+                  {mensajeError && <p className="text-red-500 font-medium mb-4" style={{ marginBottom: '20px' }}>{mensajeError}</p>}
                   
                   <input
                     className="input-style mb-4"
@@ -87,9 +99,9 @@ const ResetPassword = () => {
                     {estaEnviando ? "Guardando..." : "Actualizar y Entrar"}
                   </button>
                   
-                  <button onClick={() => navigate('/login')} className="option-link-back border-none focus:outline-none">
+                  <Link to="/login" className="option-link-back block mt-4 text-center">
                     Cancelar
-                  </button>
+                  </Link>
                 </>
               )}
             </div>
