@@ -211,7 +211,7 @@ function basePlantilla(tituloH1, username, cuerpoHtml, urlBoton, textoBoton) {
  * Plantilla: Verificación de cuenta nueva
  */
 async function enviarCorreoVerificacion(to, username, token) {
-  const url = `${FRONTEND_URL}/verify-email/${token}`;
+  const url = `${FRONTEND_URL}/#/verify-email/${token}`;
   const cuerpoHtml = `<p>Gracias por registrarte. Por favor confirma tu dirección de correo electrónico haciendo clic en el botón de abajo para activar tu cuenta:</p>`;
   const html = basePlantilla('Bienvenido a Xanani', username, cuerpoHtml, url, 'Verificar Correo');
   await sendEmail({ to, subject: 'Confirma tu correo en Xanani', html });
@@ -221,7 +221,7 @@ async function enviarCorreoVerificacion(to, username, token) {
  * Plantilla: Recuperación de contraseña
  */
 async function enviarCorreoRecuperacion(to, username, token) {
-  const url = `${FRONTEND_URL}/reset-password/${token}`;
+  const url = `${FRONTEND_URL}/#/reset-password/${token}`;
   const cuerpoHtml = `<p>Hemos recibido una solicitud para cambiar tu contraseña.</p>
                       <p>Este enlace expirará en 1 hora. Si no lo solicitaste, puedes ignorar este mensaje.</p>`;
   const html = basePlantilla('Recuperación de Contraseña', username, cuerpoHtml, url, 'Restablecer Mi Contraseña');
