@@ -344,7 +344,10 @@
     }
 
     .card-legal-footer {
-        display: none;
+        display: flex;
+        justify-content: center;
+        margin-top: 1rem;
+        gap: 1.5rem;
     }
 
     .card-form-side {

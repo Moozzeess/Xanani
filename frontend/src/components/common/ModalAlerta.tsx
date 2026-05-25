@@ -11,6 +11,8 @@ interface ModalAlertaProps {
   titulo: string;
   mensaje: string;
   detalles?: string;
+  textoAccion?: string;
+  onAccion?: () => void;
   alCerrar: () => void;
 }
 
@@ -24,6 +26,8 @@ export const ModalAlerta: React.FC<ModalAlertaProps> = ({
   titulo,
   mensaje,
   detalles,
+  textoAccion,
+  onAccion,
   alCerrar
 }) => {
   const [animado, setAnimado] = useState(false);
@@ -133,7 +137,18 @@ export const ModalAlerta: React.FC<ModalAlertaProps> = ({
             </div>
           )}
 
-          <div className="mt-8 flex justify-end">
+          <div className="mt-8 flex justify-end gap-3">
+            {textoAccion && onAccion && (
+              <button
+                onClick={() => {
+                  onAccion();
+                  alCerrar(); // Cierra el modal tras ejecutar la acción
+                }}
+                className={`px-6 py-2.5 rounded-xl font-semibold transition-all active:scale-95 border-2 shadow-sm ${config.text} border-current bg-transparent hover:bg-slate-50`}
+              >
+                {textoAccion}
+              </button>
+            )}
             <button
               onClick={alCerrar}
               className={`px-6 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 shadow-lg shadow-black/10 hover:shadow-xl hover:-translate-y-0.5 ${config.bg} brightness-110`}

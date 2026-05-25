@@ -139,25 +139,29 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
         <div className={`fixed inset-x-0 bottom-0 bg-white rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] z-[2000] transition-all duration-500 ease-in-out flex flex-col ${getPanelHeight()} ${isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
 
             {/* ESTADO 1: COLLAPSED (Telemetría Real) */}
-            <div onClick={handleToggle} className="w-full pt-4 pb-4 px-8 shrink-0 cursor-pointer bg-white">
-                <div className="w-14 h-1.5 bg-slate-200 rounded-full mx-auto mb-4"></div>
+            <div onClick={handleToggle} className="w-full pt-2 pb-4 px-8 shrink-0 cursor-pointer bg-white group hover:bg-slate-50 transition-colors">
+                <div className="flex flex-col items-center justify-center mb-3">
+                    <ChevronUp className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${viewState !== 'collapsed' ? 'rotate-180' : 'animate-bounce'}`} />
+                    <div className="w-16 h-1.5 bg-slate-300 rounded-full shadow-inner mt-0.5"></div>
+                </div>
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 ${vehicleData.isSimulated ? 'bg-indigo-600' : (isInfoOnly ? 'bg-slate-400' : 'bg-emerald-600')} rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100`}>
                             <Bus className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3 mb-1">
                                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{ruta.nombre}</span>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onToggleSuscripcion?.(ruta._id || ruta.id);
                                     }}
-                                    className={`p-1 rounded-full transition-all ${isSuscrito ? 'text-amber-400 scale-110' : 'text-slate-300 hover:text-amber-300'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all border ${isSuscrito ? 'bg-amber-50 text-amber-500 border-amber-200 scale-105' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-amber-400 hover:border-amber-200'}`}
                                     title={isSuscrito ? "Quitar de favoritos" : "Añadir a favoritos"}
                                 >
-                                    <Star className={`w-3.5 h-3.5 ${isSuscrito ? 'fill-amber-400' : ''}`} />
+                                    <Star className={`w-3.5 h-3.5 ${isSuscrito ? 'fill-amber-500' : ''}`} />
+                                    <span className="text-[9px] font-bold uppercase tracking-widest">{isSuscrito ? 'Guardada' : 'Guardar'}</span>
                                 </button>
                             </div>
                             <h2 className="text-base font-black text-slate-800 leading-tight">{vehicleData.nombreUnidad}</h2>

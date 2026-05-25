@@ -261,7 +261,7 @@ module.exports = {
   register,
   login,
   verifyEmail,
-  resendVerification,
+  resendVerificationEmail,
   forgotPassword,
   resetPassword
 };

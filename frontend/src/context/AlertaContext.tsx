@@ -3,7 +3,7 @@ import { ModalAlerta, TipoAlerta } from '../components/common/ModalAlerta';
 import api from '../services/api';
 
 interface AlertaContextType {
-  disparar: (params: { tipo: TipoAlerta; titulo: string; mensaje: string; detalles?: string }) => void;
+  disparar: (params: { tipo: TipoAlerta; titulo: string; mensaje: string; detalles?: string; textoAccion?: string; onAccion?: () => void }) => void;
   dispararError: (mensaje: string, detalles?: string, titulo?: string) => void;
 }
 
@@ -20,6 +20,8 @@ export const AlertaProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     titulo: string;
     mensaje: string;
     detalles?: string;
+    textoAccion?: string;
+    onAccion?: () => void;
   }>({
     mostrar: false,
     tipo: 'info',
@@ -27,7 +29,7 @@ export const AlertaProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     mensaje: ''
   });
 
-  const disparar = useCallback((params: { tipo: TipoAlerta; titulo: string; mensaje: string; detalles?: string }) => {
+  const disparar = useCallback((params: { tipo: TipoAlerta; titulo: string; mensaje: string; detalles?: string; textoAccion?: string; onAccion?: () => void }) => {
     setEstado({ ...params, mostrar: true });
   }, []);
 
@@ -68,6 +70,8 @@ export const AlertaProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         titulo={estado.titulo}
         mensaje={estado.mensaje}
         detalles={estado.detalles}
+        textoAccion={estado.textoAccion}
+        onAccion={estado.onAccion}
         alCerrar={cerrar}
       />
     </AlertaContext.Provider>

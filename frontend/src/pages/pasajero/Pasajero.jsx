@@ -79,6 +79,7 @@ const Pasajero = () => {
     const [mostrarRadar, setMostrarRadar] = useState(false);
     const [filtros, setFiltros] = useState({});
     const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
+    const [radarNotificado, setRadarNotificado] = useState(false);
 
     const username = usuario?.username || 'Pasajero';
     const userInitial = username.charAt(0).toUpperCase();
@@ -271,6 +272,40 @@ const Pasajero = () => {
         if (token) fetchRutas();
     }, [token]);
 
+    // Detección automática en segundo plano de paradas cercanas
+    useEffect(() => {
+        if (!userPos || rutasDisponibles.length === 0 || radarNotificado) return;
+
+        let paradaMasCercana = null;
+        let rutaAsociada = null;
+        let minDistancia = Infinity;
+
+        rutasDisponibles.forEach(ruta => {
+            ruta.paradas?.forEach(parada => {
+                const d = calcularDistancia(userPos[0], userPos[1], parada.latitud, parada.longitud);
+                if (d <= 1000 && d < minDistancia) {
+                    minDistancia = d;
+                    paradaMasCercana = parada;
+                    rutaAsociada = ruta;
+                }
+            });
+        });
+
+        if (paradaMasCercana) {
+            setRadarNotificado(true); // Evitar re-notificar
+            
+            disparar({
+                tipo: 'info',
+                titulo: 'Radar Automático',
+                mensaje: `Se detectó la parada ${paradaMasCercana.nombre} cerca de tu ubicación.`,
+                textoAccion: 'Abrir Radar',
+                onAccion: () => {
+                    handleCentrarUsuario();
+                }
+            });
+        }
+    }, [userPos, rutasDisponibles, radarNotificado, disparar]);
+
     // Cargar Perfil y Favoritos
     const fetchPerfil = async () => {
         try {
@@ -390,7 +425,6 @@ const Pasajero = () => {
         if (userPos) {
             setMapCenter([...userPos]);
             setMostrarRadar(true);
-            setTimeout(() => setMostrarRadar(false), 3000); // El radar desaparece tras 3s
 
             // LÓGICA DE DESCUBRIMIENTO: Buscar paradas cercanas en todas las rutas
             const paradasCercanas = [];
