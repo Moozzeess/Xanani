@@ -257,7 +257,7 @@ const PaginaLogin = () => {
                       <div className="password-input-wrapper">
                         <input
                           className="input-style"
-                          placeholder=""
+                          placeholder="Contraseña"
                           type={mostrarContrasenaLogin ? "text" : "password"}
                           value={contrasena}
                           onChange={(e) => setContrasena(e.target.value)}
@@ -324,7 +324,7 @@ const PaginaLogin = () => {
                     <div className="password-input-wrapper">
                       <input
                         className="input-style"
-                        placeholder="8 caracteres, 1 mayúscula, 1 número, 1 símbolo"
+                        placeholder="Contraseña (Mín. 8 caracteres, 1 mayúscula, 1 número, 1 símbolo)"
                         type={mostrarContrasenaRegistro ? "text" : "password"}
                         value={contrasenaRegistro}
                         onChange={(e) => setContrasenaRegistro(e.target.value)}
