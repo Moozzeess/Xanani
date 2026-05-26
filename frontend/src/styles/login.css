@@ -217,9 +217,8 @@
 
 .password-input-wrapper {
     position: relative;
-    display: flex;
     align-items: center;
-    width: 100%;
+    width: auto;
 }
 
 .password-input-wrapper .input-style {
