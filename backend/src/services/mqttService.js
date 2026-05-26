@@ -56,6 +56,8 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
     const cliente = mqtt.connect(currentBroker, {
       reconnectPeriod: 5000, // Reintentar cada 5 segundos si falla
       connectTimeout: 30 * 1000,
+      username: MQTT_AUTH_USER,
+      password: MQTT_AUTH_PASS,
       ...options
     });
 
