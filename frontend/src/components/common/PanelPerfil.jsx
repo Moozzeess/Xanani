@@ -179,7 +179,7 @@ const PanelPerfil = ({
 
                     {/* Descubrir Rutas (Si no hay o para agregar más) */}
                     {!isConductor && (
-                        <div className="px-5 py-4 border-b border-slate-100">
+                        <div id="tour-descubrir-rutas" className="px-5 py-4 border-b border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 flex items-center gap-1.5">
                                 <Route className="w-3 h-3" /> {rutasFavoritas.length === 0 ? 'Descubrir Rutas' : 'Explorar más'}
                             </p>

@@ -9,7 +9,7 @@ const API_URL = `import.meta.env.VITE_API_BASE_URL`;
  * cuando detecta que el pasajero abordó la unidad (GPS < 50m por 30s).
  * No pregunta si abordó; lo infiere del contexto de seguimiento.
  */
-const ModalExperiencia = ({ isOpen, unidad, onClose, onCalificar }) => {
+const ModalExperiencia = ({ isOpen, unidad, onClose, onCalificar, isTutorialMode = false }) => {
   const [encontroAsiento, setEncontroAsiento] = useState(null);
   const [calificacion, setCalificacion] = useState(0);
   const [hovered, setHovered] = useState(0);
@@ -24,23 +24,28 @@ const ModalExperiencia = ({ isOpen, unidad, onClose, onCalificar }) => {
 
     setEnviando(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/reportes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tipo: 'EXPERIENCIA',
-          unidadId: unidad?._id || null,
-          calificacion,
-          encontroAsiento,
-          descripcion: `Calificación post-viaje: ${calificacion}/5. Asiento: ${encontroAsiento === null ? 'no indicado' : encontroAsiento ? 'sí' : 'no'}`
-        })
-      });
+      if (isTutorialMode) {
+        // Simular éxito para el tutorial sin afectar la DB
+        await new Promise(r => setTimeout(r, 800));
+      } else {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/reportes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            tipo: 'EXPERIENCIA',
+            unidadId: unidad?._id || null,
+            calificacion,
+            encontroAsiento,
+            descripcion: `Calificación post-viaje: ${calificacion}/5. Asiento: ${encontroAsiento === null ? 'no indicado' : encontroAsiento ? 'sí' : 'no'}`
+          })
+        });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      }
 
       setCompletado(true);
       onCalificar?.({ calificacion, encontroAsiento });

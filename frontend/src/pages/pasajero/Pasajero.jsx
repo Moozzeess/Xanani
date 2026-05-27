@@ -29,6 +29,7 @@ import NavbarPasajero from "../../components/pasajero/NavbarPasajero";
 import PanelDescubrimiento from "../../components/pasajero/PanelDescubrimiento";
 import CapaUsuario from "../../components/common/mapa/CapaUsuario";
 import CapaInvitacion from "../../components/common/mapa/CapaInvitacion";
+import TutorialPasajero from "../../components/pasajero/TutorialPasajero";
 import { X, Navigation, MapPin, Clock, Bus, User, Star, ChevronUp, ChevronDown, Flag } from 'lucide-react';
 
 // Función Helper para distancia Haversine
@@ -80,9 +81,63 @@ const Pasajero = () => {
     const [filtros, setFiltros] = useState({});
     const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
     const [radarNotificado, setRadarNotificado] = useState(false);
+    const [mostrarTutorial, setMostrarTutorial] = useState(false);
 
     const username = usuario?.username || 'Pasajero';
     const userInitial = username.charAt(0).toUpperCase();
+
+    // Revisar si es la primera vez (registro nuevo)
+    useEffect(() => {
+        const isNew = sessionStorage.getItem('isNewRegistration');
+        if (isNew === 'true') {
+            setMostrarTutorial(true);
+        }
+    }, []);
+
+    const cerrarTutorial = () => {
+        setMostrarTutorial(false);
+        sessionStorage.removeItem('isNewRegistration');
+        // Limpiar el mock si existiera
+        if (selectedVehicle?.id === 'TUTORIAL-UNIT') {
+            setSelectedVehicle(null);
+            seleccionarRuta(null);
+        }
+    };
+
+    // Inyectar unidad simulada para el tutorial en la lista general de vehículos para que aparezca en el mapa
+    useEffect(() => {
+        if (mostrarTutorial && rutasDisponibles.length > 0) {
+            const existeTutorialUnit = vehicles.some(v => v.id === 'TUTORIAL-UNIT');
+            if (!existeTutorialUnit) {
+                const mockRoute = rutasDisponibles[Math.floor(Math.random() * rutasDisponibles.length)];
+                const pos = mockRoute.paradas?.[0] ? [mockRoute.paradas[0].latitud, mockRoute.paradas[0].longitud] : [19.4326, -99.1332];
+                
+                const mockVehicle = {
+                    id: 'TUTORIAL-UNIT',
+                    rutaId: mockRoute._id || mockRoute.id,
+                    nombreUnidad: 'Unidad de Prueba (Tutorial)',
+                    pos: pos,
+                    ocupacionActual: 5,
+                    capacidadMaxima: 15,
+                    occ: 'Baja',
+                    isSimulated: true,
+                    conductorNombre: 'Guía Xanani',
+                    indexParadaActual: 0,
+                    color: 'bg-indigo-400'
+                };
+
+                // En lugar de autoseleccionarlo, lo añadimos a la lista general de vehículos
+                setVehicles(prev => {
+                    if (prev.some(v => v.id === 'TUTORIAL-UNIT')) return prev;
+                    return [...prev, mockVehicle];
+                });
+
+                // CENTRAR MAPA EN LA UBICACIÓN DE LA COMBI DE PRUEBA
+                setMapCenter(pos);
+                setMapZoom(16);
+            }
+        }
+    }, [mostrarTutorial, rutasDisponibles, vehicles.length]);
 
     // Función Unificada para Actualizar Unidades (Real o Sim)
     const actualizarVehiculo = (datos) => {
@@ -113,22 +168,37 @@ const Pasajero = () => {
                 };
             }
 
-            if (index === -1) return [...prev, finalData];
-            const newVehicles = [...prev];
-            newVehicles[index] = finalData;
+            let finalVehicles = [];
+            if (index === -1) {
+                finalVehicles = [...prev, finalData];
+            } else {
+                const newVehicles = [...prev];
+                newVehicles[index] = finalData;
+                finalVehicles = newVehicles;
+            }
 
             // LÓGICA DE LIMPIEZA: Si esta es una unidad REAL (con conductor), eliminar cualquier simulación de fondo previa de esta ruta
             if (!finalData.isBackground) {
                 const rid = finalData.rutaId || finalData.id_ruta;
-                return newVehicles.filter(v => 
+                finalVehicles = finalVehicles.filter(v => 
                     !v.isBackground || (v.rutaId || v.id_ruta)?.toString() !== rid?.toString()
                 );
+            }
+
+            // SALVAGUARDA DE TUTORIAL: Asegurar que el vehículo TUTORIAL-UNIT no se pierda por actualizaciones
+            if (mostrarTutorial && !finalVehicles.some(v => v.id === 'TUTORIAL-UNIT')) {
+                const tutorialUnit = prev.find(v => v.id === 'TUTORIAL-UNIT');
+                if (tutorialUnit) {
+                    finalVehicles.push(tutorialUnit);
+                }
             }
 
             // Actualizar vehículo seleccionado si es el que cambió
             if (selectedVehicle?.id === id) {
                 setSelectedVehicle(finalData);
             }
+
+            return finalVehicles;
 
             // LÓGICA DE ACTUALIZACIÓN DE ETA EN RADAR:
             // Si hay un radar activo para esta ruta, actualizamos su ETA
@@ -215,12 +285,6 @@ const Pasajero = () => {
                 leida: false
             };
 
-            disparar({
-                tipo: datos.tipo || 'info',
-                titulo: datos.titulo || 'Aviso Oficial',
-                mensaje: datos.mensaje
-            });
-
             setNotificacionesLocales(prev => [nuevaNotif, ...prev]);
             setNotifUnreadCount(prev => prev + 1);
         });
@@ -236,12 +300,6 @@ const Pasajero = () => {
                 createdAt: new Date().toISOString(),
                 leida: false
             };
-
-            disparar({
-                tipo: datos.tipo || 'info',
-                titulo: datos.titulo || 'Xanani',
-                mensaje: datos.mensaje
-            });
 
             setNotificacionesLocales(prev => [nuevaNotif, ...prev]);
             setNotifUnreadCount(prev => prev + 1);
@@ -274,7 +332,7 @@ const Pasajero = () => {
 
     // Detección automática en segundo plano de paradas cercanas
     useEffect(() => {
-        if (!userPos || rutasDisponibles.length === 0 || radarNotificado) return;
+        if (!userPos || rutasDisponibles.length === 0 || radarNotificado || mostrarTutorial) return;
 
         let paradaMasCercana = null;
         let rutaAsociada = null;
@@ -569,7 +627,9 @@ const Pasajero = () => {
                             </div>
                         </div>
 
-                        <Mapa center={mapCenter} zoom={mapZoom} bounds={mapBounds} allowManualUnlock={true} onMapClick={() => seleccionarRuta(null)}>
+                        <Mapa center={mapCenter} zoom={mapZoom} bounds={mapBounds} allowManualUnlock={true} onMapClick={() => {
+                            if (!mostrarTutorial) seleccionarRuta(null);
+                        }}>
                             <CapaGeometria routeLine={routeLine} unitPos={selectedVehicle?.pos} />
                             <CapaParadas 
                                 stops={selectedRoute?.paradas || []} 
@@ -628,6 +688,22 @@ const Pasajero = () => {
                             />
                         )}
 
+                        {/* Botón para cerrar Radar/Parada detectada */}
+                        {paradaDetectada && (
+                            <div className="absolute top-20 right-6 z-[600] animate-in fade-in zoom-in">
+                                <button
+                                    onClick={() => {
+                                        setParadaDetectada(null);
+                                        setMostrarRadar(false);
+                                    }}
+                                    className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-xl border border-slate-200 text-slate-600 hover:text-red-500 hover:bg-red-50 transition-all"
+                                    title="Cerrar radar"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+                        )}
+
                         {/* Motor de Simulación Modular */}
                         <SimPasajero
                             socket={socket}
@@ -642,6 +718,7 @@ const Pasajero = () => {
                         {(selectedVehicle || selectedRoute) && (
                             <PanelRutaInteractiva
                                 isHidden={!!paradaDetectada}
+                                isTutorialMode={mostrarTutorial}
                                 vehicle={selectedVehicle}
                                 ruta={selectedRoute || rutasDisponibles.find(r => r._id.toString() === (selectedVehicle?.rutaId || selectedVehicle?.id_ruta)?.toString())}
                                 rutasFavoritas={rutasFavoritas}
@@ -739,6 +816,8 @@ const Pasajero = () => {
                     obtenerUbicacion();
                 }}
             />
+
+            {mostrarTutorial && <TutorialPasajero onClose={cerrarTutorial} />}
 
         </main>
     );

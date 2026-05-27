@@ -109,9 +109,11 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsModalOpen(true)} // Abrir modal
-            className="hidden md:flex bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-all active:scale-95 items-center gap-2 shadow-lg shadow-slate-900/10"
+            className="flex bg-slate-900 text-white p-2 md:px-4 md:py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-all active:scale-95 items-center gap-2 shadow-lg shadow-slate-900/10"
+            title="Nuevo Anuncio"
           >
-            <Megaphone className="w-4 h-4" /> Nuevo Anuncio
+            <Megaphone className="w-4 h-4" /> 
+            <span className="hidden md:inline">Nuevo Anuncio</span>
           </button>
         </div>
       </header>

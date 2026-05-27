@@ -60,6 +60,7 @@ const PaginaLogin = () => {
   const [confirmarContrasenaRegistro, setConfirmarContrasenaRegistro] = useState("");
   const [mostrarContrasenaRegistro, setMostrarContrasenaRegistro] = useState(false);
   const [mostrarConfirmarContrasena, setMostrarConfirmarContrasena] = useState(false);
+  const [erroresRegistro, setErroresRegistro] = useState<{email?: string, usuario?: string, contrasena?: string, confirmar?: string}>({});
 
   // Recuperar contraseña
   const [emailRecuperacion, setEmailRecuperacion] = useState("");
@@ -70,22 +71,40 @@ const PaginaLogin = () => {
 
   const [estaEnviando, setEstaEnviando] = useState(false);
 
-  // Validación para habilitar el botón de login (Solo campos no vacíos)
+  // Validación del login
   const puedeEnviarLogin = useMemo(() => {
     return usuarioOEmail.trim().length > 0 && contrasena.length > 0;
   }, [usuarioOEmail, contrasena]);
 
-  // Validación para habilitar el botón de registro
-  const puedeEnviarRegistro = useMemo(() => {
+  // Validación de Registro al intentar enviar
+  const validarRegistro = () => {
+    const errores: {email?: string, usuario?: string, contrasena?: string, confirmar?: string} = {};
+    let esValido = true;
+
+    if (!emailRegistro.trim() || !/^\S+@\S+\.\S+$/.test(emailRegistro)) {
+      errores.email = "Ingresa un correo electrónico válido.";
+      esValido = false;
+    }
+    if (!usuarioRegistro.trim() || usuarioRegistro.trim().length < 3) {
+      errores.usuario = "El usuario debe tener al menos 3 caracteres.";
+      esValido = false;
+    }
     const tieneCaracterEspecial = /[!@#$%^&*(),.?":{}|<>]/.test(contrasenaRegistro);
-    return (
-      emailRegistro.trim().length > 0 &&
-      usuarioRegistro.trim().length > 0 &&
-      contrasenaRegistro.length >= 8 &&
-      tieneCaracterEspecial &&
-      contrasenaRegistro === confirmarContrasenaRegistro
-    );
-  }, [emailRegistro, usuarioRegistro, contrasenaRegistro, confirmarContrasenaRegistro]);
+    const tieneMayuscula = /[A-Z]/.test(contrasenaRegistro);
+    const tieneNumero = /[0-9]/.test(contrasenaRegistro);
+    
+    if (contrasenaRegistro.length < 8 || !tieneCaracterEspecial || !tieneMayuscula || !tieneNumero) {
+      errores.contrasena = "Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo especial.";
+      esValido = false;
+    }
+    if (contrasenaRegistro !== confirmarContrasenaRegistro) {
+      errores.confirmar = "Las contraseñas no coinciden.";
+      esValido = false;
+    }
+
+    setErroresRegistro(errores);
+    return esValido;
+  };
 
   /**
    * Maneja el evento de presionar una tecla (Enter)
@@ -166,6 +185,8 @@ const PaginaLogin = () => {
    * Maneja el envío del formulario de registro.
    */
   const alEnviarRegistro = async () => {
+    if (!validarRegistro()) return;
+
     try {
       setEstaEnviando(true);
       await registrarUsuario({
@@ -178,6 +199,7 @@ const PaginaLogin = () => {
         titulo: '¡Cuenta Creada!',
         mensaje: "Por favor revisa la bandeja de entrada de tu correo electrónico (o la consola del servidor) para verificar tu cuenta."
       });
+      sessionStorage.setItem('isNewRegistration', 'true');
       setFormularioActivo("login");
     } catch (e: any) {
       console.error(e);
@@ -262,6 +284,7 @@ const PaginaLogin = () => {
                           value={contrasena}
                           onChange={(e) => setContrasena(e.target.value)}
                           onKeyDown={(e) => alPresionarTecla(e, alEnviarLogin, puedeEnviarLogin)}
+                          autoComplete="current-password"
                         />
                         <button
                           type="button"
@@ -304,62 +327,83 @@ const PaginaLogin = () => {
                     className="auth-form"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (puedeEnviarRegistro && !estaEnviando) alEnviarRegistro();
+                      if (!estaEnviando) alEnviarRegistro();
                     }}
                   >
-                    <input
-                      className="input-style"
-                      placeholder="Email"
-                      type="email"
-                      value={emailRegistro}
-                      onChange={(e) => setEmailRegistro(e.target.value)}
-                    />
-                    <input
-                      className="input-style"
-                      placeholder="Usuario"
-                      type="text"
-                      value={usuarioRegistro}
-                      onChange={(e) => setUsuarioRegistro(e.target.value)}
-                    />
-                    <div className="password-input-wrapper">
+                    <div className="input-group">
                       <input
                         className="input-style"
-                        placeholder="Contraseña (Mín. 8 caracteres, 1 mayúscula, 1 número, 1 símbolo)"
-                        type={mostrarContrasenaRegistro ? "text" : "password"}
-                        value={contrasenaRegistro}
-                        onChange={(e) => setContrasenaRegistro(e.target.value)}
+                        placeholder="Email"
+                        type="email"
+                        value={emailRegistro}
+                        onChange={(e) => setEmailRegistro(e.target.value)}
                       />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setMostrarContrasenaRegistro(!mostrarContrasenaRegistro)}
-                        title={mostrarContrasenaRegistro ? "Ocultar contraseña" : "Mostrar contraseña"}
-                      >
-                        {mostrarContrasenaRegistro ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
+                      {erroresRegistro.email && <span className="error-text text-red-500 text-xs pl-2">{erroresRegistro.email}</span>}
                     </div>
-                    <div className="password-input-wrapper">
+
+                    <div className="input-group">
                       <input
                         className="input-style"
-                        placeholder="Confirmar contraseña"
-                        type={mostrarConfirmarContrasena ? "text" : "password"}
-                        value={confirmarContrasenaRegistro}
-                        onChange={(e) => setConfirmarContrasenaRegistro(e.target.value)}
-                        onKeyDown={(e) => alPresionarTecla(e, alEnviarRegistro, puedeEnviarRegistro)}
+                        placeholder="Usuario"
+                        type="text"
+                        value={usuarioRegistro}
+                        onChange={(e) => setUsuarioRegistro(e.target.value)}
                       />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setMostrarConfirmarContrasena(!mostrarConfirmarContrasena)}
-                        title={mostrarConfirmarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
-                      >
-                        {mostrarConfirmarContrasena ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
+                      {erroresRegistro.usuario && <span className="error-text text-red-500 text-xs pl-2">{erroresRegistro.usuario}</span>}
                     </div>
+
+                    <div className="input-group">
+                      <div className="password-input-wrapper">
+                        <input
+                          className="input-style"
+                          placeholder="Contraseña"
+                          type={mostrarContrasenaRegistro ? "text" : "password"}
+                          value={contrasenaRegistro}
+                          onChange={(e) => setContrasenaRegistro(e.target.value)}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setMostrarContrasenaRegistro(!mostrarContrasenaRegistro)}
+                          title={mostrarContrasenaRegistro ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        >
+                          {mostrarContrasenaRegistro ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      {erroresRegistro.contrasena && <span className="error-text text-red-500 text-xs pl-2 block mt-1">{erroresRegistro.contrasena}</span>}
+                    </div>
+
+                    <div className="input-group">
+                      <div className="password-input-wrapper">
+                        <input
+                          className="input-style"
+                          placeholder="Confirmar contraseña"
+                          type={mostrarConfirmarContrasena ? "text" : "password"}
+                          value={confirmarContrasenaRegistro}
+                          onChange={(e) => setConfirmarContrasenaRegistro(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !estaEnviando) {
+                              alEnviarRegistro();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setMostrarConfirmarContrasena(!mostrarConfirmarContrasena)}
+                          title={mostrarConfirmarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        >
+                          {mostrarConfirmarContrasena ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      {erroresRegistro.confirmar && <span className="error-text text-red-500 text-xs pl-2 block mt-1">{erroresRegistro.confirmar}</span>}
+                    </div>
+
                     <button
-                      className="btn-auth-submit"
+                      className="btn-auth-submit mt-4"
                       onClick={alEnviarRegistro}
-                      disabled={!puedeEnviarRegistro || estaEnviando}
+                      disabled={estaEnviando}
                     >
                       Registrarme
                     </button>

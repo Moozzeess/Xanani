@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-import { Bookmark, Info, TrendingUp, Search } from 'lucide-react';
+import { Bookmark, Info, TrendingUp, Search, Clock } from 'lucide-react';
 import { estadisticasService } from '../../../services/estadisticasService';
 import { variarSerieDatos } from './simuladorEstadisticas';
 
@@ -58,27 +58,40 @@ const PanelAfluencia = ({ onDiscover }) => {
   return (
     <div className="flex flex-col h-full w-full bg-slate-50 overflow-y-auto p-4 md:p-8 pb-24">
       <header className="mb-8 max-w-4xl">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Tu Afluencia</h1>
+        <h1 id="tour-graficas" className="text-3xl font-extrabold text-slate-900 tracking-tight">Tu Afluencia</h1>
         <p className="text-slate-500 mt-2 text-lg">Pronóstico de ocupación basado en tus rutas favoritas.</p>
       </header>
 
       {rutas.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl">
           {rutas.map((ruta) => (
-            <div key={ruta.rutaId} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex flex-col h-[420px]">
-              <div className="flex justify-between items-start mb-6">
+            <div key={ruta.rutaId} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex flex-col h-[465px]">
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600">
                     <Bookmark className="w-5 h-5 fill-current" />
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-800 text-xl">{ruta.nombre}</h3>
-                    <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Histograma de 24h</p>
                   </div>
                 </div>
                 <div className="flex items-center text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
                   <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
                   <span>Optimizado</span>
+                </div>
+              </div>
+
+              {/* Horarios y Tarifa Premium */}
+              <div className="flex flex-wrap gap-2 mb-4 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 text-[11px] font-black">
+                  <span className="text-xs text-emerald-600 font-black">$</span>
+                  <span>TARIFA: {ruta.precio ? `$${Number(ruta.precio).toFixed(2)}` : '$12.00'} MXN</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 text-[11px] font-black">
+                  <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                  <span className="truncate max-w-[200px]" title={ruta.horario || '06:00 - 22:00'}>
+                    {ruta.horario || '06:00 - 22:00'}
+                  </span>
                 </div>
               </div>
 

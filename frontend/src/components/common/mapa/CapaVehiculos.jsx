@@ -41,8 +41,9 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, mostrarDetalle
 
             if (!marker) {
                 // Crear nuevo marcador si no existe
+                const isTutorialUnit = id.toString() === 'TUTORIAL-UNIT';
                 const icon = L.divIcon({
-                    className: 'bg-transparent',
+                    className: `bg-transparent ${isTutorialUnit ? 'tour-combi-mapa pointer-events-auto' : ''}`,
                     html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0, mostrarDetallesHw),
                     iconSize: [48, 48],
                     iconAnchor: [24, 24],
@@ -69,8 +70,9 @@ const CapaVehiculos = ({ vehicles = [], selectedVehicleId = null, mostrarDetalle
                 // Solo recrear el icono si el ángulo cambió sustancialmente (>1 grado) o cambió la selección
                 const rotationDiff = Math.abs((v.rotation || 0) - (marker._lastRotation || 0));
                 if (rotationDiff > 1 || enSeguimiento !== marker._lastEnSeguimiento) {
+                    const isTutorialUnit = id.toString() === 'TUTORIAL-UNIT';
                     const icon = L.divIcon({
-                        className: 'bg-transparent',
+                        className: `bg-transparent ${isTutorialUnit ? 'tour-combi-mapa pointer-events-auto' : ''}`,
                         html: htmlMarcadorVehiculo(v, enSeguimiento, v.rotation || 0, mostrarDetallesHw),
                         iconSize: [48, 48],
                         iconAnchor: [24, 24],

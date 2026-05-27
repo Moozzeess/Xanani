@@ -14,12 +14,13 @@ const TIPOS_INCIDENCIA = [
 /**
  * PanelRutaInteractiva (Versión Real-Time Premium)
  */
-const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = false, onToggleSuscripcion, onExpand, onCentrarParada, onReport, onClose }) => {
+const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = false, isTutorialMode = false, onToggleSuscripcion, onExpand, onCentrarParada, onReport, onClose }) => {
     const [viewState, setViewState] = useState('collapsed');
     const [mostrarReporte, setMostrarReporte] = useState(false);
     const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
     const [descripcion, setDescripcion] = useState('');
     const [estadoReporte, setEstadoReporte] = useState('idle'); // idle | enviando | exito | error
+    const [mockSuscrito, setMockSuscrito] = useState(false);
     const { disparar, dispararError } = useAlertaGlobal();
     const scrollRef = useRef(null);
 
@@ -38,7 +39,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
         );
     }
 
-    const isSuscrito = rutasFavoritas.some(f => (f._id || f.id).toString() === (ruta._id || ruta.id).toString());
+    const isSuscrito = isTutorialMode ? mockSuscrito : rutasFavoritas.some(f => (f._id || f.id).toString() === (ruta._id || ruta.id).toString());
     const isInfoOnly = !vehicle;
     const vehicleData = vehicle || {
         id: `PREV-${ruta._id || ruta.id}`,
@@ -105,15 +106,24 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
                 ? ruta._id
                 : (ruta?.id && esObjectIdValido(ruta?.id) ? ruta.id : null);
 
-            await api.post('/reportes', {
-                tipo: tipoSeleccionado,
-                unidadId: unidadIdFinal,
-                rutaId: rutaIdFinal,
-                descripcion: descripcion.trim() || null
-            });
+            if (isTutorialMode) {
+                // Simular el retraso de red
+                await new Promise(resolve => setTimeout(resolve, 800));
+            } else {
+                await api.post('/reportes', {
+                    tipo: tipoSeleccionado,
+                    unidadId: unidadIdFinal,
+                    rutaId: rutaIdFinal,
+                    descripcion: descripcion.trim() || null
+                });
+            }
 
             setEstadoReporte('exito');
             disparar({ tipo: 'exito', titulo: 'Reporte Enviado', mensaje: 'Gracias por ayudarnos a mejorar.' });
+
+            if (isTutorialMode) {
+                window.dispatchEvent(new Event('tutorial_reporte_enviado'));
+            }
 
             setTimeout(() => {
                 setEstadoReporte('idle');
@@ -139,7 +149,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
         <div className={`fixed inset-x-0 bottom-0 bg-white rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] z-[2000] transition-all duration-500 ease-in-out flex flex-col ${getPanelHeight()} ${isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
 
             {/* ESTADO 1: COLLAPSED (Telemetría Real) */}
-            <div onClick={handleToggle} className="w-full pt-2 pb-4 px-8 shrink-0 cursor-pointer bg-white group hover:bg-slate-50 transition-colors">
+            <div id="tour-expandir-panel" onClick={handleToggle} className="w-full pt-2 pb-4 px-8 shrink-0 cursor-pointer bg-white group hover:bg-slate-50 transition-colors">
                 <div className="flex flex-col items-center justify-center mb-3">
                     <ChevronUp className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${viewState !== 'collapsed' ? 'rotate-180' : 'animate-bounce'}`} />
                     <div className="w-16 h-1.5 bg-slate-300 rounded-full shadow-inner mt-0.5"></div>
@@ -153,9 +163,15 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
                             <div className="flex items-center gap-3 mb-1">
                                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{ruta.nombre}</span>
                                 <button
+                                    id="tour-suscribir"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onToggleSuscripcion?.(ruta._id || ruta.id);
+                                        if (isTutorialMode) {
+                                            setMockSuscrito(!mockSuscrito);
+                                            disparar({ tipo: 'exito', titulo: 'Suscripción Simulada', mensaje: 'Se ha guardado la ruta de prueba.' });
+                                        } else {
+                                            onToggleSuscripcion?.(ruta._id || ruta.id);
+                                        }
                                     }}
                                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all border ${isSuscrito ? 'bg-amber-50 text-amber-500 border-amber-200 scale-105' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-amber-400 hover:border-amber-200'}`}
                                     title={isSuscrito ? "Quitar de favoritos" : "Añadir a favoritos"}
@@ -178,6 +194,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
                             <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">ETA Real-Time</p>
                         </div>
                         <button
+                            id="tour-cerrar-panel"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onClose?.();
@@ -196,7 +213,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
                 {/* SECCIÓN INTERACTIVA: MAPA Y REPORTE */}
                 {(viewState === 'half' || viewState === 'full') && !isInfoOnly && (
                     <div className={`mt-4 grid gap-6 transition-all duration-500 ${mostrarReporte ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} animate-in fade-in slide-in-from-top-4`}>
-                        <div className="flex justify-center">
+                        <div id="tour-asientos" className="flex justify-center">
                             <MapaAsientos
                                 ocupacionActual={vehicleData.ocupacionActual}
                                 capacidadMaxima={vehicleData.capacidadMaxima}
@@ -314,6 +331,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
                                     return (
                                         <div 
                                             key={i} 
+                                            id={i === 0 ? "tour-parada-itinerario" : undefined}
                                             onClick={() => onCentrarParada?.(p)}
                                             className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors group"
                                         >
@@ -400,6 +418,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
                                 </div>
                             </div>
                             <button
+                                id="tour-reportar"
                                 onClick={() => {
                                     setMostrarReporte(!mostrarReporte);
                                     if (viewState === 'collapsed') handleToggle();

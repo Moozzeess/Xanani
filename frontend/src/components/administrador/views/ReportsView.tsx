@@ -243,14 +243,146 @@ const ReportsView: React.FC = () => {
   };
 
   /**
-   * Simulación de exportación a PDF (requerido a futuro).
+   * Exporta la lista filtrada de reportes actuales a un documento PDF estructurado en tabla.
+   * Abre una ventana de impresión con un diseño de control oficial premium y estilos optimizados.
+   * 
+   * Intención: Permitir la descarga física/digital en PDF del historial operativo de incidencias.
+   * Parámetros: Ninguno (consume reportesFiltrados del estado)
+   * Retorno: Ninguno (abre el diálogo de impresión nativo del navegador)
+   * Reglas de negocio: Verifica que existan registros antes de proceder y aplica el filtro del rol de administrador actual.
    */
   const exportarPDF = () => {
-    disparar({
-      tipo: 'info',
-      titulo: 'Exportación a PDF',
-      mensaje: 'La funcionalidad de exportación a PDF se está preparando en la lógica de negocio.'
-    });
+    if (reportesFiltrados.length === 0) {
+      disparar({
+        tipo: 'advertencia',
+        titulo: 'Exportación a PDF',
+        mensaje: 'No hay reportes de pasajeros en la lista actual para exportar.'
+      });
+      return;
+    }
+
+    const ventanaImpresion = window.open('', '_blank');
+    if (!ventanaImpresion) {
+      dispararError('Bloqueador de ventanas', 'Por favor habilita las ventanas emergentes para poder generar el PDF.');
+      return;
+    }
+
+    // Construcción de filas de la tabla de reportes
+    const filasReportesHTML = reportesFiltrados.map((rep, idx) => {
+      const fechaFormateada = new Date(rep.createdAt).toLocaleString('es-MX', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      const placaUnidad = rep.unidad?.placa || 'N/A';
+      const nombreRuta = rep.ruta?.nombre || 'N/A';
+      const tipoReporte = rep.tipo === 'ANUNCIO' ? 'ANUNCIO OFICIAL' : rep.tipo.replace(/_/g, ' ');
+      const nombreUsuario = rep.tipo === 'ANUNCIO' ? 'Administrador' : (rep.usuario?.username || 'Anónimo');
+      const descripcionIncidencia = rep.descripcion || 'Sin descripción detallada';
+      const estadoActual = rep.estado;
+
+      return `
+        <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px; font-size: 11px; font-weight: 600; color: #475569;">${fechaFormateada}</td>
+          <td style="padding: 10px; font-size: 11px; font-weight: bold; color: #2563eb;">${tipoReporte}</td>
+          <td style="padding: 10px; font-size: 11px; color: #334155;">${nombreUsuario}</td>
+          <td style="padding: 10px; font-size: 11px; color: #475569;">${placaUnidad} / ${nombreRuta}</td>
+          <td style="padding: 10px; font-size: 11px; color: #1e293b; max-width: 260px; word-wrap: break-word;">${descripcionIncidencia}</td>
+          <td style="padding: 10px; font-size: 10px; font-weight: bold; text-align: center;">
+            <span style="padding: 4px 8px; border-radius: 6px; font-size: 9px; text-transform: uppercase;
+              background-color: ${estadoActual === 'PENDIENTE' ? '#fef3c7' : estadoActual === 'REVISADO' ? '#dbeafe' : '#d1fae5'};
+              color: ${estadoActual === 'PENDIENTE' ? '#d97706' : estadoActual === 'REVISADO' ? '#2563eb' : '#059669'};">
+              ${estadoActual}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const plantillaContenidoHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Vista Previa - Reportes Xanani</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+            body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 0; background-color: #f1f5f9; }
+            .doc-wrapper { background-color: #ffffff; max-width: 1000px; margin: 40px auto; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+            .header-doc { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+            .header-doc h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
+            .header-doc p { font-size: 12px; color: #475569; margin: 4px 0 0 0; font-weight: 600; }
+            .meta-doc { font-size: 11px; color: #475569; margin-bottom: 25px; line-height: 1.6; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; text-align: left; }
+            th { background-color: #0f172a; color: #ffffff; padding: 12px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+            .footer-doc { text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 60px; font-weight: 600; }
+            
+            /* Clases para el control de impresión */
+            @media print {
+              body { background-color: #ffffff !important; margin: 0 !important; padding: 0 !important; }
+              .no-print { display: none !important; }
+              .doc-wrapper { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Barra superior de control y vista previa (No imprimible) -->
+          <div class="no-print" style="position: sticky; top: 0; left: 0; width: 100%; background-color: #0f172a; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-bottom: 3px solid #2563eb; z-index: 1000; box-sizing: border-box;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 800; font-size: 12px; letter-spacing: 0.5px; color: #ffffff; text-transform: uppercase;">Vista Previa del Reporte Oficial</span>
+              <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">Revise la tabla a continuación. Use el botón azul para descargar o imprimir el PDF oficial.</span>
+            </div>
+            <div style="display: flex; gap: 12px;">
+              <button onclick="window.print()" style="background-color: #2563eb; color: white; border: none; padding: 10px 18px; font-size: 11px; font-weight: 800; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(37,99,235,0.25); transition: background-color 0.2s;">
+                Descargar o Imprimir PDF
+              </button>
+              <button onclick="window.close()" style="background-color: #334155; color: #e2e8f0; border: none; padding: 10px 18px; font-size: 11px; font-weight: 800; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;">
+                Cerrar Vista
+              </button>
+            </div>
+          </div>
+
+          <div class="doc-wrapper">
+            <div class="header-doc">
+              <div>
+                <h1>XANANI - PLATAFORMA DE MOVILIDAD INTELIGENTE</h1>
+                <p>Reporte Oficial de Incidencias, Quejas y Sugerencias de Pasajeros</p>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 10px; font-weight: 800; color: #2563eb; border: 2px solid #2563eb; padding: 5px 10px; border-radius: 8px; letter-spacing: 1px;">CONTROL ADM</span>
+              </div>
+            </div>
+            
+            <div class="meta-doc">
+              <strong>Generado por:</strong> Administrador de Flota Comercial<br/>
+              <strong>Fecha y hora de emisión:</strong> ${new Date().toLocaleString('es-MX')}<br/>
+              <strong>Total de registros exportados:</strong> ${reportesFiltrados.length} reportes<br/>
+              <strong>Filtros activos de la vista:</strong> Estado: ${filtroEstado} | Categoría de Reporte: ${filtroTipo}
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 15%;">Fecha</th>
+                  <th style="width: 20%;">Categoría</th>
+                  <th style="width: 15%;">Usuario</th>
+                  <th style="width: 15%;">Unidad/Ruta</th>
+                  <th style="width: 25%;">Descripción</th>
+                  <th style="width: 10%; text-align: center;">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filasReportesHTML}
+              </tbody>
+            </table>
+
+            <div class="footer-doc">
+              Documento de control confidencial generado por la consola administrativa de Xanani. Prohibida su alteración o redistribución externa.
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    ventanaImpresion.document.write(plantillaContenidoHTML);
+    ventanaImpresion.document.close();
   };
 
   /**

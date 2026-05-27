@@ -9,15 +9,16 @@ export interface ResumenDashboard {
   incidentesActivos: number;
   pasajerosHoy: number;
   eficiencia: number;
+  gananciasHoy: number;
 }
 
 /**
  * Interfaz para los gráficos analíticos.
  */
 export interface GraficosDashboard {
-  afluencia: Array<{ hora: string; pasajeros: number }>;
-  distribucionUnidades: Array<{ estado: string; cantidad: number }>;
-  incidentesPorTipo: Array<{ tipo: string; cantidad: number }>;
+  afluencia: Array<{ hora: string; pasajeros: number; demandaEsperada: number }>;
+  viajesPorRuta: Array<{ ruta: string; cantidad: number }>;
+  gananciasProximas: Array<{ dia: string; real: number; proyectado: number }>;
 }
 
 /**
