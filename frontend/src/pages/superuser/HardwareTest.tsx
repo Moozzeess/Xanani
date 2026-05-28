@@ -38,7 +38,9 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
     sim800l: {
       connected: false,
       signalStrength: 0,
-      dataPlanActive: false
+      dataPlanActive: false,
+      saldo: '' as string,
+      consumo: '' as string
     },
     gps: {
       latitud: 0,
@@ -86,7 +88,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       macAddress: '',
       statusCode: -1,
       errorMsg: '',
-      sim800l: { connected: false, signalStrength: 0, dataPlanActive: false },
+      sim800l: { connected: false, signalStrength: 0, dataPlanActive: false, saldo: '', consumo: '' },
       gps: { latitud: 0, longitud: 0, conectado: false, satelites: 0, velocidad: 0 },
       pasajeros: { entradas: 0, salidas: 0, actuales: 0 },
       celdas: [],
@@ -175,9 +177,11 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         errorMsg: payload.err || '',
         sim800l: {
           connected:      payload.sim?.con    ?? false,
-          signalStrength: payload.sim?.signal ? 
+          signalStrength: payload.sim?.signal ?
                           Math.round((payload.sim.signal / 31) * 100) : 0, // convierte 0-31 a %
-          dataPlanActive: payload.sim?.con    ?? false
+          dataPlanActive: payload.sim?.con    ?? false,
+          saldo:   payload.saldo   || prev.sim800l.saldo   || '',
+          consumo: payload.consumo || prev.sim800l.consumo || ''
         },
         gps: {
           conectado: payload.gps?.con || false,
@@ -323,7 +327,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Cpu size={20} className="text-blue-400" />
-            Panel de Pruebas de Hardware
+            Panel de Gestión de Hardware
           </h2>
           <p className="text-slate-400 text-xs mt-1">Diagnóstico y configuración de ESP32, SIM800L y Sensores</p>
         </div>
@@ -340,7 +344,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
           {/* COLUMNA 1: CONFIGURACIÓN (Izquierda - 3 cols) */}
-          <div className="xl:col-span-3 space-y-6">
+          <div className="xl:col-span-3 space-y-6 min-w-0">
             <MqttSettingsPanel
               mqttConfig={mqttConfig}
               onChange={handleConfigChange}
@@ -363,9 +367,11 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
           </div>
 
           {/* COLUMNA 2: DIAGNÓSTICO EN VIVO (Centro - 4 cols) */}
-          <div className="xl:col-span-4 space-y-6">
+          <div className="xl:col-span-4 space-y-6 min-w-0">
             <DeviceStatusPanel
               deviceStatus={deviceStatus}
+              isConnected={isConnected}
+              isConnecting={isConnecting}
             />
 
             <InteractiveSettingsPanel
@@ -382,7 +388,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
           </div>
 
           {/* COLUMNA 3: DATOS DE SENSORES Y SUMARIO (Derecha - 5 cols) */}
-          <div className="xl:col-span-5 space-y-6">
+          <div className="xl:col-span-5 space-y-6 min-w-0">
             <SensorDataPanel
               sensorData={sensorData}
               capacidadMaxima={hardwareSettings.capacidadMaxima}

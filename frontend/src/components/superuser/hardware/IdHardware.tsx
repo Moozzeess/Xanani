@@ -85,7 +85,7 @@ export const DeviceIdentificationPanel = ({ isConnected, esp32Online, hardwareId
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mt-6">
+    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
       <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
         <Truck size={16} className="text-emerald-500" />
         Identificar Dispositivo

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Server, Database, Wifi, AlertTriangle, CheckCircle2, XCircle, RefreshCw, Radio, AlertCircle } from 'lucide-react';
+import { Server, Database, Wifi, AlertTriangle, CheckCircle2, XCircle, RefreshCw, Radio, AlertCircle, Clock } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { superadminApi } from './useSuperadminApi';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:4000';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const tsNow = () => new Date().toLocaleTimeString('es-MX', { hour12: false });
@@ -40,8 +40,8 @@ function ServiceCard({ icon: Icon, title, detail, status, metric, metricLabel })
         </div>
         <span className={`flex items-center gap-1.5 text-[11px] font-black px-2.5 py-1 rounded-full
           ${ok ? 'bg-emerald-50 text-emerald-600' : warn ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
-          {ok ? <CheckCircle2 size={11} /> : warn ? <AlertTriangle size={11} /> : <XCircle size={11} />}
-          {ok ? 'Operativo' : warn ? 'Advertencia' : 'Error'}
+          {ok ? <CheckCircle2 size={11} /> : warn ? <Clock size={11} /> : <XCircle size={11} />}
+          {ok ? 'Operativo' : warn ? 'Verificando' : 'Error'}
         </span>
       </div>
       <div className="mt-3">
@@ -66,11 +66,12 @@ export default function SystemHealthView() {
   const [health, setHealth]       = useState(null);
   const [loadingH, setLoadingH]   = useState(true);
   const [errorH, setErrorH]       = useState(null);
-  const [mqttConectado, setMqttConectado] = useState(null); // null = desconocido
+  const [mqttConectado, setMqttConectado] = useState(null); // null = verificando…
   const [logs, setLogs]           = useState([]);
   const [filter, setFilter]       = useState('all');
   const socketRef                 = useRef(null);
   const intervalRef               = useRef(null);
+  const mqttTimeoutRef            = useRef(null);
 
   // ── REST: health ─────────────────────────────────────────────────────────────
   const cargarHealth = useCallback(async () => {
@@ -98,43 +99,75 @@ export default function SystemHealthView() {
 
     socket.on('connect', () => {
       addLog('info', 'Socket.IO', `Conectado al servidor — ID: ${socket.id}`);
+
+      // Solicitar el estado actual del bróker MQTT al conectarse.
+      // Si el bróker ya estaba activo antes de abrir esta pestaña, sin este
+      // emit el cliente nunca recibe el evento 'estado_mqtt' y se queda en
+      // "Verificando…" indefinidamente.
+      socket.emit('get_mqtt_status');
+
+      // Fallback: si en 8 s no llega respuesta, marcamos como desconectado
+      // para no mostrar un estado ambiguo eternamente.
+      if (mqttTimeoutRef.current) clearTimeout(mqttTimeoutRef.current);
+      mqttTimeoutRef.current = setTimeout(() => {
+        setMqttConectado(prev => {
+          if (prev === null) {
+            addLog('warn', 'MQTT Broker', 'Sin respuesta del bróker tras 8 s — se asume desconectado');
+            return false;
+          }
+          return prev;
+        });
+      }, 8000);
     });
 
     socket.on('disconnect', (reason) => {
       addLog('warn', 'Socket.IO', `Desconectado: ${reason}`);
     });
 
-    // Estado del broker MQTT
+    // Estado del broker MQTT (respuesta a get_mqtt_status o cambio reactivo)
     socket.on('estado_mqtt', (data) => {
+      if (mqttTimeoutRef.current) {
+        clearTimeout(mqttTimeoutRef.current);
+        mqttTimeoutRef.current = null;
+      }
       setMqttConectado(data.conectado);
       if (data.conectado) {
-        addLog('info', 'MQTT Broker', `Conexión establecida con ${data.broker}`);
+        addLog('info', 'MQTT Broker', `Conexión establecida con ${data.broker ?? 'bróker'}`);
       } else {
         addLog(data.error ? 'error' : 'warn', 'MQTT Broker',
-          data.error ? `Error: ${data.error}` : 'Conexión cerrada por el broker');
+          data.error ? `Error: ${data.error}` : 'Conexión cerrada por el bróker');
       }
     });
 
-    // Telemetría de dispositivos IoT
+    // Telemetría de dispositivos IoT — si llegan datos, el bróker está activo
     socket.on('datos_esp32', (data) => {
       const { payload } = data;
       if (!payload || typeof payload !== 'object') return;
 
-      // GPS
+      // Si recibimos telemetría, confirmamos implícitamente que el bróker está OK
+      if (mqttConectado === null) {
+        if (mqttTimeoutRef.current) {
+          clearTimeout(mqttTimeoutRef.current);
+          mqttTimeoutRef.current = null;
+        }
+        setMqttConectado(true);
+      }
+
       if (payload.gps?.con === false) {
         addLog('warn', 'IoT Gateway', `Dispositivo ${payload.id ?? '?'} — GPS sin señal`);
       }
-      // SIM
       if (payload.sim?.con === false) {
         addLog('warn', 'IoT Gateway', `Dispositivo ${payload.id ?? '?'} — SIM desconectada`);
       }
-      // Código de error del Arduino
       if (payload.st !== undefined && payload.st > 0) {
         addLog('error', 'IoT Gateway', `Dispositivo ${payload.id ?? '?'} — Código de error: ${payload.st}${payload.err ? ` (${payload.err})` : ''}`);
       }
     });
 
-    return () => { socket.disconnect(); };
+    return () => {
+      if (mqttTimeoutRef.current) clearTimeout(mqttTimeoutRef.current);
+      socket.disconnect();
+    };
   }, []);
 
   const addLog = useCallback((level, service, message) => {
@@ -156,7 +189,8 @@ export default function SystemHealthView() {
     ? (health.iot.sinSenal > 10 ? 'error' : health.iot.gpsLento > 5 ? 'warn' : 'ok')
     : 'ok';
 
-  const mqttStatus = mqttConectado === null ? 'ok' : mqttConectado ? 'ok' : 'error';
+  // null = verificando (warn), true = ok, false = error
+  const mqttStatus = mqttConectado === null ? 'warn' : mqttConectado ? 'ok' : 'error';
 
   if (errorH && !health) return (
     <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-500">
@@ -182,8 +216,8 @@ export default function SystemHealthView() {
           metricLabel={`Host: ${health?.mongodb.host ?? '—'}`} />
         <ServiceCard icon={Radio}    title="MQTT Broker"   detail="Mosquitto"
           status={mqttStatus}
-          metric={mqttConectado === null ? 'Esperando…' : mqttConectado ? 'Conectado' : 'Desconectado'}
-          metricLabel="Estado del broker" />
+          metric={mqttConectado === null ? 'Verificando…' : mqttConectado ? 'Conectado' : 'Desconectado'}
+          metricLabel="Estado del bróker" />
         <ServiceCard icon={Wifi}     title="IoT Gateway"   detail="Dispositivos GPS"
           status={iotStatus}
           metric={health ? `${health.iot.sinSenal} offline` : (loadingH ? '…' : '—')}

@@ -22,7 +22,7 @@ export const InteractiveSettingsPanel = ({
   isConnected
 }: InteractiveSettingsPanelProps) => {
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mt-6">
+    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
       <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
         <SlidersHorizontal size={16} className="text-indigo-500" />
         Configuración Interactiva (ESP32)
@@ -77,7 +77,7 @@ export const InteractiveSettingsPanel = ({
             disabled={!isConnected}
             className="flex-1 bg-rose-100 hover:bg-rose-200 text-rose-700 py-2 rounded-lg text-xs font-bold transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
           >
-            <RefreshCw size={14} /> Reset Contadores
+            <RefreshCw size={14} /> Reiniciar Contadores
           </button>
         </div>
       </div>

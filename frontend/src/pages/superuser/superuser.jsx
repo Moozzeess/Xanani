@@ -63,7 +63,7 @@ const Superususario = () => {
         <div className="flex gap-4">
           {renderTab('analytics', <LayoutDashboard size={18} />, 'Analítica Global')}
           {renderTab('admins', <Users size={18} />, 'Gestión de Administradores')}
-          {renderTab('hardware', <Cpu size={18} />, 'Pruebas de Hardware')}
+          {renderTab('hardware', <Cpu size={18} />, 'Gestión de Hardware')}
           {renderTab('health', <Activity size={18} />, 'Estado del Sistema')}
           {renderTab('heatmap', <Map size={18} />, 'Mapa de Calor')}
         </div>
@@ -109,7 +109,7 @@ const Superususario = () => {
                 onClick={() => setActiveTab('hardware')}
                 className="mb-4 text-blue-600 font-bold hover:underline self-start"
               >
-                &larr; Volver al Invetario
+                &larr; Volver al Inventario
               </button>
               <HardwareTest onSaved={() => setActiveTab('hardware')} initialDevice={testDevice} />
             </div>

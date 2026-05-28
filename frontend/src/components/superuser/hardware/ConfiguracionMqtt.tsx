@@ -28,7 +28,7 @@ export const MqttSettingsPanel = ({
       
       <div className="space-y-3">
         <div>
-          <label className="text-xs font-bold text-slate-500 uppercase">Broker URL</label>
+          <label className="text-xs font-bold text-slate-500 uppercase">URL del Bróker</label>
           <input 
             type="text" 
             name="broker"
@@ -103,7 +103,7 @@ export const MqttSettingsPanel = ({
                  onClick={onPing}
                  className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-700 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm"
                >
-                 Ping (Test Mosquitto)
+                 Prueba de Latencia (Mosquitto)
                </button>
                <button 
                  onClick={onDisconnect}

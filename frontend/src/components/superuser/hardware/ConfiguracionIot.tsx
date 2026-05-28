@@ -28,7 +28,7 @@ export const ConfigSummaryPanel = ({
   if (!isConnected || !esp32Online) return null;
 
   return (
-    <div className="bg-indigo-900 border border-indigo-800 p-5 rounded-xl mt-6 relative overflow-hidden text-white shadow-xl">
+    <div className="bg-indigo-900 border border-indigo-800 p-5 rounded-2xl relative overflow-hidden text-white shadow-xl">
        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[80px] opacity-30 pointer-events-none"></div>
        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500 rounded-full blur-[80px] opacity-20 pointer-events-none"></div>
 
@@ -51,7 +51,7 @@ export const ConfigSummaryPanel = ({
           <div className="bg-indigo-950/50 p-3 rounded-lg border border-indigo-800/50">
              <p className="text-indigo-300 font-bold mb-1">Diagnóstico en Vivo</p>
              <p><span className="text-slate-400">Estado ESP32:</span> <span className="text-green-400">Despachando En Vivo</span></p>
-             <p><span className="text-slate-400">Total Tickets:</span> {entradas} Subidas / {salidas} Bajadas</p>
+             <p><span className="text-slate-400">Total Viajes:</span> {entradas} Subidas / {salidas} Bajadas</p>
           </div>
        </div>
     </div>

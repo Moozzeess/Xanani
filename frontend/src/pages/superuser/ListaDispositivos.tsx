@@ -226,7 +226,7 @@ export default function ListaDispositivos({ onAddNew, onTestDevice }: { onAddNew
                       {onlineDevices[disp.Id_Dispositivo_Hardware] && (
                         <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 animate-pulse">
                           <Activity size={10} />
-                          VIVO / ONLINE
+                          ACTIVO / EN LÍNEA
                         </span>
                       )}
                     </div>

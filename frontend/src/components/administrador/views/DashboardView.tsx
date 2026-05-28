@@ -15,14 +15,6 @@ export interface DashboardViewProps {
   onGoToIncidents: () => void;
 }
 
-const COLORES_ESTADOS = {
-  activa: '#3b82f6',    // Azul
-  en_ruta: '#8b5cf6',   // Púrpura
-  llena: '#ef4444',     // Rojo
-  base: '#10b981',      // Verde
-  inactiva: '#94a3b8'   // Slate
-};
-
 /**
  * DashboardView: Panel principal de analíticas para el administrador.
  * Muestra métricas clave, gráficos de demanda y estado de la flota en tiempo real.
@@ -243,7 +235,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onGoToIncidents }) => {
                   dataKey="cantidad"
                   nameKey="ruta"
                 >
-                  {graficos.viajesPorRuta.map((entry, index) => {
+                  {graficos.viajesPorRuta.map((_entry, index) => {
                     const coloresPie = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'];
                     return (
                       <Cell key={`cell-${index}`} fill={coloresPie[index % coloresPie.length]} />
