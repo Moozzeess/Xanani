@@ -49,7 +49,7 @@ const inicializarSocket = (server) => {
     socket.on('configurar_mqtt', (configuracion) => {
       console.log(`Petición para reconfigurar MQTT recibida de ${socket.id}:`, configuracion);
       const { reconfigurarMQTT } = require('./mqttService');
-      
+
       try {
         reconfigurarMQTT(configuracion);
       } catch (error) {
@@ -73,7 +73,7 @@ const inicializarSocket = (server) => {
     socket.on('enviar_comando_hardware', async (payload) => {
       console.log(`Comando para hardware recibido de ${socket.id}:`, payload);
       const { enviarComando } = require('./mqttService');
-      
+
       try {
         await enviarComando(payload);
         // Confirmar al frontend que se envió correctamente
@@ -91,6 +91,10 @@ const inicializarSocket = (server) => {
       enviarPingTest();
     });
 
+    socket.on('get_mqtt_status', () => {
+      const { getEstadoMQTT } = require('./mqttService');
+      socket.emit('estado_mqtt', getEstadoMQTT());
+    });
     // Suscribir usuario a su sala de flotilla (para administradores y conductores)
     socket.on('suscribir_flotilla', (flotilla) => {
       if (flotilla) {
@@ -113,7 +117,7 @@ const inicializarSocket = (server) => {
       if (datos.flotilla) {
         io.to(`fleet_${datos.flotilla}`).emit('ubicacion_conductor', datos);
       }
-      
+
       // Los pasajeros siguen recibiendo todo para la landing page (o se puede segmentar por ruta)
       socket.broadcast.emit('ubicacion_conductor', datos);
 
@@ -133,10 +137,10 @@ const inicializarSocket = (server) => {
         });
 
         // Opcional: Avisar por socket de forma inmediata incluyendo la posición inicial
-        io.emit('ruta_activa', { 
-          rutaId, 
-          rutaNombre, 
-          pos: datos.pos, 
+        io.emit('ruta_activa', {
+          rutaId,
+          rutaNombre,
+          pos: datos.pos,
           unidadId: datos.id,
           flotilla: flotilla || null
         });
@@ -183,7 +187,7 @@ const inicializarSocket = (server) => {
 
         // Enriquecer datos con el ID generado para el frontend
         const payload = { ...datos, _id: nuevaIncidencia._id };
-        
+
         // Propagar SOLO al administrador de la flotilla correspondiente
         if (datos.flotilla) {
           io.to(`fleet_${datos.flotilla}`).emit('reporte_incidencia', payload);
@@ -196,7 +200,7 @@ const inicializarSocket = (server) => {
     });
 
     // --- LÓGICA DE SIMULACIÓN PARA PASAJEROS ---
-    
+
     // El frontend de pasajero/landing solicita simulación si no hay unidades reales
     socket.on('solicitar_simulacion', () => {
       const { iniciarSimulacionPasajeros } = require('./simulacionService');

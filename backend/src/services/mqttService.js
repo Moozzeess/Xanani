@@ -269,10 +269,17 @@ const desconectarMQTT = () => {
   }
 };
 
+const getEstadoMQTT = () => ({
+  conectado: !!(clienteActual && clienteActual.connected),
+  broker: currentBroker,
+  error: null
+});
+
 module.exports = {
   conectarMQTT,
   reconfigurarMQTT,
   desconectarMQTT,
   enviarComando,
-  enviarPingTest
+  enviarPingTest,
+  getEstadoMQTT
 };
