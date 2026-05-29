@@ -33,11 +33,16 @@ exports.obtenerIncidentesAdmin = async (req, res) => {
 exports.gestionarEstadoIncidente = async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body;
+    const { estado, detalleAtencion } = req.body;
+
+    const actualizacion = { estado };
+    if (detalleAtencion !== undefined) {
+      actualizacion.detalleAtencion = detalleAtencion;
+    }
 
     const incidencia = await Incidencia.findByIdAndUpdate(
       id,
-      { estado },
+      actualizacion,
       { new: true }
     );
 

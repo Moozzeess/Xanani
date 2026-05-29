@@ -34,8 +34,12 @@ const incidenciaSchema = new mongoose.Schema(
     },
     estado: {
       type: String,
-      enum: ['ACTIVO', 'ATENDIDO', 'FALSO_POSITIVO'],
-      default: 'ACTIVO'
+      enum: ['ACTIVO', 'PENDIENTE', 'ATENDIDO', 'RESUELTO', 'FALSO_POSITIVO'],
+      default: 'PENDIENTE'
+    },
+    detalleAtencion: {
+      type: String,
+      trim: true
     },
     ubicacion: {
       latitud: Number,

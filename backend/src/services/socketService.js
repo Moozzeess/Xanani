@@ -247,24 +247,42 @@ const inicializarSocket = (server) => {
     // 3. Reportes de incidencias desde Conductores hacia Admin (SEGMENTADO POR FLOTA)
     socket.on('reporte_incidencia', async (datos) => {
       try {
-        // console.log(`Reporte de incidencia recibido:`, datos);
-        // Guardar de forma persistente con TTL
+        let datosConductor = null;
+        let placaUnidad = null;
+        let flotillaIncidencia = datos.flotilla;
+
+        if (datos.unidadId) {
+           const Unidad = require('../models/Unidad');
+           const u = await Unidad.findById(datos.unidadId).select('flotilla placa conductor').populate('conductor', 'nombre apellido username');
+           if (u) {
+              flotillaIncidencia = u.flotilla;
+              placaUnidad = u.placa;
+              if (u.conductor) datosConductor = u.conductor;
+           }
+        }
+
         const nuevaIncidencia = new Incidencia({
           conductor: datos.conductorId,
           unidad: datos.unidadId,
-          tipo: datos.tipo, // Ej: SOS, FALLA_MECANICA
+          tipo: datos.tipo,
           descripcion: datos.descripcion,
           ubicacion: datos.ubicacion,
-          flotilla: datos.flotilla || null
+          flotilla: flotillaIncidencia || null
         });
         await nuevaIncidencia.save();
 
-        // Enriquecer datos con el ID generado para el frontend
-        const payload = { ...datos, _id: nuevaIncidencia._id };
+        // Poblado inicial básico para enviar por socket al panel del admin
+        const payload = { 
+            ...datos, 
+            _id: nuevaIncidencia._id, 
+            flotilla: flotillaIncidencia || null,
+            createdAt: nuevaIncidencia.createdAt || new Date().toISOString(),
+            conductor: datosConductor,
+            unidad: placaUnidad ? { placa: placaUnidad } : undefined
+        };
 
-        // Propagar SOLO al administrador de la flotilla correspondiente
-        if (datos.flotilla) {
-          io.to(`fleet_${datos.flotilla}`).emit('reporte_incidencia', payload);
+        if (flotillaIncidencia) {
+          io.to(`fleet_${flotillaIncidencia}`).emit('reporte_incidencia', payload);
         } else {
           socket.broadcast.emit('reporte_incidencia', payload);
         }

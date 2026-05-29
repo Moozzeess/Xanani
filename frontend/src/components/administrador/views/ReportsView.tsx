@@ -64,6 +64,9 @@ const ReportsView: React.FC = () => {
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS');
   const [respuestas, setRespuestas] = useState<{[key: string]: string}>({});
   const [enviandoRespuesta, setEnviandoRespuesta] = useState<string | null>(null);
+  const [reporteSeleccionado, setReporteSeleccionado] = useState<Reporte | null>(null);
+
+  const cerrarModal = () => setReporteSeleccionado(null);
 
   /**
    * Carga inicial de reportes desde el servidor.
@@ -496,7 +499,8 @@ const ReportsView: React.FC = () => {
           reportesFiltrados.map((reporte) => (
             <div 
               key={reporte._id} 
-              className={`report-card ${reporte.tipo === 'CONDUCCION_PELIGROSA' ? 'report-critical' : ''} ${reporte.tipo === 'ANUNCIO' ? 'report-announcement' : ''}`}
+              onClick={() => setReporteSeleccionado(reporte)}
+              className={`report-card cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all ${reporte.tipo === 'CONDUCCION_PELIGROSA' ? 'report-critical' : ''} ${reporte.tipo === 'ANUNCIO' ? 'report-announcement' : ''}`}
             >
               {/* Header de la tarjeta */}
               <div className="flex justify-between items-start mb-4">
@@ -594,10 +598,10 @@ const ReportsView: React.FC = () => {
 
               {/* Acciones */}
               {reporte.estado !== 'RESUELTO' && (
-                <div className="report-actions">
+                <div className="report-actions" onClick={e => e.stopPropagation()}>
                   {reporte.estado === 'PENDIENTE' && (
                     <button 
-                      onClick={() => gestionarReporte(reporte._id, 'REVISADO')}
+                      onClick={(e) => { e.stopPropagation(); gestionarReporte(reporte._id, 'REVISADO'); }}
                       className="btn-action btn-revisar"
                     >
                       <Search size={16} />
@@ -605,7 +609,7 @@ const ReportsView: React.FC = () => {
                     </button>
                   )}
                   <button 
-                    onClick={() => gestionarReporte(reporte._id, 'RESUELTO')}
+                    onClick={(e) => { e.stopPropagation(); gestionarReporte(reporte._id, 'RESUELTO'); }}
                     className="btn-action btn-resolver"
                   >
                     <CheckCircle2 size={16} />
@@ -615,7 +619,7 @@ const ReportsView: React.FC = () => {
               )}
 
               {/* Área de Respuesta Administrativa */}
-              <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="mt-4 pt-4 border-t border-slate-100" onClick={e => e.stopPropagation()}>
                 {reporte.respuestaAdmin ? (
                   <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                     <div className="flex items-center gap-2 mb-1">
@@ -652,7 +656,7 @@ const ReportsView: React.FC = () => {
 
               {/* Botón de eliminar (siempre visible para admin) */}
               <button 
-                onClick={() => eliminarReporte(reporte._id)}
+                onClick={(e) => { e.stopPropagation(); eliminarReporte(reporte._id); }}
                 className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                 title="Eliminar reporte permanentemente"
               >
@@ -662,6 +666,121 @@ const ReportsView: React.FC = () => {
           ))
         )}
       </div>
+
+      {/* Modal de Detalles del Reporte */}
+      {reporteSeleccionado && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={cerrarModal}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden fade-in relative" onClick={e => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div className={`p-6 text-white flex justify-between items-start ${
+              reporteSeleccionado.tipo === 'CONDUCCION_PELIGROSA' ? 'bg-red-500' : 'bg-blue-600'
+            }`}>
+              <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-3 rounded-2xl">
+                  {reporteSeleccionado.tipo === 'CONDUCCION_PELIGROSA' ? <ShieldAlert size={28} /> : 
+                   reporteSeleccionado.tipo === 'ANUNCIO' ? <Megaphone size={28} /> : <MessageSquare size={28} />}
+                </div>
+                <div>
+                  <h3 className="text-xl font-black leading-tight">
+                    {reporteSeleccionado.tipo === 'ANUNCIO' ? 'ANUNCIO OFICIAL' : reporteSeleccionado.tipo.replace(/_/g, ' ')}
+                  </h3>
+                  <p className="text-sm text-white/80 font-medium mt-1">
+                    Enviado el {new Date(reporteSeleccionado.createdAt).toLocaleString('es-MX', {
+                      day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+              <button onClick={cerrarModal} className="text-white/60 hover:text-white bg-black/10 hover:bg-black/20 p-2 rounded-full transition-colors">
+                 ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User size={16} className="text-slate-400" />
+                    <span className="text-[11px] font-black uppercase text-slate-500 tracking-wider">Pasajero</span>
+                  </div>
+                  <p className="font-bold text-slate-800">
+                    {reporteSeleccionado.tipo === 'ANUNCIO' ? 'Administrador' : reporteSeleccionado.usuario.username}
+                  </p>
+                  {reporteSeleccionado.tipo !== 'ANUNCIO' && (
+                     <p className="text-xs text-slate-500 font-medium mt-1 truncate">{reporteSeleccionado.usuario.email}</p>
+                  )}
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    {reporteSeleccionado.tipo === 'ANUNCIO' ? <Info size={16} className="text-blue-500" /> : <Bus size={16} className="text-slate-400" />}
+                    <span className="text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                      {reporteSeleccionado.tipo === 'ANUNCIO' ? 'Destinatario' : 'Unidad'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-800">
+                    {reporteSeleccionado.tipo === 'ANUNCIO' ? (reporteSeleccionado.destinatario || 'Todos') : (reporteSeleccionado.unidad?.placa || 'N/A')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Contenido Completo */}
+              <div className="mb-8">
+                <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-wider mb-2">Queja / Comentario Completo</h4>
+                <div className={`p-4 rounded-2xl border ${reporteSeleccionado.tipo === 'CONDUCCION_PELIGROSA' ? 'bg-red-50/50 border-red-100' : 'bg-blue-50/50 border-blue-100'}`}>
+                  <p className="text-slate-700 font-medium whitespace-pre-wrap leading-relaxed">
+                    {reporteSeleccionado.descripcion || 'El usuario no proporcionó detalles adicionales.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Interacciones */}
+              {reporteSeleccionado.tipo !== 'ANUNCIO' && (
+                <div className="mb-4">
+                  <h4 className="text-[11px] font-black uppercase text-blue-500 tracking-wider mb-2 flex items-center gap-2">
+                    <MessageSquare size={12} /> Respuesta Administrativa
+                  </h4>
+                  {reporteSeleccionado.respuestaAdmin ? (
+                    <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                      <p className="text-emerald-800 font-medium italic whitespace-pre-wrap">"{reporteSeleccionado.respuestaAdmin}"</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <textarea 
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:border-blue-500 focus:bg-white transition-all outline-none resize-none min-h-[100px]"
+                        placeholder="Escribe la respuesta oficial que le llegará al pasajero..."
+                        value={respuestas[reporteSeleccionado._id] || ''}
+                        onChange={(e) => setRespuestas(prev => ({ ...prev, [reporteSeleccionado._id]: e.target.value }))}
+                      />
+                      <button 
+                        onClick={() => { enviarRespuesta(reporteSeleccionado._id); cerrarModal(); }}
+                        disabled={enviandoRespuesta === reporteSeleccionado._id || !respuestas[reporteSeleccionado._id]}
+                        className="w-full bg-blue-600 text-white py-3.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                      >
+                        {enviandoRespuesta === reporteSeleccionado._id ? <Loader2 size={18} className="animate-spin" /> : <MessageSquare size={18} />}
+                        Enviar Respuesta y Atender
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Botones de Cambio de Estado Rápidos */}
+              {reporteSeleccionado.estado !== 'RESUELTO' && (
+                <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+                  <button 
+                    onClick={() => { gestionarReporte(reporteSeleccionado._id, 'RESUELTO'); cerrarModal(); }}
+                    className="flex-1 py-3.5 rounded-xl text-sm font-black text-white bg-slate-800 shadow-xl transition-all flex items-center justify-center gap-2 hover:bg-slate-900"
+                  >
+                    <CheckCircle2 size={18} /> Forzar Resolución (Cerrar Ticket)
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
