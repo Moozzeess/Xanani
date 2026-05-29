@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, CheckCircle } from 'lucide-react';
 import { useAlertaGlobal } from '../../context/AlertaContext';
 
-const API_URL = `import.meta.env.VITE_API_BASE_URL`;
+const API_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:4000/api`;
 
 const OPCIONES = [
   { tipo: 'HAY_LUGARES', etiqueta: 'Hay lugares', emoji: '🟢', color: 'border-green-200 bg-green-50 hover:bg-green-100 text-green-800' },

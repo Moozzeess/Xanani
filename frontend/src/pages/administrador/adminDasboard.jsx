@@ -24,7 +24,7 @@ import ReportsView from '../../components/administrador/views/ReportsView';
  */
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { cerrarSesion } = useAuth();
+  const { cerrarSesion, usuario } = useAuth();
   const { socket } = useSocket();
 
   const [activeView, setActiveView] = useState('dashboard');
@@ -42,6 +42,10 @@ const AdminDashboard = () => {
   // Escuchar incidencias globales (especialmente SOS)
   useEffect(() => {
     if (!socket) return;
+
+    if (usuario?.flotilla) {
+      socket.emit('suscribir_flotilla', usuario.flotilla);
+    }
 
     const handleGlobalIncidencia = (incidencia) => {
       console.log('Nueva incidencia recibida en Dashboard:', incidencia);

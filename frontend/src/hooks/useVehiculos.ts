@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = `import.meta.env.VITE_SOCKET_URL`;
-const API_URL = `import.meta.env.VITE_API_BASE_URL`;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `http://${window.location.hostname}:4000`;
+const API_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:4000/api`;
 
 /**
  * Niveles de ocupación calculados a partir del porcentaje de llenado.
@@ -181,9 +181,9 @@ export function useVehiculos() {
       const d = evento.payload;
       if (!d) return;
 
-      // El ESP32 puede enviar lat/lng directamente o anidado en ubicacion{}
-      const lat = d.lat ?? d.latitud ?? d.ubicacion?.lat ?? d.ubicacion?.latitud;
-      const lng = d.lng ?? d.longitud ?? d.ubicacion?.lng ?? d.ubicacion?.longitud;
+      // El ESP32 puede enviar lat/lng directamente, anidado en ubicacion{} o en gps{}
+      const lat = d.lat ?? d.latitud ?? d.ubicacion?.lat ?? d.ubicacion?.latitud ?? d.gps?.lat;
+      const lng = d.lng ?? d.longitud ?? d.ubicacion?.lng ?? d.ubicacion?.longitud ?? d.gps?.lon ?? d.gps?.lon;
 
       if (lat == null || lng == null) return;
 

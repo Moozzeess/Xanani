@@ -75,13 +75,13 @@ exports.getAllHardware = async (req, res, next) => {
             .limit(limit)
             .lean();
 
-        // Calcular estado dinámico basado en la última conexión (30 segundos de umbral)
+        // Calcular estado dinámico basado en la última conexión (30 segundos de umbral) o en el estado configurado en BD
         const dispositivosConEstado = dispositivos.map(disp => {
             const esReciente = disp.ultimaConexion && 
                 (Date.now() - new Date(disp.ultimaConexion).getTime()) < 30000;
             return {
                 ...disp,
-                estado: esReciente ? 'activo' : 'inactivo'
+                estado: (disp.estado === 'activo' || esReciente) ? 'activo' : 'inactivo'
             };
         });
 
@@ -120,13 +120,13 @@ exports.getAdminHardware = async (req, res, next) => {
 
         const dispositivos = await DispositivoHardware.find({ administrador: adminId }).lean();
 
-        // Calcular estado dinámico basado en la última conexión
+        // Calcular estado dinámico basado en la última conexión o en el estado configurado en BD
         const dispositivosConEstado = dispositivos.map(disp => {
             const esReciente = disp.ultimaConexion && 
                 (Date.now() - new Date(disp.ultimaConexion).getTime()) < 30000;
             return {
                 ...disp,
-                estado: esReciente ? 'activo' : 'inactivo'
+                estado: (disp.estado === 'activo' || esReciente) ? 'activo' : 'inactivo'
             };
         });
 

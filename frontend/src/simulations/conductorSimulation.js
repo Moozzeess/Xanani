@@ -14,14 +14,13 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
   const routeRef = useRef(routeLine);
   const stopsRef = useRef(stops);
 
-  // Sincronizar referencias con las props más recientes
+  // Sincronizar referencias con las props más recientes.
+  // Intencion: Mantener routeRef actualizado pero NO inicializar simulatedPosition
+  // a menos que la simulacion este activa. Si se inicializa aqui, bloquea la
+  // prioridad de ubicacionReal porque isTesting && simulatedPosition siempre seria true.
   useEffect(() => {
     if (routeLine && routeLine.length > 0) {
       routeRef.current = routeLine;
-      // Inicializar posición simulada si no existe y tenemos ruta
-      if (!simulatedPosition) {
-        setSimulatedPosition(routeLine[0]);
-      }
     }
   }, [routeLine]);
 
@@ -50,8 +49,10 @@ export const useConductorSimulation = (routeLine, stops, isViewModeDriving) => {
       return;
     }
 
-    // Asegurar posición inicial al activar el modo prueba
-    if (routeRef.current && routeRef.current.length > 0 && !simulatedPosition) {
+    // Inicializar posición simulada SOLO al activar el modo prueba.
+    // Este es el único lugar correcto para hacerlo, garantizando que
+    // simulatedPosition sea null mientras isTesting === false.
+    if (routeRef.current && routeRef.current.length > 0) {
       setSimulatedPosition(routeRef.current[0]);
     }
 

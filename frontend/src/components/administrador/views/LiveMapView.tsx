@@ -13,7 +13,7 @@ interface LiveMapViewProps {
 
 const LiveMapView: React.FC<LiveMapViewProps> = ({ targetUnitId }) => {
   const { socket } = useSocket();
-  const { token } = useAuth();
+  const { token, usuario } = useAuth();
 
   // Estados reactivos para el mapa modular
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -26,6 +26,42 @@ const LiveMapView: React.FC<LiveMapViewProps> = ({ targetUnitId }) => {
   // 1. Escuchar actualizaciones de Socket.io y actualizar estado de vehículos
   useEffect(() => {
     if (!socket) return;
+
+    // Suscribir al administrador a la sala de su flotilla para recibir la ubicación en tiempo real
+    if ((usuario as any)?.flotilla) {
+      socket.emit('suscribir_flotilla', (usuario as any).flotilla);
+    }
+
+    // Carga inicial del catálogo de vehículos de la flotilla
+    const fetchUnidades = async () => {
+        try {
+            const response = await api.get('/unidades', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data && Array.isArray(response.data)) {
+                // Pre-poblar el estado con las unidades (estarán sin 'pos' hasta que el socket las actualice)
+                setVehicles(prevVehicles => {
+                    const newVehicles = [...prevVehicles];
+                    response.data.forEach((u: any) => {
+                        if (!newVehicles.find(v => v.id === u._id)) {
+                            newVehicles.push({
+                                id: u._id,
+                                placa: u.placa,
+                                estado: u.estado || 'inactivo',
+                                isSimulated: false,
+                                isBackground: false,
+                                // Sin pos inicial hasta que el GPS reporte
+                            });
+                        }
+                    });
+                    return newVehicles;
+                });
+            }
+        } catch (e) {
+            console.error("Error al cargar el catálogo de unidades", e);
+        }
+    };
+    fetchUnidades();
 
     const handleUbicacion = (datos: any) => {
       // Sincronizar con el formato emitido por Conductor.jsx (id, pos, placa, isSimulated, etc.)
@@ -133,6 +169,58 @@ const LiveMapView: React.FC<LiveMapViewProps> = ({ targetUnitId }) => {
             onVehicleClick={(v: any) => setSelectedUnit(v)}
         />
       </Mapa>
+
+      {/* Panel de Unidades de la Flotilla (En vivo) */}
+      <div className="absolute top-4 left-4 w-72 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 z-[1000] flex flex-col max-h-[80%] overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="font-black text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Unidades Activas ({vehicles.length})
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">Flotilla transmitiendo en tiempo real</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            {vehicles.length === 0 ? (
+                <div className="text-center p-4 text-slate-400 text-sm font-medium">
+                    No hay unidades transmitiendo en este momento.
+                </div>
+            ) : (
+                vehicles.map(v => (
+                    <button
+                        key={v.id}
+                        onClick={() => {
+                            setSelectedUnit(v);
+                            if (v.pos) setMapCenter(v.pos);
+                            setZoom(17);
+                        }}
+                        className={`w-full text-left p-3 rounded-xl transition-all border ${
+                            selectedUnit?.id === v.id 
+                                ? 'bg-blue-50 border-blue-200 shadow-sm' 
+                                : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-200'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-slate-800">{v.placa}</span>
+                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                !v.pos ? 'bg-slate-100 text-slate-500' :
+                                v.estado === 'sos' ? 'bg-red-100 text-red-600' : 
+                                v.isSimulated && !v.isBackground ? 'bg-indigo-100 text-indigo-600' :
+                                'bg-emerald-100 text-emerald-600'
+                            }`}>
+                                {!v.pos ? 'SIN SEÑAL' : v.estado === 'sos' ? 'EMERGENCIA' : v.isSimulated && !v.isBackground ? 'SIMULADO' : 'GPS REAL'}
+                            </span>
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center justify-between">
+                            <span>Estado: {!v.pos ? 'Desconectado' : v.estado === 'en_ruta' ? 'En Ruta' : v.estado === 'llena' ? 'Unidad Llena' : 'Inactivo'}</span>
+                            {selectedUnit?.id === v.id && (
+                                <span className="text-blue-600 font-bold text-[10px] uppercase">Siguiendo</span>
+                            )}
+                        </div>
+                    </button>
+                ))
+            )}
+        </div>
+      </div>
 
       {/* Leyenda Flotante */}
       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur p-4 rounded-lg shadow-lg border border-slate-200 z-[1000] hidden md:block">

@@ -103,31 +103,47 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
         }
 
         const datos = JSON.parse(mensajeTexto);
-        const idHardware = datos.id || datos.id_hardware || datos.Id_Dispositivo_Hardware;
 
 
-        // Si el mensaje incluye un ID de hardware, actualizar su última conexión
-        if (idHardware) {
-          await DispositivoHardware.findOneAndUpdate(
-            { Id_Dispositivo_Hardware: idHardware },
-            { ultimaConexion: new Date() }
+        const idHardwareRaw = datos.id || datos.id_hardware || datos.Id_Dispositivo_Hardware;
+
+        // Buscar el dispositivo en la base de datos por ID amigable O por Direccion MAC
+        let hwAmigable = idHardwareRaw;
+        let dispositivoBD = null;
+        if (idHardwareRaw) {
+          dispositivoBD = await DispositivoHardware.findOneAndUpdate(
+            {
+              $or: [
+                { Id_Dispositivo_Hardware: idHardwareRaw },
+                { Direccion_Mac: idHardwareRaw }
+              ]
+            },
+            { ultimaConexion: new Date() },
+            { new: true } // Devuelve el documento actualizado
           );
+
+          if (dispositivoBD) {
+            // Unificar todos los eventos y payloads usando el ID amigable
+            hwAmigable = dispositivoBD.Id_Dispositivo_Hardware;
+          }
         }
 
         if (datos.xanani_ping_request) {
           const tiempoMs = Date.now() - datos.xanani_ping_request;
-          return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs }, idHardware);
+          return emitirEvento('ping_recibido', { exito: true, tiempo_ms: tiempoMs }, hwAmigable);
         }
 
         // Normalización de datos
         const payloadNormalizado = {
-          id: idHardware,
+          id: hwAmigable,
           gps: {
-            con: datos.gps?.con || false,
-            lat: datos.gps?.lat || 0,
-            lon: datos.gps?.lon || 0,
-            sat: datos.gps?.sat || 0,
-            spd: datos.gps?.spd || 0
+            con: datos.gps?.con ?? false,
+            // Uso de ?? (coalescencia nula) en lugar de || para no suprimir
+            // coordenadas validas como 0.0 (aunque improbable, es el patron correcto).
+            lat: datos.gps?.lat ?? 0,
+            lon: datos.gps?.lon ?? 0,
+            sat: datos.gps?.sat ?? 0,
+            spd: datos.gps?.spd ?? 0
           },
           // Ahora sim viene directo del ESP32
           sim: {
@@ -137,7 +153,9 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           pasajeros: {
             in:  datos.pasajeros?.in  ?? (datos.in  || 0),
             out: datos.pasajeros?.out ?? (datos.out || 0),
-            act: datos.pasajeros?.act ?? (datos.act || datos.ocupados || 0)
+            act: datos.pasajeros?.act ?? (datos.act || datos.ocupados || 0),
+            // max: Capacidad máxima en tiempo real recuperada del hardware (cap/capacidadMaxima)
+            max: datos.pasajeros?.max ?? (datos.cap || 15)
           },
           // seats viene directo - tu ESP32 ya lo serializa bien
           celdas: datos.seats || datos.celdas || [],
@@ -153,7 +171,7 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
 
         // Caso: Tópico de Validación/Debug (xanani/debug/...)
         if (topic.includes('/debug')) {
-          emitirEvento('datos_debug_esp32', payloadNormalizado, idHardware);
+          emitirEvento('datos_debug_esp32', payloadNormalizado, hwAmigable);
         }
 
         // Emitir a la sala privada del dispositivo (Aislamiento)
@@ -161,17 +179,16 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           tema: topic,
           payload: payloadNormalizado,
           fecha: payloadNormalizado.fecha
-        }, idHardware);
+        }, hwAmigable);
 
         // Emitir a la sala de la flotilla (Administradores)
-        const hw = await DispositivoHardware.findOne({ Id_Dispositivo_Hardware: idHardware }).select('flotilla');
-        if (hw && hw.flotilla) {
+        if (dispositivoBD && dispositivoBD.flotilla) {
           emitirEvento('datos_esp32', {
             tema: topic,
             payload: payloadNormalizado,
             fecha: payloadNormalizado.fecha,
-            flotilla: hw.flotilla
-          }, null, null, `fleet_${hw.flotilla}`);
+            flotilla: dispositivoBD.flotilla
+          }, null, null, `fleet_${dispositivoBD.flotilla}`);
         }
 
         // Emitir también de forma global (Legacy/Debug/Pasajeros)
@@ -180,6 +197,51 @@ const conectarMQTT = (brokerUrl = currentBroker, topic = currentTopic, options =
           payload: payloadNormalizado,
           fecha: payloadNormalizado.fecha
         }, null);
+
+        // Emitir al canal personal del conductor asignado a este hardware,
+        // como canal de respaldo en caso de reconexion del socket.
+        if (dispositivoBD) {
+          const Unidad = require('../models/Unidad');
+          const unidadConductor = await Unidad.findOne({ dispositivoHardware: dispositivoBD._id })
+            .populate('conductor', '_id usuario');
+          if (unidadConductor?.conductor?._id) {
+            emitirEvento('datos_esp32', {
+              tema: topic,
+              payload: payloadNormalizado,
+              fecha: payloadNormalizado.fecha
+            }, null, String(unidadConductor.conductor._id));
+          }
+        }
+
+        // Procesamiento y emisión automática de ubicación a partir de telemetría física (ESP32)
+        if (dispositivoBD && payloadNormalizado.gps && payloadNormalizado.gps.lat !== 0 && payloadNormalizado.gps.lon !== 0) {
+          const Unidad = require('../models/Unidad');
+          const unidad = await Unidad.findOne({ dispositivoHardware: dispositivoBD._id }).populate('conductor');
+            if (unidad) {
+              const datosUbicacion = {
+                id: unidad._id,
+                placa: unidad.placa,
+                pos: [payloadNormalizado.gps.lat, payloadNormalizado.gps.lon],
+                rutaId: unidad.ruta || null,
+                conductorId: unidad.conductor?._id || null,
+                isSimulated: false,
+                isBackground: true,
+                velocidad: payloadNormalizado.gps.spd || 0,
+                ocupacionActual: payloadNormalizado.pasajeros.act,
+                capacidadMaxima: payloadNormalizado.pasajeros.max,
+                flotilla: unidad.flotilla || dispositivoBD.flotilla || 'ESCOM',
+                estado: payloadNormalizado.err === 'FULL' ? 'llena' : 'en_ruta'
+              };
+
+              // Emitir a la sala de flotilla (Administradores) y de forma global (Pasajeros)
+              emitirEvento('ubicacion_conductor', datosUbicacion, null, null, `fleet_${datosUbicacion.flotilla}`);
+              emitirEvento('ubicacion_conductor', datosUbicacion, null);
+
+              // Actualizar ocupación en la base de datos en tiempo real
+              unidad.ocupacionActual = payloadNormalizado.pasajeros.act;
+              await unidad.save();
+            }
+        }
 
       } catch (e) {
         emitirEvento('datos_esp32', {

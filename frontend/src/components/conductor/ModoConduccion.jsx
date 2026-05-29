@@ -7,10 +7,13 @@ import { Notificaciones } from './HUD_Components';
  * Panel superior flotante con indicaciones de ruta.
  * Panel inferior flotante con estado (velocidad, hora llegada).
  * FABs para emergencias y reportes.
+ *
+ * @param {boolean} esSimulacion - true = modo simulacion (sin hardware). false = GPS real.
  */
 const ModoConduccion = ({
     pasajeros = 0,
     capacidad = 20,
+    seats = [],
     notificaciones = [],
     onRemoveNotificacion,
     onOpenReportes,
@@ -18,7 +21,8 @@ const ModoConduccion = ({
     onStopRoute,
     siguienteParada = "Av. Principal",
     velocidad = "40",
-    tiempoRestante = "15"
+    tiempoRestante = "15",
+    esSimulacion = false
 }) => {
     // Reloj del sistema
     const [horaActual, setHoraActual] = useState('');
@@ -35,6 +39,18 @@ const ModoConduccion = ({
 
     return (
         <main className="fixed inset-0 w-screen h-screen pointer-events-none z-10 flex flex-col justify-between p-4 sm:p-6">
+
+            {/* BADGE DE MODO: indica visualmente si es simulacion o hardware real */}
+            <div className="absolute top-4 left-4 z-50 pointer-events-none">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border backdrop-blur-md shadow-lg ${
+                    esSimulacion
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                        : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${esSimulacion ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-ping'}`} />
+                    {esSimulacion ? 'Simulación' : 'GPS Real'}
+                </div>
+            </div>
 
             {/* PANEL SUPERIOR (Tarjeta de Indicación Flotante) */}
             <header className="pointer-events-auto w-full max-w-lg mx-auto transform transition-all duration-700 ease-out translate-y-0 opacity-100">
@@ -121,6 +137,27 @@ const ModoConduccion = ({
                             </div>
                             <span className="text-[9px] text-white/50 font-black uppercase tracking-widest">Pasajeros</span>
                         </div>
+
+                        {/* Asientos Detectados */}
+                        {seats && seats.length > 0 && (
+                            <>
+                                <div className="h-10 w-[1px] bg-white/10"></div>
+                                <div className="flex flex-col items-center justify-center min-w-[100px]">
+                                    <span className="text-[9px] text-white/50 font-black uppercase tracking-widest mb-1">Asientos</span>
+                                    <div className="flex gap-1.5 bg-white/5 p-1 rounded-lg border border-white/5">
+                                        {seats.map((ocupado, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`w-3.5 h-3.5 rounded-md transition-all duration-300 ${
+                                                    ocupado ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]'
+                                                }`}
+                                                title={`Asiento ${idx + 1}: ${ocupado ? 'Ocupado' : 'Libre'}`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                     </div>
                     

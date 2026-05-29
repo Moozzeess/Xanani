@@ -8,6 +8,21 @@ const Incidencia = require('../models/Incidencia');
  */
 let io;
 const rutasNotificadas = new Set(); // Cache para evitar spam de notificaciones
+const desviacionesNotificadas = new Map(); // unidadId -> timestamp de última notificación de desviación
+
+/**
+ * Calcula la distancia en metros entre dos coordenadas geográficas (Fórmula de Haversine).
+ */
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (v) => (v * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 /**
  * Intención: Instanciar y encender el motor de Socket.io emparejado al puerto del backend.
@@ -144,6 +159,65 @@ const inicializarSocket = (server) => {
           unidadId: datos.id,
           flotilla: flotilla || null
         });
+      }
+      // Detección automática de desviación de ruta
+      if (rutaId && datos.pos && Array.isArray(datos.pos) && datos.pos.length === 2) {
+        try {
+          const Ruta = require('../models/Ruta');
+          const rutaObj = await Ruta.findById(rutaId).lean();
+          if (rutaObj && rutaObj.geometria && rutaObj.geometria.length > 0) {
+            const [driverLat, driverLon] = datos.pos;
+            let distanciaMinima = Infinity;
+
+            for (const pt of rutaObj.geometria) {
+              const d = haversine(driverLat, driverLon, pt.latitud, pt.longitud);
+              if (d < distanciaMinima) {
+                distanciaMinima = d;
+              }
+            }
+
+            // Umbral de 150 metros para desviación de ruta
+            if (distanciaMinima > 150) {
+              const ahora = Date.now();
+              const ultimaNotif = desviacionesNotificadas.get(datos.id) || 0;
+              if (ahora - ultimaNotif > 60000) { // Throttle de 60 segundos por vehículo
+                desviacionesNotificadas.set(datos.id, ahora);
+
+                const descripcion = `La unidad ${datos.placa || 'desconocida'} se ha desviado de su ruta asignada. Distancia actual: ${Math.round(distanciaMinima)}m.`;
+                
+                // Guardar incidencia en base de datos
+                const nuevaIncidencia = new Incidencia({
+                  conductor: datos.conductorId,
+                  unidad: datos.id, // datos.id es el unidadId en ubicacion_conductor
+                  tipo: 'DESVIACION',
+                  descripcion: descripcion,
+                  ubicacion: { latitud: driverLat, longitud: driverLon },
+                  flotilla: flotilla || null
+                });
+                await nuevaIncidencia.save();
+
+                const payloadIncidencia = {
+                  conductorId: datos.conductorId,
+                  unidadId: datos.id,
+                  tipo: 'DESVIACION',
+                  descripcion: descripcion,
+                  ubicacion: { latitud: driverLat, longitud: driverLon },
+                  flotilla: flotilla || null,
+                  _id: nuevaIncidencia._id
+                };
+
+                // Propagar alerta al administrador de la flota
+                if (flotilla) {
+                  io.to(`fleet_${flotilla}`).emit('reporte_incidencia', payloadIncidencia);
+                } else {
+                  io.emit('reporte_incidencia', payloadIncidencia);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error en detección de desviación de ruta:", err.message);
+        }
       }
     });
 

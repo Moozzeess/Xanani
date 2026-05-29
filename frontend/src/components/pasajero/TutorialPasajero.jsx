@@ -275,25 +275,49 @@ const TutorialPasajero = ({ onClose }) => {
         }
     };
 
-    // Calcular posición del tooltip
+    // Calcular posición del tooltip asegurando que no se salga de la pantalla ni se encime al navbar
     let tooltipStyle = {};
     if (targetRect && pasoActual.targetId !== 'mapa-container') {
         const isTopHalf = targetRect.top < window.innerHeight / 2;
-        const isLeftHalf = targetRect.left < window.innerWidth / 2;
+        const tooltipWidth = 260; // Max width aproximado
+        
+        // Clampeamos el valor left para que no se salga por la derecha ni por la izquierda
+        let safeLeft = targetRect.left;
+        if (safeLeft + tooltipWidth > window.innerWidth - 10) {
+            safeLeft = window.innerWidth - tooltipWidth - 10;
+        }
+        if (safeLeft < 10) safeLeft = 10;
+
+        // Márgenes seguros para el header/navbar
+        const SAFE_TOP = 80;
+        const SAFE_BOTTOM = 90;
+
+        // Calculamos top/bottom con límites
+        let safeTop = isTopHalf ? targetRect.bottom + 10 : 'auto';
+        let safeBottom = !isTopHalf ? window.innerHeight - targetRect.top + 10 : 'auto';
+
+        if (isTopHalf) {
+            // Limitamos que el top no baje más allá de la zona segura del navbar inferior
+            safeTop = `${Math.min(targetRect.bottom + 10, window.innerHeight - SAFE_BOTTOM - 150)}px`;
+        } else {
+            // Limitamos que el bottom no suba más allá de la zona segura superior
+            safeBottom = `${Math.min(window.innerHeight - targetRect.top + 10, window.innerHeight - SAFE_TOP - 150)}px`;
+        }
 
         tooltipStyle = {
             position: 'absolute',
-            top: isTopHalf ? targetRect.bottom + 10 : 'auto',
-            bottom: !isTopHalf ? (window.innerHeight - targetRect.top) + 10 : 'auto',
-            left: isLeftHalf ? Math.max(10, targetRect.left) : 'auto',
-            right: !isLeftHalf ? Math.max(10, window.innerWidth - targetRect.right) : 'auto',
+            left: `${safeLeft}px`,
+            top: safeTop,
+            bottom: safeBottom,
+            zIndex: 3010
         };
     } else {
         tooltipStyle = {
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: 'translate(-50%, -50%)'
+            transform: 'translate(-50%, -50%)',
+            zIndex: 3010
         };
     }
 
@@ -330,7 +354,7 @@ const TutorialPasajero = ({ onClose }) => {
             {/* Tooltip Card */}
             {!isInteracting && !pasoActual.hideCard && (
                 <div 
-                    className="bg-white/95 backdrop-blur-xl border border-white shadow-xl rounded-2xl w-full max-w-[200px] overflow-hidden pointer-events-auto transition-all duration-500"
+                    className="bg-white/95 backdrop-blur-xl border border-white shadow-xl rounded-2xl w-[90vw] max-w-[260px] max-h-[80vh] overflow-y-auto overflow-x-hidden pointer-events-auto transition-all duration-500"
                     style={tooltipStyle}
                 >
                     <button 

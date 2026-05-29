@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import api from "../../services/api";
@@ -22,26 +22,72 @@ import { Bell, CheckCircle, MessageSquare, Trash2 } from 'lucide-react';
 import ModalAlerta from '../../components/common/ModalAlerta';
 
 
+/**
+ * Pagina principal del conductor.
+ *
+ * Arquitectura de modos de conduccion:
+ *
+ * MODO SIMULACION (modoConduccion === 'simulacion'):
+ *   - El hardware no esta disponible o el conductor eligio simular.
+ *   - Posicion: viene de useConductorSimulation (interpolacion de la geometria de ruta).
+ *   - Velocidad: aleatoria (35-44 km/h para que se vea dinamico).
+ *   - Pasajeros / Capacidad / Asientos: valores del perfil, no se actualizan.
+ *
+ * MODO HARDWARE REAL (modoConduccion === 'hardware'):
+ *   - El ESP32 envia telemetria via MQTT -> backend -> socket -> aqui.
+ *   - TODA la informacion (pos, velocidad, pasajeros, cap, asientos) viene
+ *     EXCLUSIVAMENTE del objeto telemetriaHardware.
+ *   - Ningun otro estado puede sobreescribir los datos del hardware.
+ *   - Si el hardware pierde conexion (30s sin datos), regresa a 'simulacion'.
+ *
+ * MODO ESPERA (viewMode === 'espera'):
+ *   - El mapa muestra la geometria de la ruta asignada.
+ *   - Se muestra NoRouteOverlay con boton para iniciar.
+ */
 const Conductor = () => {
   const navigate = useNavigate();
   const { cerrarSesion, token, usuario } = useAuth();
 
+  // ─── Datos de ruta y asignacion ────────────────────────────────────────────
   const [routeLine, setRouteLine] = useState([]);
   const [paradas, setParadas] = useState([]);
+  const [rawIds, setRawIds] = useState({ unidadId: null, rutaId: null, conductorProfileId: null });
+  const [unidadActual, setUnidadActual] = useState('Sin Asignar');
+  const [rutaActual, setRutaActual] = useState('Sin Ruta');
+  const [profileData, setProfileData] = useState(null);
+
+  // Capacidad y asientos del PERFIL (usados en simulacion como fallback)
+  const [capacidadPerfil, setCapacidadPerfil] = useState(15);
+
+  // ─── Control de vista ──────────────────────────────────────────────────────
   const [viewMode, setViewMode] = useState('espera');
 
-  const [passengerCount, setPassengerCount] = useState(0);
-  const [unidadActual, setUnidadActual] = useState("Sin Asignar");
-  const [rutaActual, setRutaActual] = useState("Sin Ruta");
-  const [rawIds, setRawIds] = useState({ unidadId: null, rutaId: null, conductorProfileId: null });
-  const [capacity, setCapacity] = useState(15);
-  const [notificaciones, setNotificaciones] = useState([]);
-  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
+  // ─── Modo de conduccion activo ─────────────────────────────────────────────
+  // Intención: fuente de verdad única que determina qué datos usar en la UI.
+  // Valores: 'inactivo' | 'simulacion' | 'hardware'
+  const [modoConduccion, setModoConduccion] = useState('inactivo');
 
-  // Estados de gestión de viaje y simulación
+  // ─── Telemetría del hardware (UNICA fuente de verdad en modo 'hardware') ───
+  // Solo se actualiza desde el listener de datos_esp32.
+  // Ningun otro efecto debe modificar estos valores.
+  const [telemetriaHardware, setTelemetriaHardware] = useState({
+    pos: null,         // [lat, lon] del GPS del ESP32
+    velocidad: 0,      // km/h desde gps.spd
+    pasajeros: 0,      // desde pasajeros.act (ocupados)
+    capacidad: null,   // desde pasajeros.max (cap del hardware). null = aun no recibido
+    asientos: []       // desde celdas (array de 0/1 por sensor)
+  });
+
+  // ─── Estado del hardware ───────────────────────────────────────────────────
+  const [hardwareId, setHardwareId] = useState(null);
+  const [isHardwareActive, setIsHardwareActive] = useState(false);
+  const hardwareTimeoutRef = useRef(null);
+
+  // ─── Socket ────────────────────────────────────────────────────────────────
   const [socket, setSocket] = useState(null);
 
-  // Integración del Hook de Simulación Profunda
+  // ─── Hook de simulacion ────────────────────────────────────────────────────
+  // Solo activo cuando modoConduccion === 'simulacion'
   const {
     isTesting,
     setIsTesting,
@@ -51,29 +97,61 @@ const Conductor = () => {
     resetSimulation
   } = useConductorSimulation(routeLine, paradas, viewMode === 'conduccion');
 
+  // ─── Estados de UI ─────────────────────────────────────────────────────────
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showSimModal, setShowSimModal] = useState(false);
-  const [isHardwareActive, setIsHardwareActive] = useState(false);
-  const [hardwareId, setHardwareId] = useState(null);
-  const hardwareTimeoutRef = React.useRef(null);
-  const [profileData, setProfileData] = useState(null);
-  const [ubicacionReal, setUbicacionReal] = useState(null);
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
   const [isSOS, setIsSOS] = useState(false);
-  const wakeLockRef = React.useRef(null);
-  
-  // Estado para suavizar la velocidad de la interfaz
+  const wakeLockRef = useRef(null);
+
+  // Velocimetro suavizado (solo simulacion — en hardware se usa telemetriaHardware.velocidad)
   const [targetSpeed, setTargetSpeed] = useState(0);
   const [displaySpeed, setDisplaySpeed] = useState(0);
 
-  // Gestión de Screen Wake Lock para evitar que la pantalla se apague en ruta
+  // Estadisticas del viaje
+  const [tripStats, setTripStats] = useState({
+    timeStarted: null,
+    pasajerosTotales: 0,
+    ganancias: 0,
+    kmRecorridos: 0,
+    calificacion: 5.0
+  });
+
+  // ─── Valores derivados para la UI ──────────────────────────────────────────
+  // Intencion: punto de acceso único para los datos que se muestran al conductor.
+  // En modo hardware: datos del ESP32. En simulacion: datos del perfil/simulacion.
+  const esHardwareActivo = modoConduccion === 'hardware';
+
+  // Si hay hardware detectado y tiene coordenadas, usarlas siempre, incluso en pantalla de espera
+  const posActual = (isHardwareActive && telemetriaHardware.pos)
+    ? telemetriaHardware.pos
+    : (isTesting ? simulatedPosition : null);
+
+  const pasajerosMostrados = esHardwareActivo
+    ? telemetriaHardware.pasajeros
+    : 0;
+
+  // Capacidad: si el hardware ya envio su cap, usarlo. Si no, usar el del perfil.
+  const capacidadMostrada = (esHardwareActivo && telemetriaHardware.capacidad !== null)
+    ? telemetriaHardware.capacidad
+    : capacidadPerfil;
+
+  const asientosMostrados = esHardwareActivo
+    ? telemetriaHardware.asientos
+    : [];
+
+  const velocidadMostrada = esHardwareActivo
+    ? telemetriaHardware.velocidad
+    : displaySpeed;
+
+  // ─── Screen Wake Lock ──────────────────────────────────────────────────────
   useEffect(() => {
     const requestWakeLock = async () => {
       if ('wakeLock' in navigator && viewMode === 'conduccion') {
         try {
           wakeLockRef.current = await navigator.wakeLock.request('screen');
-          console.log('Screen Wake Lock activado');
-
           wakeLockRef.current.addEventListener('release', () => {
             console.log('Screen Wake Lock liberado');
           });
@@ -82,76 +160,75 @@ const Conductor = () => {
         }
       }
     };
-
     const releaseWakeLock = async () => {
       if (wakeLockRef.current) {
         await wakeLockRef.current.release();
         wakeLockRef.current = null;
       }
     };
-
     if (viewMode === 'conduccion') {
       requestWakeLock();
     } else {
       releaseWakeLock();
     }
-
-    // Re-solicitar si el documento vuelve a ser visible (ej. cambiar pestaña)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && viewMode === 'conduccion') {
         requestWakeLock();
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => {
       releaseWakeLock();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [viewMode]);
 
-  // Efecto para suavizar los saltos de velocidad en la interfaz (Efecto velocímetro)
+  // ─── Velocimetro suavizado (SOLO simulacion) ───────────────────────────────
+  // Intencion: efecto visual de aguja de velocimetro para el modo simulacion.
+  // En hardware real, velocidadMostrada = telemetriaHardware.velocidad (directa).
   useEffect(() => {
-    if (viewMode !== 'conduccion') return;
-    
+    if (viewMode !== 'conduccion' || esHardwareActivo) return;
     const interval = setInterval(() => {
       setDisplaySpeed(prev => {
         if (prev === targetSpeed) return prev;
         const diff = targetSpeed - prev;
-        // Ajusta gradualmente hacia el objetivo (10% por ciclo o mínimo 1 unidad)
         const step = Math.sign(diff) * Math.max(1, Math.floor(Math.abs(diff) * 0.15));
         const next = prev + step;
-        // Evita pasarse del objetivo
         return (diff > 0 && next > targetSpeed) || (diff < 0 && next < targetSpeed) ? targetSpeed : next;
       });
-    }, 150); // Actualiza la UI a ~6fps para un efecto fluido
-
+    }, 150);
     return () => clearInterval(interval);
-  }, [targetSpeed, viewMode]);
+  }, [targetSpeed, viewMode, esHardwareActivo]);
 
-  // Efecto para simular la velocidad cambiando de forma más realista (cada 3 segundos)
+  // Velocidad aleatoria solo en modo simulacion (no en hardware)
   useEffect(() => {
-    if (isTesting && viewMode === 'conduccion') {
+    if (isTesting && !esHardwareActivo && viewMode === 'conduccion') {
       const interval = setInterval(() => {
-        setTargetSpeed(Math.floor(Math.random() * 10) + 35); // 35 - 44 km/h
+        setTargetSpeed(Math.floor(Math.random() * 10) + 35);
       }, 3000);
       return () => clearInterval(interval);
-    } else if (!isTesting && viewMode !== 'conduccion') {
+    } else if (!isTesting || viewMode !== 'conduccion') {
       setTargetSpeed(0);
       setDisplaySpeed(0);
     }
-  }, [isTesting, viewMode]);
+  }, [isTesting, esHardwareActivo, viewMode]);
 
-  // Inicializar Socket
+  // ─── Inicializar Socket ────────────────────────────────────────────────────
   useEffect(() => {
-    const host = window.location.hostname;
-    const newSocket = io(`import.meta.env.VITE_SOCKET_URL`);
+    const newSocket = io(import.meta.env.VITE_SOCKET_URL || `http://${window.location.hostname}:4000`);
     setSocket(newSocket);
+
+    // Unirse al canal personal del usuario como respaldo ante reconexiones
+    newSocket.on('connect', () => {
+      if (usuario?._id) {
+        newSocket.emit('suscribir_usuario', String(usuario._id));
+      }
+    });
+
     return () => newSocket.disconnect();
   }, []);
 
-  // Efecto para consultar la asignación de ruta y unidad
+  // ─── Cargar asignacion de ruta y unidad ───────────────────────────────────
   useEffect(() => {
     const cargarAsignacion = async () => {
       try {
@@ -163,26 +240,34 @@ const Conductor = () => {
         if (conductor && conductor.rutaAsignadaId) {
           setProfileData(conductor);
 
-          // Configurar datos de la unidad asignada desde el objeto unidadAsignada
           const unidadInfo = conductor.unidadAsignada;
-          setUnidadActual(unidadInfo?.placa || conductor.unidad || "Sin Unidad");
-          // Leer la capacidad configurada (capacidadMaxima o capacidad, evitando el fallback a 15 si existe un valor real)
-          setCapacity(unidadInfo?.capacidadMaxima || unidadInfo?.capacidad || 15);
-          
-          setRutaActual(conductor.rutaAsignadaId?.nombre || "Sin Ruta");
+          setUnidadActual(unidadInfo?.placa || conductor.unidad || 'Sin Unidad');
+
+          // Capacidad del perfil: solo se usa en simulacion como valor inicial
+          const capPerfil = unidadInfo?.capacidadMaxima || unidadInfo?.capacidad || 15;
+          setCapacidadPerfil(capPerfil);
+
+          setRutaActual(conductor.rutaAsignadaId?.nombre || 'Sin Ruta');
           setRawIds({
             unidadId: unidadInfo?._id || null,
             rutaId: conductor.rutaAsignadaId?._id || null,
             conductorProfileId: conductor._id
           });
 
-          // Extraer ID de hardware para monitoreo en tiempo real
-          const hwId = unidadInfo?.dispositivoHardware?.Id_Dispositivo_Hardware;
+          // Extraer ID de hardware para monitoreo en tiempo real.
+          // Evaluamos la ultimaConexion reportada por el broker MQTT (se actualiza
+          // en la BD con cada paquete recibido). Si fue hace menos de 30s, el
+          // hardware se considera activo instantáneamente al cargar la página.
+          const hw = unidadInfo?.dispositivoHardware;
+          const hwId = hw?.Id_Dispositivo_Hardware;
           if (hwId) {
             setHardwareId(hwId);
+            const esReciente = hw.ultimaConexion &&
+              (Date.now() - new Date(hw.ultimaConexion).getTime()) < 30000;
+            setIsHardwareActive(esReciente);
           }
 
-          // 1. Mapear paradas primero (son la fuente de verdad de la ruta)
+          // Mapear paradas
           let paradasMapeadas = [];
           if (conductor.rutaAsignadaId.paradas && Array.isArray(conductor.rutaAsignadaId.paradas)) {
             paradasMapeadas = conductor.rutaAsignadaId.paradas.map(p => ({
@@ -193,7 +278,7 @@ const Conductor = () => {
             setParadas(paradasMapeadas);
           }
 
-          // 2. Mapear geometría con fallback a las paradas si está vacía
+          // Mapear geometria con fallback a paradas
           const geometriaOriginal = conductor.rutaAsignadaId.geometria || [];
           let geometriaValidada = geometriaOriginal.map(p => {
             const lat = parseFloat(p.latitud !== undefined ? p.latitud : p.lat);
@@ -201,9 +286,8 @@ const Conductor = () => {
             return [lat, lng];
           }).filter(coord => !isNaN(coord[0]) && !isNaN(coord[1]));
 
-          // FALLBACK CRÍTICO: Si no hay geometría pero hay paradas, usar las paradas como geometría
           if (geometriaValidada.length === 0 && paradasMapeadas.length > 0) {
-            console.warn("Geometría vacía detectada, usando paradas como respaldo.");
+            console.warn('Geometría vacía detectada, usando paradas como respaldo.');
             geometriaValidada = paradasMapeadas.map(p => [p.latitud, p.longitud]);
           }
 
@@ -215,113 +299,112 @@ const Conductor = () => {
           }
         }
       } catch (error) {
-        console.error("Error al cargar asignación:", error);
+        console.error('Error al cargar asignación:', error);
       }
     };
 
     if (token) cargarAsignacion();
   }, [token, usuario]);
 
-  // Emisión de ubicación en tiempo real
-  useEffect(() => {
-    if (socket && (simulatedPosition || ubicacionReal) && viewMode === 'conduccion') {
-      const posActual = (isTesting && simulatedPosition) ? simulatedPosition : ubicacionReal;
-      if (!posActual) return;
-
-      socket.emit('ubicacion_conductor', {
-        id: rawIds.unidadId || 'test-bus',
-        placa: unidadActual,
-        pos: posActual,
-        rutaId: rawIds.rutaId,
-        conductorId: rawIds.conductorProfileId,
-        isSimulated: isTesting,
-        isBackground: false,
-        ocupacionActual: passengerCount,
-        capacidadMaxima: capacity,
-        estado: isSOS ? 'sos' : (isTesting ? 'simulado' : 'en_ruta')
-      });
-    }
-  }, [simulatedPosition, ubicacionReal, isTesting, socket, viewMode, rawIds, unidadActual, passengerCount, capacity]);
-
-  // Listeners de Avisos del Administrador
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on('aviso_conductor', (datos) => {
-      // Mostrar toast inmediato
-      addToastNotification('Aviso de Administración', datos.mensaje, 'info');
-      setNotifUnreadCount(prev => prev + 1);
-
-      // Recargar notificaciones si estamos en la vista de avisos
-      if (viewMode === 'avisos') {
-        cargarNotificaciones();
-      }
-    });
-
-    socket.on('notificacion_sistema', (datos) => {
-      addToastNotification('Xanani', datos.mensaje, 'info');
-      setNotifUnreadCount(prev => prev + 1);
-
-      if (viewMode === 'avisos') {
-        cargarNotificaciones();
-      }
-    });
-
-    return () => {
-      socket.off('aviso_conductor');
-      socket.off('notificacion_sistema');
-    };
-  }, [socket, viewMode]);
-
-  // Listener para Actividad de Hardware en Tiempo Real
+  // ─── Listener de Telemetría del Hardware (FUENTE PRINCIPAL DE DATOS REALES) ─
+  // Intencion: detectar en tiempo real si el broker esta enviando datos del
+  // dispositivo asignado. La activacion de isHardwareActive ocurre con CUALQUIER
+  // paquete recibido del hardware (no solo cuando hay GPS valido).
+  //
+  // Reglas:
+  //   - ACTIVO: cuando se recibe un paquete del hardware en el broker (cualquier dato).
+  //   - INACTIVO: cuando pasan 30 segundos sin recibir ningun paquete del hardware.
+  //   - El temporizador de inactividad se reinicia con cada paquete recibido.
+  //   - La actualizacion de telemetriaHardware solo ocurre con GPS valido (con=true).
   useEffect(() => {
     if (!socket || !hardwareId) return;
 
-    // Suscribirse a la sala del dispositivo para recibir su telemetría
-    socket.emit('suscribir_dispositivo', hardwareId);
+    // Funcion para suscribirse a las salas correctas
+    const suscribirCanales = () => {
+      socket.emit('suscribir_dispositivo', hardwareId);
+      if (usuario?._id) {
+        socket.emit('suscribir_usuario', String(usuario._id));
+      }
+    };
+
+    // Suscribir inmediatamente si ya esta conectado, y re-suscribir si hay reconexion
+    if (socket.connected) {
+      suscribirCanales();
+    }
+    socket.on('connect', suscribirCanales);
 
     const manejarDatosHardware = (data) => {
       const payload = data.payload;
-      if (!payload || payload.id !== hardwareId) return;
 
-      // Si recibimos datos, el hardware está activo
+      // Filtro: ignorar eventos de otros dispositivos
+      if (!payload || String(payload.id) !== String(hardwareId)) return;
+
+      // ACTIVAR inmediatamente al recibir cualquier paquete del hardware.
+      // Esto actualiza el indicador visual en NoRouteOverlay en tiempo real.
       setIsHardwareActive(true);
 
-      // Actualizar ubicación real desde el GPS del hardware
-      if (payload.gps && payload.gps.lat !== 0 && payload.gps.lon !== 0) {
-        setUbicacionReal([payload.gps.lat, payload.gps.lon]);
-        
-        // Actualizar velocidad objetivo si el hardware lo envía
-        const speed = payload.gps.velocidad !== undefined ? payload.gps.velocidad : payload.gps.speed;
-        if (speed !== undefined) {
-          setTargetSpeed(Math.round(speed));
-        }
-      }
-
-      // Actualizar conteo de pasajeros desde el hardware si está disponible
-      if (payload.pasajeros) {
-        if (payload.pasajeros.act !== undefined) {
-          setPassengerCount(payload.pasajeros.act);
-        }
-        if (payload.pasajeros.max !== undefined) {
-          setCapacity(payload.pasajeros.max);
-        }
-      }
-
-      // Reiniciar el temporizador de desconexión (30 segundos)
+      // Reiniciar temporizador de inactividad.
+      // INACTIVO se activa si pasan 30s sin recibir ningun paquete.
       if (hardwareTimeoutRef.current) {
         clearTimeout(hardwareTimeoutRef.current);
       }
-
       hardwareTimeoutRef.current = setTimeout(() => {
+        // Sin paquetes por 30s = dispositivo apagado o sin conexion al broker
         setIsHardwareActive(false);
-        console.log(`Hardware ${hardwareId} marcado como offline por inactividad.`);
+        // Si la ruta estaba en modo hardware, regresar a simulacion
+        setModoConduccion(prev => {
+          if (prev === 'hardware') {
+            setIsTesting(true);
+            return 'simulacion';
+          }
+          return prev;
+        });
+        console.log(`Hardware ${hardwareId}: sin datos por 30s → inactivo.`);
       }, 30000);
+
+      // Actualizar telemetria de forma atomica con los datos del paquete
+      setTelemetriaHardware(prev => {
+        const nueva = { ...prev };
+
+        // GPS: solo actualizar posicion si el fix es valido (gps.con === true)
+        // Un fix invalido (con=false) no sobreescribe la ultima posicion conocida
+        if (payload.gps && payload.gps.con === true && payload.gps.lat !== 0 && payload.gps.lon !== 0) {
+          nueva.pos = [payload.gps.lat, payload.gps.lon];
+          nueva.velocidad = Math.round(payload.gps.spd ?? 0);
+
+          // Cambiar al modo hardware real cuando hay GPS valido
+          setModoConduccion(prev => {
+            if (prev !== 'hardware') {
+              setIsTesting(false);
+              return 'hardware';
+            }
+            return prev;
+          });
+        }
+
+        // Pasajeros y capacidad desde el hardware
+        if (payload.pasajeros) {
+          if (payload.pasajeros.act !== undefined) {
+            nueva.pasajeros = payload.pasajeros.act;
+          }
+          if (payload.pasajeros.max !== undefined && payload.pasajeros.max > 0) {
+            nueva.capacidad = payload.pasajeros.max;
+          }
+        }
+
+        // Asientos: array de sensores (1=ocupado, 0=libre)
+        if (payload.celdas && payload.celdas.length > 0) {
+          nueva.asientos = payload.celdas;
+        }
+
+        return nueva;
+      });
     };
 
     socket.on('datos_esp32', manejarDatosHardware);
 
     return () => {
+      socket.off('connect', suscribirCanales);
       socket.off('datos_esp32', manejarDatosHardware);
       socket.emit('desuscribir_dispositivo', hardwareId);
       if (hardwareTimeoutRef.current) {
@@ -330,14 +413,96 @@ const Conductor = () => {
     };
   }, [socket, hardwareId]);
 
-  // Cargar Notificaciones desde el Backend
+  // ─── Listener de ubicacion_conductor (respaldo del backend) ───────────────
+  // Intencion: recibir la ubicacion procesada por el backend cuando este emite
+  // ubicacion_conductor directamente desde la telemetria MQTT (isBackground=true).
+  // REGLA: NUNCA actualiza capacidad (evita el echo que restablecia el valor del perfil).
+  useEffect(() => {
+    if (!socket || !rawIds.unidadId) return;
+
+    const manejarUbicacion = (datos) => {
+      const esEstaConductora = String(datos.id) === String(rawIds.unidadId)
+        || String(datos.conductorId) === String(rawIds.conductorProfileId);
+
+      // Solo procesar si viene del backend (isBackground=true) y es este conductor
+      if (!esEstaConductora || datos.isBackground !== true) return;
+
+      setIsHardwareActive(true);
+
+      if (datos.pos && datos.pos[0] !== 0 && datos.pos[1] !== 0) {
+        setTelemetriaHardware(prev => ({
+          ...prev,
+          pos: datos.pos,
+          velocidad: datos.velocidad !== undefined ? Math.round(datos.velocidad) : prev.velocidad,
+          pasajeros: datos.ocupacionActual !== undefined ? datos.ocupacionActual : prev.pasajeros
+        }));
+        setModoConduccion(prev => {
+          if (prev !== 'hardware') {
+            setIsTesting(false);
+            return 'hardware';
+          }
+          return prev;
+        });
+      }
+    };
+
+    socket.on('ubicacion_conductor', manejarUbicacion);
+    return () => socket.off('ubicacion_conductor', manejarUbicacion);
+  }, [socket, rawIds.unidadId, rawIds.conductorProfileId]);
+
+  // ─── Emision de ubicacion en tiempo real ──────────────────────────────────
+  // Intencion: el conductor emite su posicion al servidor para que el administrador
+  // y los pasajeros puedan verla en el mapa.
+  // En modo hardware: usa las coordenadas reales del ESP32.
+  // En modo simulacion: usa la posicion interpolada de la simulacion.
+  useEffect(() => {
+    if (!socket || viewMode !== 'conduccion') return;
+    if (!posActual) return;
+
+    socket.emit('ubicacion_conductor', {
+      id: rawIds.unidadId || 'test-bus',
+      placa: unidadActual,
+      pos: posActual,
+      rutaId: rawIds.rutaId,
+      conductorId: rawIds.conductorProfileId,
+      isSimulated: modoConduccion === 'simulacion',
+      isBackground: false,
+      ocupacionActual: pasajerosMostrados,
+      capacidadMaxima: capacidadMostrada,
+      flotilla: usuario?.flotilla || profileData?.flotilla || 'ESCOM',
+      estado: isSOS ? 'sos' : (modoConduccion === 'simulacion' ? 'simulado' : 'en_ruta')
+    });
+  }, [posActual, modoConduccion, socket, viewMode, rawIds, unidadActual, pasajerosMostrados, capacidadMostrada]);
+
+  // ─── Listeners de avisos del administrador ────────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('aviso_conductor', (datos) => {
+      addToastNotification('Aviso de Administración', datos.mensaje, 'info');
+      setNotifUnreadCount(prev => prev + 1);
+      if (viewMode === 'avisos') cargarNotificaciones();
+    });
+
+    socket.on('notificacion_sistema', (datos) => {
+      addToastNotification('Xanani', datos.mensaje, 'info');
+      setNotifUnreadCount(prev => prev + 1);
+      if (viewMode === 'avisos') cargarNotificaciones();
+    });
+
+    return () => {
+      socket.off('aviso_conductor');
+      socket.off('notificacion_sistema');
+    };
+  }, [socket, viewMode]);
+
+  // ─── Cargar Notificaciones ─────────────────────────────────────────────────
   const cargarNotificaciones = async () => {
     try {
       const res = await api.get('/notificaciones', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = res.data.data;
-      // Mapear al formato que espera el componente (id, title, message, type, leida)
       const mapped = data.map(n => ({
         id: n._id,
         title: n.titulo,
@@ -348,35 +513,26 @@ const Conductor = () => {
       }));
       setNotificaciones(mapped);
     } catch (error) {
-      console.error("Error al cargar notificaciones:", error);
+      console.error('Error al cargar notificaciones:', error);
     }
   };
 
-  // Cargar avisos al entrar en la vista correspondiente
   useEffect(() => {
     if (viewMode === 'avisos') {
       cargarNotificaciones();
-      setNotifUnreadCount(0); // Resetear contador al entrar
+      setNotifUnreadCount(0);
     }
   }, [viewMode]);
 
-  const [tripStats, setTripStats] = useState({
-    timeStarted: null,
-    pasajerosTotales: 0,
-    ganancias: 0,
-    kmRecorridos: 0,
-    calificacion: 5.0
-  });
-
+  // ─── Manejadores de acciones ───────────────────────────────────────────────
   const onLogout = () => {
     cerrarSesion();
-    navigate("/LandingPage", { replace: true });
+    navigate('/LandingPage', { replace: true });
   };
 
   const addToastNotification = (title, message, type = 'info') => {
     const id = Date.now() + Math.random();
     setNotificaciones(prev => [...prev, { id, title, message, type }]);
-
     setTimeout(() => {
       setNotificaciones(prev => prev.filter(n => n.id !== id));
     }, 4500);
@@ -384,16 +540,16 @@ const Conductor = () => {
 
   const handleCloseResumen = () => {
     setViewMode('espera');
-    setPassengerCount(0);
     setNotificaciones([]);
     resetSimulation();
+    setModoConduccion('inactivo');
+    setTelemetriaHardware({ pos: null, velocidad: 0, pasajeros: 0, capacidad: null, asientos: [] });
   };
 
   const handleTriggerSOS = () => {
     addToastNotification('SOS Registrado', 'Autoridades alertadas discretamente.', 'alert');
     setIsSOS(true);
     if (socket) {
-      const posActual = (isTesting && simulatedPosition) ? simulatedPosition : ubicacionReal;
       socket.emit('reporte_incidencia', {
         conductorId: rawIds.conductorProfileId || usuario?._id,
         unidadId: rawIds.unidadId,
@@ -404,14 +560,11 @@ const Conductor = () => {
     }
   };
 
-  const handleFastReport = () => {
-    setIsReportModalOpen(true);
-  };
+  const handleFastReport = () => setIsReportModalOpen(true);
 
   const handleSubmitReport = (tipo) => {
     addToastNotification('Reporte Enviado', `Se ha marcado un evento de "${tipo}" en tu ubicación.`, 'info');
     if (socket) {
-      const posActual = (isTesting && simulatedPosition) ? simulatedPosition : ubicacionReal;
       socket.emit('reporte_incidencia', {
         conductorId: rawIds.conductorProfileId || usuario?._id,
         unidadId: rawIds.unidadId,
@@ -424,38 +577,39 @@ const Conductor = () => {
   };
 
   const removeNotification = async (id) => {
-    // Si el ID es numérico (toast temporal), solo filtrar localmente
     if (typeof id === 'number') {
       setNotificaciones(prev => prev.filter(notif => notif.id !== id));
       return;
     }
-
-    // Si es un ID de MongoDB, marcar como leída en el backend
     try {
       await api.patch(`/notificaciones/${id}/leida`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotificaciones(prev => prev.filter(notif => notif.id !== id));
     } catch (error) {
-      console.error("Error al marcar como leída:", error);
-      // Fallback: eliminar localmente aunque falle el backend para no bloquear al usuario
+      console.error('Error al marcar como leída:', error);
       setNotificaciones(prev => prev.filter(notif => notif.id !== id));
     }
   };
 
+  /**
+   * Inicia el recorrido en el modo detectado automaticamente.
+   * VERDE (isHardwareActive) -> 'hardware'
+   * AZUL  (!isHardwareActive) -> 'simulacion'
+   */
   const handleStartRoute = () => {
-    if (!isHardwareActive) {
-      setShowSimModal(true);
-      return;
-    }
-    ejecutarInicioRuta(false);
+    ejecutarInicioRuta(isHardwareActive ? 'hardware' : 'simulacion');
   };
 
-  const ejecutarInicioRuta = (simular) => {
-    setIsTesting(simular);
+  /**
+   * Inicia el recorrido en el modo indicado.
+   * @param {'hardware'|'simulacion'} modo - Modo a activar.
+   */
+  const ejecutarInicioRuta = (modo) => {
     setIsSOS(false);
     setViewMode('conduccion');
-    setPassengerCount(0);
+    setModoConduccion(modo);
+    setIsTesting(modo === 'simulacion');
     setTripStats({
       timeStarted: Date.now(),
       pasajerosTotales: 0,
@@ -463,7 +617,6 @@ const Conductor = () => {
       kmRecorridos: 0,
       calificacion: parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1))
     });
-    setShowSimModal(false);
   };
 
   const handleStopRoute = async () => {
@@ -472,11 +625,11 @@ const Conductor = () => {
     const timeEnded = Date.now();
     const durationMs = timeEnded - (tripStats.timeStarted || timeEnded);
     const durationMinutes = Math.max(1, Math.floor(durationMs / 60000));
-
     const kmSimulados = parseFloat((Math.random() * 20 + 5).toFixed(1));
     const califSimulada = parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1));
 
     setViewMode('resumen');
+    setModoConduccion('inactivo');
     setTripStats(prev => ({
       ...prev,
       kmRecorridos: kmSimulados,
@@ -485,16 +638,18 @@ const Conductor = () => {
     }));
   };
 
+  // ─── Centro del mapa y posicion del marcador ──────────────────────────────
+  // Prioridad: hardware activo > simulacion > primer punto de ruta > CDMX
+  const centroMapa = posActual
+    || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332]);
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#0f172a] font-sans">
 
       {/* MAPA BASE (Omnipresente) */}
       <div className="absolute inset-0 z-0">
         <Mapa
-          center={
-            (isTesting && simulatedPosition) ? simulatedPosition :
-              (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332]))
-          }
+          center={centroMapa}
           tileTheme="standard"
           zoom={viewMode === 'conduccion' ? 18 : 16}
           followDuration={viewMode === 'conduccion' ? 0.3 : 1.5}
@@ -504,24 +659,22 @@ const Conductor = () => {
           <CapaVehiculos
             vehicles={[{
               id: 'self',
-              pos: (isTesting && simulatedPosition) ? simulatedPosition :
-                (ubicacionReal || (routeLine && routeLine.length > 0 ? routeLine[0] : [19.4326, -99.1332])),
+              pos: centroMapa,
               color: 'bg-emerald-500',
               text: 'text-white',
               eta: 'Tú',
-              rotation: isTesting ? simulatedHeading : 0
+              // Rotacion solo en simulacion (en hardware el GPS no da heading directamente)
+              rotation: modoConduccion === 'simulacion' ? simulatedHeading : 0
             }]}
             selectedVehicleId="self"
           />
         </Mapa>
       </div>
 
-      {/* BOTÓN FLOTANTE MODO PRUEBA ELIMINADO SEGÚN REQUERIMIENTO */}
-
       {/* CAPAS DE UI (Sobre el mapa) */}
       <div className="relative z-10 h-full w-full pointer-events-none">
 
-        {/* VISTA DE INICIO (Overlay) */}
+        {/* VISTA DE ESPERA */}
         {viewMode === 'espera' && (
           <div className="pointer-events-auto h-full w-full bg-slate-900/40 backdrop-blur-[2px]">
             <NoRouteOverlay
@@ -534,19 +687,21 @@ const Conductor = () => {
           </div>
         )}
 
-        {/* VISTA DE CONDUCCIÓN (HUD Inmersivo) */}
+        {/* VISTA DE CONDUCCION (HUD Inmersivo) */}
         {viewMode === 'conduccion' && (
           <ModoConduccion
-            pasajeros={passengerCount}
-            capacidad={capacity}
+            pasajeros={pasajerosMostrados}
+            capacidad={capacidadMostrada}
+            seats={asientosMostrados}
             notificaciones={notificaciones}
             onRemoveNotificacion={removeNotification}
             onOpenReportes={handleFastReport}
             onTriggerSOS={handleTriggerSOS}
             onStopRoute={handleStopRoute}
             siguienteParada={paradaSiguienteSimulada}
-            velocidad={displaySpeed.toString()}
+            velocidad={String(velocidadMostrada)}
             tiempoRestante="12"
+            esSimulacion={modoConduccion === 'simulacion'}
           />
         )}
 
@@ -560,7 +715,7 @@ const Conductor = () => {
           </div>
         )}
 
-        {/* VISTA DE AVISOS / NOTIFICACIONES */}
+        {/* VISTA DE AVISOS */}
         {viewMode === 'avisos' && (
           <div className="pointer-events-auto h-full w-full bg-[#0f172a] p-6 overflow-y-auto">
             <header className="mb-6 flex items-center justify-between">
@@ -574,14 +729,13 @@ const Conductor = () => {
             </header>
 
             <div className="space-y-4 max-w-2xl mx-auto">
-              {/* Mensaje de Bienvenida / Estado */}
               <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-4">
                 <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 text-blue-400">
                   <CheckCircle className="w-5 h-5" />
                 </div>
                 <div>
                   <h4 className="font-bold text-blue-100 text-sm">Sistema Operativo</h4>
-                  <p className="text-blue-200/70 text-xs">No hay incidencias críticas reportadas en tu ruta actual. ¡Buen viaje!</p>
+                  <p className="text-blue-200/70 text-xs">No hay incidencias críticas reportadas en tu ruta actual.</p>
                   <span className="text-[10px] text-blue-400 mt-1 block">Ahora</span>
                 </div>
               </div>
@@ -618,12 +772,8 @@ const Conductor = () => {
                       </button>
                     </div>
                   ))}
-
                   <button
-                    onClick={() => {
-                      // Marcar todas como leídas (limpiar pantalla)
-                      notificaciones.forEach(n => removeNotification(n.id));
-                    }}
+                    onClick={() => notificaciones.forEach(n => removeNotification(n.id))}
                     className="w-full py-4 text-xs font-bold text-slate-400 hover:text-white transition-colors border-t border-white/5 pointer-events-auto"
                   >
                     Limpiar todos los avisos
@@ -654,7 +804,7 @@ const Conductor = () => {
           </div>
         )}
 
-        {/* COMPONENTE DE REPORTES (Discreto) */}
+        {/* MODAL DE REPORTES */}
         <Reportes
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
@@ -668,6 +818,7 @@ const Conductor = () => {
           <Navbar
             rol="CONDUCTOR"
             onCenterLocation={handleStartRoute}
+            isHardwareActive={isHardwareActive}
             onAfluenciaClick={() => setViewMode('historial')}
             onNotificationsClick={() => setViewMode('avisos')}
             onMapClick={() => setViewMode('espera')}
@@ -692,13 +843,13 @@ const Conductor = () => {
         onLogout={onLogout}
       />
 
-      {/* MODAL DE SIMULACIÓN AUTOMÁTICA */}
+      {/* MODAL DE SIMULACION AUTOMATICA */}
       <ModalAlerta
         mostrar={showSimModal}
         tipo="advertencia"
         titulo="Hardware no detectado"
         mensaje={`La unidad ${unidadActual} se encuentra offline. Se iniciará el recorrido en modo de simulación para mantener el servicio activo.`}
-        alCerrar={() => ejecutarInicioRuta(true)}
+        alCerrar={() => ejecutarInicioRuta('simulacion')}
       />
     </div>
   );

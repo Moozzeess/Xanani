@@ -126,15 +126,15 @@ const Pasajero = () => {
                     color: 'bg-indigo-400'
                 };
 
-                // En lugar de autoseleccionarlo, lo añadimos a la lista general de vehículos
                 setVehicles(prev => {
                     if (prev.some(v => v.id === 'TUTORIAL-UNIT')) return prev;
                     return [...prev, mockVehicle];
                 });
 
                 // CENTRAR MAPA EN LA UBICACIÓN DE LA COMBI DE PRUEBA
+                setMapBounds(null); // Quitar cualquier bound previo para forzar el centrado
                 setMapCenter(pos);
-                setMapZoom(16);
+                setMapZoom(18); // Zoom más cercano para que la unidad sea muy visible
             }
         }
     }, [mostrarTutorial, rutasDisponibles, vehicles.length]);

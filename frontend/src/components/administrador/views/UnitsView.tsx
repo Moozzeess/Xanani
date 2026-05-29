@@ -63,7 +63,26 @@ export default function unidadesView() {
   }, [token]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let newCapacidad = formData.capacidad;
+
+    if (name === 'dispositivoHardware' && value) {
+      const hw = hardwareLibre.find(h => h._id === value);
+      if (hw) {
+        newCapacidad = hw.capacidadMaxima || 15;
+      } else {
+        const unitWithHw = unidades.find(u => u.dispositivoHardware?._id === value);
+        if (unitWithHw && unitWithHw.dispositivoHardware) {
+          newCapacidad = unitWithHw.dispositivoHardware.capacidadMaxima || 15;
+        }
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      capacidad: name === 'dispositivoHardware' && value ? newCapacidad : prev.capacidad
+    }));
   };
 
   const handleOpenCreate = () => {
@@ -278,7 +297,24 @@ export default function unidadesView() {
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Capacidad de Pasajeros *</label>
-                <input required type="number" name="capacidad" value={formData.capacidad} onChange={handleChange} className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
+                <input 
+                  required 
+                  type="number" 
+                  name="capacidad" 
+                  value={formData.capacidad} 
+                  onChange={handleChange} 
+                  disabled={!!formData.dispositivoHardware}
+                  className={`w-full mt-1 p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                    formData.dispositivoHardware 
+                      ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed" 
+                      : "bg-slate-50 border-slate-200 focus:bg-white"
+                  }`} 
+                />
+                {formData.dispositivoHardware && (
+                  <p className="text-[10px] text-emerald-600 mt-1 font-semibold">
+                    Capacidad asignada automáticamente desde el hardware por el superusuario.
+                  </p>
+                )}
               </div>
 
               <div className="border-t border-slate-100 pt-4 mt-4">

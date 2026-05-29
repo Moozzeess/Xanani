@@ -11,7 +11,8 @@ const Navbar = ({
     onAfluenciaClick, 
     activeTab,
     rol = 'PASAJERO',
-    hasNewNotifications = false // Nueva prop para controlar el indicador
+    hasNewNotifications = false, // Nueva prop para controlar el indicador
+    isHardwareActive = false // Nueva prop para saber si hay hardware (para el color del boton)
 }) => {
     const esConductor = rol === 'CONDUCTOR';
 
@@ -44,8 +45,8 @@ const Navbar = ({
                 <div className="relative -top-5">
                     <button
                         onClick={onCenterLocation}
-                        className={`w-14 h-14 ${esConductor ? 'bg-emerald-600 shadow-emerald-600/40' : 'bg-blue-600 shadow-blue-600/40'} rounded-2xl rotate-45 flex items-center justify-center text-white shadow-lg active:scale-95 transition-all border-4 border-white`}
-                        title={esConductor ? "Iniciar Ruta" : "Centrar Ubicación"}
+                        className={`w-14 h-14 ${esConductor ? (isHardwareActive ? 'bg-emerald-600 shadow-emerald-600/40' : 'bg-blue-600 shadow-blue-600/40') : 'bg-blue-600 shadow-blue-600/40'} rounded-2xl rotate-45 flex items-center justify-center text-white shadow-lg active:scale-95 transition-all border-4 border-white`}
+                        title={esConductor ? (isHardwareActive ? "Iniciar Recorrido Real" : "Iniciar Simulación") : "Centrar Ubicación"}
                     >
                         <Navigation className="w-6 h-6 -rotate-45" />
                     </button>

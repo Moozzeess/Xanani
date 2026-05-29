@@ -26,6 +26,15 @@ exports.crearUnidad = async (req, res) => {
       datosUnidad.flotilla = req.auth.flotilla;
     }
 
+    // Sincronizar automáticamente la capacidad desde el hardware asignado por el superusuario
+    if (datosUnidad.dispositivoHardware) {
+      const hw = await DispositivoHardware.findById(datosUnidad.dispositivoHardware);
+      if (hw) {
+        datosUnidad.capacidad = hw.capacidadMaxima;
+        datosUnidad.capacidadMaxima = hw.capacidadMaxima;
+      }
+    }
+
     const nuevaUnidad = new Unidad(datosUnidad);
     await nuevaUnidad.save();
 
@@ -205,6 +214,15 @@ exports.actualizarUnidad = async (req, res) => {
           { user: unidadAnterior.conductor },
           { unidad: placa }
         );
+      }
+    }
+
+    // Sincronizar automáticamente la capacidad desde el hardware asignado por el superusuario
+    if (req.body.dispositivoHardware) {
+      const hw = await DispositivoHardware.findById(req.body.dispositivoHardware);
+      if (hw) {
+        req.body.capacidad = hw.capacidadMaxima;
+        req.body.capacidadMaxima = hw.capacidadMaxima;
       }
     }
 
