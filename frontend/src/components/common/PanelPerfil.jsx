@@ -7,6 +7,7 @@ import { X, User, Star, Route, MapPin, Bell, Trash2, LogOut, ChevronRight, Heart
  */
 const PanelPerfil = ({
     isOpen,
+    isTutorialMode = false,
     onClose,
     usuario,
     conductorData = null, // Datos técnicos si el rol es CONDUCTOR
@@ -55,6 +56,7 @@ const PanelPerfil = ({
                 {/* Cabecera con identidad */}
                 <div className="bg-gradient-to-br from-slate-900 to-slate-700 px-6 pt-12 pb-6 text-white relative h-fit">
                     <button
+                        id="tour-cerrar-perfil"
                         onClick={onClose}
                         className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
                     >
@@ -155,8 +157,9 @@ const PanelPerfil = ({
                                     className="w-full flex items-center gap-3 py-2 hover:bg-slate-50 rounded-xl px-2 group transition-colors"
                                 >
                                     <button
-                                        onClick={() => onVerRutaFavorita?.(ruta)}
-                                        className="flex-1 flex items-center gap-3 text-left min-w-0"
+                                        onClick={() => { if (!isTutorialMode) onVerRutaFavorita?.(ruta); }}
+                                        className={`flex-1 flex items-center gap-3 text-left min-w-0 ${isTutorialMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={isTutorialMode}
                                     >
                                         <Route className="w-4 h-4 text-blue-500 flex-shrink-0" />
                                         <span className="text-sm text-slate-700 font-medium truncate">{ruta.nombre}</span>
@@ -164,10 +167,11 @@ const PanelPerfil = ({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onToggleSuscripcion?.(ruta._id || ruta.id);
+                                            if (!isTutorialMode) onToggleSuscripcion?.(ruta._id || ruta.id);
                                         }}
-                                        className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-all"
+                                        className={`p-1.5 rounded-lg transition-all ${isTutorialMode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50 text-red-400'}`}
                                         title="Quitar suscripción"
+                                        disabled={isTutorialMode}
                                     >
                                         <X className="w-3.5 h-3.5" />
                                     </button>
@@ -192,22 +196,24 @@ const PanelPerfil = ({
                                             className="w-full flex items-center gap-3 py-2 hover:bg-slate-50 rounded-xl px-2 transition-colors border border-dashed border-transparent hover:border-slate-200"
                                         >
                                             <div 
-                                                onClick={() => onVerRuta?.(ruta)}
-                                                className="flex-1 min-w-0 cursor-pointer hover:text-blue-600 transition-colors"
+                                                onClick={() => { if (!isTutorialMode) onVerRuta?.(ruta); }}
+                                                className={`flex-1 min-w-0 ${isTutorialMode ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:text-blue-600'} transition-colors`}
                                             >
                                                 <p className="text-sm text-slate-700 font-medium truncate group-hover:text-blue-600">{ruta.nombre}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => onVerRuta?.(ruta)}
-                                                    className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-colors"
+                                                    onClick={() => { if (!isTutorialMode) onVerRuta?.(ruta); }}
+                                                    className={`p-1.5 rounded-lg transition-colors ${isTutorialMode ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                                                     title="Ver paradas e itinerario"
+                                                    disabled={isTutorialMode}
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => onToggleSuscripcion?.(ruta._id || ruta.id)}
-                                                    className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg hover:bg-blue-600 hover:text-white transition-all"
+                                                    onClick={() => { if (!isTutorialMode) onToggleSuscripcion?.(ruta._id || ruta.id); }}
+                                                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${isTutorialMode ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400' : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white'}`}
+                                                    disabled={isTutorialMode}
                                                 >
                                                     Suscribirse
                                                 </button>
@@ -231,8 +237,9 @@ const PanelPerfil = ({
                             {paradasFavoritas.map((parada) => (
                                 <button
                                     key={parada.nombre}
-                                    onClick={() => onCentrarParada?.(parada)}
-                                    className="w-full flex items-center gap-3 py-2.5 hover:bg-slate-50 rounded-xl px-2 transition-colors"
+                                    onClick={() => { if (!isTutorialMode) onCentrarParada?.(parada); }}
+                                    className={`w-full flex items-center gap-3 py-2.5 rounded-xl px-2 transition-colors ${isTutorialMode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                                    disabled={isTutorialMode}
                                 >
                                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0" />
                                     <span className="text-sm text-slate-700 font-medium flex-1 text-left truncate">{parada.nombre}</span>

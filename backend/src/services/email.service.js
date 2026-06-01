@@ -255,9 +255,26 @@ async function enviarCorreoEstadoReporte(to, username, folio, estado) {
   await sendEmail({ to, subject: `Actualización de tu reporte #${folio} - Xanani`, html });
 }
 
+/**
+ * Plantilla: Creación de cuenta por un administrador/superusuario
+ */
+async function enviarCorreoCreacionCuenta(to, username, password, token) {
+  const url = `${FRONTEND_URL}/#/verify-email/${token}`;
+  const cuerpoHtml = `<p>Tu cuenta ha sido creada exitosamente.</p>
+                      <p>Tus credenciales de acceso temporal son:</p>
+                      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p style="margin: 0 0 5px 0;"><strong>Usuario / Correo:</strong> ${to}</p>
+                        <p style="margin: 0;"><strong>Contraseña temporal:</strong> ${password}</p>
+                      </div>
+                      <p>Para activar tu cuenta y poder iniciar sesión, debes verificar tu correo haciendo clic en el botón de abajo. <strong>Te recomendamos cambiar tu contraseña temporal</strong> desde tu perfil una vez que inicies sesión por seguridad.</p>`;
+  const html = basePlantilla('Bienvenido a Xanani', username, cuerpoHtml, url, 'Verificar y Activar mi Cuenta');
+  await sendEmail({ to, subject: 'Tus credenciales de acceso a Xanani', html });
+}
+
 module.exports = {
   enviarCorreoVerificacion,
   enviarCorreoRecuperacion,
   enviarCorreoRespuestaReporte,
-  enviarCorreoEstadoReporte
+  enviarCorreoEstadoReporte,
+  enviarCorreoCreacionCuenta
 };

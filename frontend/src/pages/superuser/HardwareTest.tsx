@@ -296,7 +296,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
     setHardwareSettings(prev => ({ ...prev, [name]: Number(value) }));
   };
 
-  const sendHardwareCommand = (tipo: 'config' | 'reset' | 'power_toggle') => {
+  const sendHardwareCommand = (tipo: 'config' | 'reset' | 'power_toggle' | 'request_sim_data') => {
     if (!socket || !isConnected) {
       return dispararError(
         'Sin conexión',
@@ -315,6 +315,8 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
       payload = { action: 'reset_counters' };
     } else if (tipo === 'power_toggle') {
       payload = { action: 'power_toggle', status: hardwareSettings.powerOn ? 'ON' : 'OFF' };
+    } else if (tipo === 'request_sim_data') {
+      payload = { action: 'request_sim_data' };
     }
 
     socket.emit('enviar_comando_hardware', payload);
@@ -372,6 +374,7 @@ const HardwareTest = ({ onSaved, initialDevice }: { onSaved?: () => void, initia
               deviceStatus={deviceStatus}
               isConnected={isConnected}
               isConnecting={isConnecting}
+              onRequestSimData={() => sendHardwareCommand('request_sim_data')}
             />
 
             <InteractiveSettingsPanel

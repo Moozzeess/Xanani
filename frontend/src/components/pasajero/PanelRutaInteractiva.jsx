@@ -23,6 +23,7 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
     const [mockSuscrito, setMockSuscrito] = useState(false);
     const { disparar, dispararError } = useAlertaGlobal();
     const scrollRef = useRef(null);
+    const touchStartY = useRef(null);
 
     // Efecto para subir el scroll al activar el reporte
     useEffect(() => {
@@ -87,6 +88,31 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
         onExpand?.(next);
     };
 
+    const handleTouchStart = (e) => {
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e) => {
+        if (!touchStartY.current) return;
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchStartY.current - touchEndY;
+        
+        // Umbral de 30px para considerar que fue un deslizamiento
+        if (deltaY > 30) {
+            // Deslizar hacia arriba
+            if (viewState === 'collapsed') { setViewState('half'); onExpand?.('half'); }
+            else if (viewState === 'half') { setViewState('full'); onExpand?.('full'); }
+        } else if (deltaY < -30) {
+            // Deslizar hacia abajo
+            if (viewState === 'full') { setViewState('half'); onExpand?.('half'); }
+            else if (viewState === 'half') { setViewState('collapsed'); onExpand?.('collapsed'); }
+        } else {
+            // Fue un simple toque o muy corto, procesar como clic si lo desean, 
+            // pero el onClick de handleToggle ya se encarga de eso.
+        }
+        touchStartY.current = null;
+    };
+
     const handleEnviarReporte = async () => {
         if (!tipoSeleccionado) {
             dispararError('Selecciona un tipo de incidencia', '', 'Reporte incompleto');
@@ -149,7 +175,13 @@ const PanelRutaInteractiva = ({ vehicle, ruta, rutasFavoritas = [], isHidden = f
         <div className={`fixed inset-x-0 bottom-0 bg-white rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] z-[2000] transition-all duration-500 ease-in-out flex flex-col ${getPanelHeight()} ${isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
 
             {/* ESTADO 1: COLLAPSED (Telemetría Real) */}
-            <div id="tour-expandir-panel" onClick={handleToggle} className="w-full pt-2 pb-4 px-8 shrink-0 cursor-pointer bg-white group hover:bg-slate-50 transition-colors">
+            <div 
+                id="tour-expandir-panel" 
+                onClick={handleToggle} 
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                className="w-full pt-2 pb-4 px-8 shrink-0 cursor-pointer bg-white group hover:bg-slate-50 transition-colors"
+            >
                 <div className="flex flex-col items-center justify-center mb-3">
                     <ChevronUp className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${viewState !== 'collapsed' ? 'rotate-180' : 'animate-bounce'}`} />
                     <div className="w-16 h-1.5 bg-slate-300 rounded-full shadow-inner mt-0.5"></div>

@@ -139,6 +139,46 @@ const Pasajero = () => {
         }
     }, [mostrarTutorial, rutasDisponibles, vehicles.length]);
 
+    // Sincronización de UI guiada por el tutorial (Botón atrás)
+    useEffect(() => {
+        if (!mostrarTutorial) return;
+
+        const handleForcePerfil = () => { setIsProfileOpen(true); setActiveTab('perfil'); };
+        const handleForceAfluencia = () => { setIsProfileOpen(false); setActiveTab('afluencia'); };
+        const handleForceAlertas = () => { setIsProfileOpen(false); setActiveTab('notifications'); };
+        const handleForceMapa = () => { setIsProfileOpen(false); setActiveTab('map'); };
+        const handleForcePanel = () => { 
+            setIsProfileOpen(false); 
+            setActiveTab('map'); 
+            const tutorialUnit = vehicles.find(v => v.id === 'TUTORIAL-UNIT');
+            if (tutorialUnit && selectedVehicle?.id !== 'TUTORIAL-UNIT') {
+                setSelectedVehicle(tutorialUnit);
+                const rutaInfo = rutasDisponibles.find(r => r._id.toString() === (tutorialUnit.rutaId || tutorialUnit.id_ruta)?.toString());
+                if (rutaInfo) {
+                    if (rutaInfo.geometria) {
+                        setRouteLine(rutaInfo.geometria.map(p => [p.latitud, p.longitud]));
+                    }
+                    setParadas(rutaInfo.paradas || []);
+                    setSelectedRoute(rutaInfo);
+                }
+            }
+        };
+
+        window.addEventListener('tutorial_force_perfil', handleForcePerfil);
+        window.addEventListener('tutorial_force_afluencia', handleForceAfluencia);
+        window.addEventListener('tutorial_force_alertas', handleForceAlertas);
+        window.addEventListener('tutorial_force_mapa', handleForceMapa);
+        window.addEventListener('tutorial_force_panel', handleForcePanel);
+
+        return () => {
+            window.removeEventListener('tutorial_force_perfil', handleForcePerfil);
+            window.removeEventListener('tutorial_force_afluencia', handleForceAfluencia);
+            window.removeEventListener('tutorial_force_alertas', handleForceAlertas);
+            window.removeEventListener('tutorial_force_mapa', handleForceMapa);
+            window.removeEventListener('tutorial_force_panel', handleForcePanel);
+        };
+    }, [mostrarTutorial, vehicles, selectedVehicle, rutasDisponibles]);
+
     // Función Unificada para Actualizar Unidades (Real o Sim)
     const actualizarVehiculo = (datos) => {
         setVehicles(prev => {
@@ -232,7 +272,12 @@ const Pasajero = () => {
                 (pos) => {
                     const coords = [pos.coords.latitude, pos.coords.longitude];
                     setUserPos(coords);
-                    setMapCenter(coords);
+                    
+                    // Evitar que el mapa se mueva al usuario si el tutorial está corriendo
+                    const isTutorialActive = sessionStorage.getItem('isNewRegistration') === 'true';
+                    if (!isTutorialActive) {
+                        setMapCenter(coords);
+                    }
                 },
                 (err) => {
                     console.warn("Geolocalización denegada", err);
@@ -678,7 +723,7 @@ const Pasajero = () => {
                         </Mapa>
 
                         {/* Radar de Descubrimiento */}
-                        {!paradaDetectada && (
+                        {!paradaDetectada && !selectedRoute && !selectedVehicle && (
                             <PanelDescubrimiento
                                 totalUnidades={vehicles.length}
                                 sinUnidades={vehicles.length === 0}
@@ -692,6 +737,7 @@ const Pasajero = () => {
                         {paradaDetectada && (
                             <div className="absolute top-20 right-6 z-[600] animate-in fade-in zoom-in">
                                 <button
+                                    id="btn-cerrar-parada"
                                     onClick={() => {
                                         setParadaDetectada(null);
                                         setMostrarRadar(false);
@@ -776,18 +822,26 @@ const Pasajero = () => {
 
             <PanelPerfil
                 isOpen={isProfileOpen}
-                onClose={() => setIsProfileOpen(false)}
+                isTutorialMode={mostrarTutorial}
+                onClose={() => {
+                    setIsProfileOpen(false);
+                    if (mostrarTutorial) {
+                        setActiveTab('map');
+                    }
+                }}
                 usuario={{ ...perfilCompleto, role: 'PASAJERO' }}
                 rutasFavoritas={rutasFavoritas}
                 rutasDisponibles={rutasDisponibles}
                 historial={historialViajes}
                 onToggleSuscripcion={handleToggleSuscripcion}
                 onVerRutaFavorita={(r) => {
+                    if (mostrarTutorial) return;
                     setIsProfileOpen(false);
                     setActiveTab('map');
                     seleccionarRuta(r);
                 }}
                 onVerRuta={(ruta) => {
+                    if (mostrarTutorial) return;
                     setIsProfileOpen(false);
                     setActiveTab('map');
                     seleccionarRuta(ruta);

@@ -129,7 +129,7 @@ const PaginaLogin = () => {
       if (usuarioAuth?.role === 'PASAJERO') {
         mensajeBienvenida = 'Explora las rutas disponibles y suscríbete a tu favorita para recibir actualizaciones en tiempo real.';
       } else if (usuarioAuth?.role === 'CONDUCTOR') {
-        mensajeBienvenida = 'Estamos listos para que realices tu primer viaje y mejores la movilidad de la ciudad.';
+        mensajeBienvenida = 'Buen viaje';
       } else if (usuarioAuth?.role === 'ADMINISTRADOR' || usuarioAuth?.role === 'SUPERUSUARIO') {
         mensajeBienvenida = 'Te invitamos a explorar cada módulo para gestionar la flota de manera eficiente.';
       }
@@ -197,7 +197,7 @@ const PaginaLogin = () => {
       disparar({
         tipo: 'exito',
         titulo: '¡Cuenta Creada!',
-        mensaje: "Por favor revisa la bandeja de entrada de tu correo electrónico (o la consola del servidor) para verificar tu cuenta."
+        mensaje: "Por favor revisa la bandeja de entrada de tu correo electrónico (o la bandeja de spam) para verificar tu cuenta."
       });
       sessionStorage.setItem('isNewRegistration', 'true');
       setFormularioActivo("login");

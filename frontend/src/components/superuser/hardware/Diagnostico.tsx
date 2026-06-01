@@ -11,6 +11,7 @@ interface Sim800lStatus {
 interface DeviceStatusPanelProps {
   isConnected?: boolean;
   isConnecting?: boolean;
+  onRequestSimData?: () => void;
   deviceStatus: {
     esp32: boolean;
     macAddress?: string;
@@ -34,7 +35,7 @@ interface DeviceStatusPanelProps {
   };
 }
 
-export const DeviceStatusPanel = ({ deviceStatus, isConnected = false, isConnecting = false }: DeviceStatusPanelProps) => {
+export const DeviceStatusPanel = ({ deviceStatus, isConnected = false, isConnecting = false, onRequestSimData }: DeviceStatusPanelProps) => {
   const parseEstatusCodigo = (code?: number) => {
     if (isConnecting) return { t: 'Conectando al bróker…', c: 'text-blue-500', bg: 'bg-blue-50' };
     if (!isConnected) return { t: 'Sin conexión MQTT', c: 'text-slate-400', bg: 'bg-slate-100' };
@@ -164,7 +165,7 @@ export const DeviceStatusPanel = ({ deviceStatus, isConnected = false, isConnect
           </div>
 
           {/* Señal y plan de datos */}
-          <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mt-3 pt-3 border-t border-slate-200 items-end">
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase">Señal</p>
               <div className="flex items-center gap-2 mt-1">
@@ -190,6 +191,16 @@ export const DeviceStatusPanel = ({ deviceStatus, isConnected = false, isConnect
                   </span>
                 )}
               </div>
+            </div>
+            <div className="pb-0.5">
+               <button 
+                 onClick={onRequestSimData}
+                 disabled={!isConnected}
+                 className="p-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-600 rounded-md transition-colors disabled:opacity-50 border border-cyan-200 shadow-sm flex items-center justify-center"
+                 title="Consultar Saldo y Consumo al ESP32"
+               >
+                 <RefreshCw size={14} />
+               </button>
             </div>
           </div>
 

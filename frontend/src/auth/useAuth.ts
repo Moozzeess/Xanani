@@ -15,6 +15,7 @@ type ValorContextoAuth = {
   registrarUsuario: (datos: RegisterRequest) => Promise<void>;
   cerrarSesion: () => void;
   tieneRol: (rol: Role) => boolean;
+  cambiarContrasenaObligatoria: (nuevaContrasena: string) => Promise<{ mensaje: string }>;
 };
 
 /**
@@ -114,6 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       tieneRol: (rol) => {
         return usuario?.role === rol;
+      },
+      cambiarContrasenaObligatoria: async (nuevaContrasena) => {
+        const respuesta = await authApi.cambiarContrasena(nuevaContrasena);
+        if (usuario) {
+          const usuarioActualizado = { ...usuario, mustChangePassword: false };
+          setUsuario(usuarioActualizado);
+          guardarAuth({ token: token!, user: usuarioActualizado });
+        }
+        return respuesta;
       }
     }),
     [token, usuario, estaAutenticado, estaCargando]

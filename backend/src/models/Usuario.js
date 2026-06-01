@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    mustChangePassword: {
+      type: Boolean,
+      default: false
+    },
     // Nuevos campos para validación y recuperación de contraseñas
     isVerified: {
       type: Boolean,

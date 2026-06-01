@@ -158,7 +158,8 @@ async function login({ usernameOrEmail, password }) {
       fechaNacimiento: user.fechaNacimiento,
       foto: user.foto,
       rutasFavoritas: user.rutasFavoritas,
-      flotilla: flotilla
+      flotilla: flotilla,
+      mustChangePassword: user.mustChangePassword
     }
   };
 }
@@ -257,11 +258,29 @@ async function resetPassword({ token, newPassword }) {
   return { mensaje: 'Contraseña actualizada exitosamente.' };
 }
 
+/**
+ * CAMBIAR CONTRASEÑA OBLIGATORIA
+ * Permite cambiar la contraseña estando autenticado y remueve la restricción.
+ */
+async function cambiarContrasenaObligatoria(userId, nuevaContrasena) {
+  const user = await Usuario.findById(userId);
+  if (!user) {
+    throw new ErrorApp('Usuario no encontrado.', 404);
+  }
+
+  user.passwordHash = await bcrypt.hash(nuevaContrasena, 10);
+  user.mustChangePassword = false;
+  await user.save();
+
+  return { mensaje: 'Contraseña actualizada exitosamente. Ahora puedes continuar.' };
+}
+
 module.exports = {
   register,
   login,
   verifyEmail,
   resendVerificationEmail,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  cambiarContrasenaObligatoria
 };

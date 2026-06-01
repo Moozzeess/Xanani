@@ -15,3 +15,8 @@ export async function resendVerification(usernameOrEmail: string): Promise<{ men
   const { data } = await api.post<{ mensaje: string }>('/autenticacion/resend-verification', { usernameOrEmail });
   return data;
 }
+
+export async function cambiarContrasena(nuevaContrasena: string): Promise<{ mensaje: string }> {
+  const { data } = await api.put<{ mensaje: string }>('/autenticacion/cambiar-contrasena', { nuevaContrasena });
+  return data;
+}

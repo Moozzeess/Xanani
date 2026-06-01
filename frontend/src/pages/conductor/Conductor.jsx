@@ -86,6 +86,17 @@ const Conductor = () => {
   // ─── Socket ────────────────────────────────────────────────────────────────
   const [socket, setSocket] = useState(null);
 
+  // Refs para retener datos en caso de pérdida de señal
+  const socketRef = useRef(null);
+  const rawIdsRef = useRef(rawIds);
+  const telemetriaRef = useRef(telemetriaHardware);
+  const recorridoIdRef = useRef(null);
+
+  useEffect(() => { socketRef.current = socket; }, [socket]);
+  useEffect(() => { rawIdsRef.current = rawIds; }, [rawIds]);
+  useEffect(() => { telemetriaRef.current = telemetriaHardware; }, [telemetriaHardware]);
+  useEffect(() => { recorridoIdRef.current = recorridoId; }, [recorridoId]);
+
   // ─── Hook de simulacion ────────────────────────────────────────────────────
   // Solo activo cuando modoConduccion === 'simulacion'
   const {
@@ -119,6 +130,8 @@ const Conductor = () => {
     calificacion: 5.0
   });
 
+  const [recorridoId, setRecorridoId] = useState(null);
+
   // ─── Valores derivados para la UI ──────────────────────────────────────────
   // Intencion: punto de acceso único para los datos que se muestran al conductor.
   // En modo hardware: datos del ESP32. En simulacion: datos del perfil/simulacion.
@@ -129,16 +142,20 @@ const Conductor = () => {
     ? telemetriaHardware.pos
     : (isTesting ? simulatedPosition : null);
 
-  const pasajerosMostrados = esHardwareActivo
+  // Si iniciamos un viaje real (recorridoId existe), retenemos la información del hardware 
+  // aunque se pierda la señal (esHardwareActivo pase a false).
+  const retenerInfoHardware = esHardwareActivo || (recorridoId !== null);
+
+  const pasajerosMostrados = retenerInfoHardware
     ? telemetriaHardware.pasajeros
     : 0;
 
   // Capacidad: si el hardware ya envio su cap, usarlo. Si no, usar el del perfil.
-  const capacidadMostrada = (esHardwareActivo && telemetriaHardware.capacidad !== null)
+  const capacidadMostrada = (retenerInfoHardware && telemetriaHardware.capacidad !== null)
     ? telemetriaHardware.capacidad
     : capacidadPerfil;
 
-  const asientosMostrados = esHardwareActivo
+  const asientosMostrados = retenerInfoHardware
     ? telemetriaHardware.asientos
     : [];
 
@@ -351,10 +368,27 @@ const Conductor = () => {
       hardwareTimeoutRef.current = setTimeout(() => {
         // Sin paquetes por 30s = dispositivo apagado o sin conexion al broker
         setIsHardwareActive(false);
-        // Si la ruta estaba en modo hardware, regresar a simulacion
+        // Si la ruta estaba en modo hardware, regresar a simulacion manteniendo info
         setModoConduccion(prev => {
           if (prev === 'hardware') {
             setIsTesting(true);
+            
+            // Si estábamos en un viaje real, avisamos al admin de la pérdida de señal
+            if (recorridoIdRef.current && socketRef.current) {
+              const lastPos = telemetriaRef.current.pos;
+              socketRef.current.emit('reporte_incidencia', {
+                conductorId: rawIdsRef.current.conductorProfileId,
+                unidadId: rawIdsRef.current.unidadId,
+                tipo: 'PÉRDIDA_SEÑAL',
+                descripcion: 'La unidad perdió conexión. El conductor mantendrá la información de pasajeros localmente hasta finalizar.',
+                ubicacion: lastPos ? { latitud: lastPos[0], longitud: lastPos[1] } : null
+              });
+              
+              setTimeout(() => {
+                addToastNotification('Señal Perdida', 'Se guardó tu último estado y se avisó al administrador.', 'alert');
+              }, 0);
+            }
+            
             return 'simulacion';
           }
           return prev;
@@ -605,7 +639,7 @@ const Conductor = () => {
    * Inicia el recorrido en el modo indicado.
    * @param {'hardware'|'simulacion'} modo - Modo a activar.
    */
-  const ejecutarInicioRuta = (modo) => {
+  const ejecutarInicioRuta = async (modo) => {
     setIsSOS(false);
     setViewMode('conduccion');
     setModoConduccion(modo);
@@ -617,6 +651,23 @@ const Conductor = () => {
       kmRecorridos: 0,
       calificacion: parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1))
     });
+
+    if (modo === 'hardware') {
+      try {
+        const res = await api.post('/recorridos/iniciar', {
+          conductorId: rawIds.conductorProfileId,
+          unidadId: rawIds.unidadId,
+          rutaId: rawIds.rutaId
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRecorridoId(res.data.recorrido._id);
+        addToastNotification('¡Buen viaje!', 'Tu recorrido ha comenzado y se registrará al finalizar.', 'info');
+      } catch (error) {
+        console.error('Error al iniciar recorrido real:', error);
+        addToastNotification('Aviso', 'Hubo un problema al iniciar tu recorrido, intenta de nuevo.', 'alert');
+      }
+    }
   };
 
   const handleStopRoute = async () => {
@@ -625,17 +676,53 @@ const Conductor = () => {
     const timeEnded = Date.now();
     const durationMs = timeEnded - (tripStats.timeStarted || timeEnded);
     const durationMinutes = Math.max(1, Math.floor(durationMs / 60000));
-    const kmSimulados = parseFloat((Math.random() * 20 + 5).toFixed(1));
-    const califSimulada = parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1));
+    
+    // Generar datos aproximados para el resumen (permitir 0 para probar descartes)
+    const kmCalculados = parseFloat((Math.random() * 20 + 5).toFixed(1));
+    const califCalculada = parseFloat((Math.random() * (5.0 - 4.2) + 4.2).toFixed(1));
+    const pasajerosCalculados = Math.floor(Math.random() * 30); // Puede ser 0
+    const gananciasCalculadas = parseFloat((pasajerosCalculados * 8.5).toFixed(2));
+
+    const nuevasEstadisticas = {
+      ...tripStats,
+      kmRecorridos: kmCalculados,
+      calificacion: califCalculada,
+      pasajerosTotales: pasajerosCalculados,
+      ganancias: gananciasCalculadas,
+      tiempoMinutos: durationMinutes
+    };
+
+    if (modoConduccion === 'hardware' && recorridoId) {
+      try {
+        if (nuevasEstadisticas.pasajerosTotales < 1) {
+          // Descartar el viaje si no hubo pasajeros
+          await api.delete(`/recorridos/cancelar/${recorridoId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          addToastNotification('Recorrido descartado', 'Como no hubo pasajeros, este viaje no se guardará en tu historial.', 'info');
+        } else {
+          // Guardar el viaje si hubo al menos un pasajero
+          await api.put(`/recorridos/finalizar/${recorridoId}`, {
+            pasajerosTotales: nuevasEstadisticas.pasajerosTotales,
+            ganancias: nuevasEstadisticas.ganancias,
+            kmRecorridos: nuevasEstadisticas.kmRecorridos,
+            calificacion: nuevasEstadisticas.calificacion,
+            observaciones: 'Ruta finalizada con éxito'
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          addToastNotification('¡Viaje terminado!', 'Buen trabajo, tu viaje ya está en tu historial.', 'info');
+        }
+        setRecorridoId(null);
+      } catch (error) {
+        console.error('Error al manejar el recorrido real:', error);
+        addToastNotification('Aviso', 'Hubo un problema al procesar el cierre de tu viaje.', 'alert');
+      }
+    }
 
     setViewMode('resumen');
     setModoConduccion('inactivo');
-    setTripStats(prev => ({
-      ...prev,
-      kmRecorridos: kmSimulados,
-      calificacion: califSimulada,
-      tiempoMinutos: durationMinutes
-    }));
+    setTripStats(nuevasEstadisticas);
   };
 
   // ─── Centro del mapa y posicion del marcador ──────────────────────────────

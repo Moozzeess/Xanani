@@ -34,5 +34,10 @@ export default function RutaProtegida({ children, allowedRoles }: ProtectedRoute
     return <Navigate to="/" replace />;
   }
 
+  // Redirigir obligatoriamente al cambio de contraseña si está marcado y no estamos en esa ruta
+  if (usuario.mustChangePassword && ubicacion.pathname !== '/force-change-password') {
+    return <Navigate to="/force-change-password" replace />;
+  }
+
   return children;
 }

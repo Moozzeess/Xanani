@@ -5,6 +5,7 @@ export type AuthUser = {
   username: string;
   email: string;
   role: Role;
+  mustChangePassword?: boolean;
 };
 
 export type LoginRequest = {

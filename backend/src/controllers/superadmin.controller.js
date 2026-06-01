@@ -8,6 +8,9 @@ const Unidad = require('../models/Unidad');
 const DispositivoHardware = require('../models/DispositivoHardware');
 const catchAsync = require('../utils/catchAsync');
 const ErrorApp = require('../utils/ErrorApp');
+const crypto = require('crypto');
+const emailService = require('../services/email.service');
+const { generarPasswordSegura } = require('../utils/password');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ANALÍTICA GLOBAL
@@ -110,10 +113,10 @@ const listarAdmins = catchAsync(async (req, res) => {
  * Body: { username, email, password, flotilla? }
  */
 const crearAdmin = catchAsync(async (req, res) => {
-  const { username, email, password, flotilla } = req.body;
+  const { username, email, flotilla } = req.body;
 
-  if (!username || !email || !password) {
-    throw new ErrorApp('Datos incompletos: username, email y password son obligatorios.', 400);
+  if (!username || !email) {
+    throw new ErrorApp('Datos incompletos: username y email son obligatorios.', 400);
   }
 
   const existente = await Usuario.findOne({
@@ -124,13 +127,24 @@ const crearAdmin = catchAsync(async (req, res) => {
     throw new ErrorApp(`${campo} ya está en uso.`, 409);
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordSegura = generarPasswordSegura(16);
+  const passwordHash = await bcrypt.hash(passwordSegura, 10);
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+
   const nuevoAdmin = await Usuario.create({
     username,
     email: email.toLowerCase(),
     passwordHash,
     role: USER_ROLES.ADMINISTRADOR,
-    flotilla: flotilla || null // Duplicamos en Usuario para filtros rápidos
+    flotilla: flotilla || null, // Duplicamos en Usuario para filtros rápidos
+    isVerified: false,
+    verificationToken,
+    mustChangePassword: true
+  });
+
+  // Enviar correo de creación con credenciales y verificación
+  emailService.enviarCorreoCreacionCuenta(nuevoAdmin.email, nuevoAdmin.username, passwordSegura, verificationToken).catch(err => {
+    console.error('Error enviando correo de creación al admin:', err);
   });
 
   // Crear el perfil de Administrador

@@ -24,6 +24,6 @@ router.get('/historial/admin', requireAuth, requireRole([USER_ROLES.ADMINISTRADO
 router.get('/activo/:userId', requireAuth, recorridoController.obtenerRecorridoActivo);
 
 // Cancelar/Eliminar un recorrido simulado o de prueba
-router.delete('/cancelar/:id', requireAuth, requireRole([USER_ROLES.ADMINISTRADOR, USER_ROLES.SUPERUSUARIO]), recorridoController.cancelarRecorrido);
+router.delete('/cancelar/:id', requireAuth, requireRole([USER_ROLES.ADMINISTRADOR, USER_ROLES.SUPERUSUARIO, USER_ROLES.CONDUCTOR]), recorridoController.cancelarRecorrido);
 
 module.exports = router;

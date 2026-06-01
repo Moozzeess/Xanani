@@ -6,6 +6,7 @@
  */
 const router = require('express').Router();
 const autenticacionController = require('../controllers/autenticacion.controller');
+const { requireAuth } = require('../middlewares/auth');
 
 router.post('/registro', autenticacionController.registrar);
 router.post('/login', autenticacionController.iniciarSesion);
@@ -15,5 +16,6 @@ router.get('/verify-email/:token', autenticacionController.verificarCorreo);
 router.post('/resend-verification', autenticacionController.reenviarVerificacion);
 router.post('/forgot-password', autenticacionController.solicitarRecuperacion);
 router.post('/reset-password/:token', autenticacionController.restablecerContrasena);
+router.put('/cambiar-contrasena', requireAuth, autenticacionController.cambiarContrasena);
 
 module.exports = router;

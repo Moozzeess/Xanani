@@ -82,11 +82,28 @@ const restablecerContrasena = catchAsync(async (req, res) => {
   res.status(200).json(result);
 });
 
+const cambiarContrasena = catchAsync(async (req, res) => {
+  const { nuevaContrasena } = req.body;
+  const userId = req.auth?.userId; // Extraído del token por el middleware de autenticación
+
+  if (!userId) {
+    throw new ErrorApp('No autorizado. Token inválido o expirado.', 401);
+  }
+
+  if (!nuevaContrasena || nuevaContrasena.length < 8) {
+    throw new ErrorApp('La nueva contraseña debe tener al menos 8 caracteres.', 400);
+  }
+
+  const result = await authService.cambiarContrasenaObligatoria(userId, nuevaContrasena);
+  res.status(200).json(result);
+});
+
 module.exports = {
   registrar,
   iniciarSesion,
   verificarCorreo,
   reenviarVerificacion,
   solicitarRecuperacion,
-  restablecerContrasena
+  restablecerContrasena,
+  cambiarContrasena
 };

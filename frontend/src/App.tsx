@@ -8,6 +8,7 @@ import ResetPassword from "./auth/ResetPassword";
 import { useAuth } from "./auth/useAuth";
 import type { Role } from "./types/auth";
 import RutaProtegida from "./auth/ProtectedRoute";
+import ForceChangePassword from "./auth/ForceChangePassword";
 
 import SuperusuarioPage from "./pages/superuser/superuser";
 import AdminDashboard from "./pages/administrador/adminDasboard";
@@ -68,6 +69,16 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/privacidad" element={<PrivacidadPage />} />
         <Route path="/seguridad" element={<SeguridadPage />} />
+
+        {/* Ruta para cambio obligatorio de contraseña */}
+        <Route
+          path="/force-change-password"
+          element={
+            <RutaProtegida allowedRoles={["ADMINISTRADOR", "CONDUCTOR"]}>
+              <ForceChangePassword />
+            </RutaProtegida>
+          }
+        />
 
         <Route
           path="/superuser"

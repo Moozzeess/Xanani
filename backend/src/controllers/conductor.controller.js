@@ -4,6 +4,9 @@ const Unidad = require('../models/Unidad');
 const Recorrido = require('../models/Recorrido');
 const catchAsync = require('../utils/catchAsync');
 const ErrorApp = require('../utils/ErrorApp');
+const crypto = require('crypto');
+const emailService = require('../services/email.service');
+const { generarPasswordSegura } = require('../utils/password');
 
 /**
  * Calcula la edad exacta basada en la fecha de nacimiento.
@@ -66,7 +69,7 @@ const obtenerConductores = catchAsync(async (req, res, next) => {
  * Intención: Crea un nuevo Usuario y su ficha de Conductor asociada.
  */
 const crearConductor = catchAsync(async (req, res, next) => {
-  const { username, email, password, telefono, licencia, unidad, fechaNacimiento, rutaAsignadaId } = req.body;
+  const { username, email, telefono, licencia, unidad, fechaNacimiento, rutaAsignadaId } = req.body;
 
   let unidadDocumento = null;
   // Solo buscar unidad si se proporcionó una placa no vacía
@@ -77,13 +80,24 @@ const crearConductor = catchAsync(async (req, res, next) => {
     }
   }
 
-  const passwordHash = await require('bcryptjs').hash(password, 10);
+  const passwordSegura = generarPasswordSegura(16);
+  const passwordHash = await require('bcryptjs').hash(passwordSegura, 10);
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+  
   const user = await Usuario.create({
     username,
     email: email.toLowerCase(),
     passwordHash,
     role: USER_ROLES.CONDUCTOR,
-    flotilla: req.auth?.flotilla || null
+    flotilla: req.auth?.flotilla || null,
+    isVerified: false,
+    verificationToken,
+    mustChangePassword: true
+  });
+
+  // Enviar correo con credenciales de acceso temporal y token de verificación
+  emailService.enviarCorreoCreacionCuenta(user.email, user.username, passwordSegura, verificationToken).catch(err => {
+    console.error('Error enviando correo de creación al conductor:', err);
   });
 
   const conductor = await Conductor.create({
