@@ -113,7 +113,7 @@ const LandingPasajero: React.FC = () => {
     });
 
     conDistancia.sort((a, b) => a.dist - b.dist);
-    return conDistancia.slice(0, 3); // Mostrar las 3 unidades más cercanas
+    return conDistancia.slice(0, 1); // Mostrar solo la unidad más cercana
   }, [vehiculosActivos, userLocation]);
 
   const nearestVehicle = vehiculosCercanos[0] || null;

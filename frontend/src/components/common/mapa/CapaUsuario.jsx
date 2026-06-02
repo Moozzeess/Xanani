@@ -26,7 +26,7 @@ const CapaUsuario = ({ posicion, radio = 0 }) => {
 
             markerRef.current = L.marker(posicion, { 
                 icon,
-                zIndexOffset: 1000 
+                zIndexOffset: 200 
             }).addTo(map);
         } else {
             markerRef.current.setLatLng(posicion);

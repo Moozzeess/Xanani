@@ -13,13 +13,31 @@ const CapaInvitacion = ({ trazo = [], parada = null, eta = null, estaSuscrito = 
     const markerRef = useRef(null);
 
     // 1. Gestión del Trazado (Línea punteada)
-    // El trazo de invitación ha sido eliminado según los requerimientos
     useEffect(() => {
         if (!map) return;
-        if (lineRef.current) {
+        
+        if (trazo && trazo.length > 0) {
+            if (!lineRef.current) {
+                lineRef.current = L.polyline(trazo, {
+                    color: '#3b82f6',
+                    weight: 4,
+                    dashArray: '5, 10',
+                    opacity: 0.8
+                }).addTo(map);
+            } else {
+                lineRef.current.setLatLngs(trazo);
+            }
+        } else if (lineRef.current) {
             lineRef.current.remove();
             lineRef.current = null;
         }
+        
+        return () => {
+            if (lineRef.current) {
+                lineRef.current.remove();
+                lineRef.current = null;
+            }
+        };
     }, [map, trazo]);
 
     // 2. Gestión del Marcador y Popup de ETA

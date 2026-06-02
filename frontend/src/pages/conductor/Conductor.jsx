@@ -85,6 +85,7 @@ const Conductor = () => {
 
   // ─── Socket ────────────────────────────────────────────────────────────────
   const [socket, setSocket] = useState(null);
+  const [recorridoId, setRecorridoId] = useState(null);
 
   // Refs para retener datos en caso de pérdida de señal
   const socketRef = useRef(null);
@@ -129,8 +130,6 @@ const Conductor = () => {
     kmRecorridos: 0,
     calificacion: 5.0
   });
-
-  const [recorridoId, setRecorridoId] = useState(null);
 
   // ─── Valores derivados para la UI ──────────────────────────────────────────
   // Intencion: punto de acceso único para los datos que se muestran al conductor.

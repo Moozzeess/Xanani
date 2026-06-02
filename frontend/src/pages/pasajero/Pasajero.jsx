@@ -379,35 +379,56 @@ const Pasajero = () => {
     useEffect(() => {
         if (!userPos || rutasDisponibles.length === 0 || radarNotificado || mostrarTutorial) return;
 
-        let paradaMasCercana = null;
-        let rutaAsociada = null;
-        let minDistancia = Infinity;
-
+        const paradasCercanas = [];
         rutasDisponibles.forEach(ruta => {
             ruta.paradas?.forEach(parada => {
                 const d = calcularDistancia(userPos[0], userPos[1], parada.latitud, parada.longitud);
-                if (d <= 1000 && d < minDistancia) {
-                    minDistancia = d;
-                    paradaMasCercana = parada;
-                    rutaAsociada = ruta;
+                if (d <= 1000) {
+                    paradasCercanas.push({ parada, ruta, distancia: d });
                 }
             });
         });
 
-        if (paradaMasCercana) {
+        if (paradasCercanas.length > 0) {
+            paradasCercanas.sort((a, b) => a.distancia - b.distancia);
+            
+            const idsSuscritos = rutasFavoritas.map(f => (f._id || f.id).toString());
+            const paradasSuscritas = paradasCercanas.filter(p => idsSuscritos.includes((p.ruta._id || p.ruta.id).toString()));
+            
+            // Priorizar suscrita más cercana, si no hay, la más cercana general
+            const seleccionada = paradasSuscritas.length > 0 ? paradasSuscritas[0] : paradasCercanas[0];
+            const { parada: paradaMasCercana, ruta: rutaAsociada } = seleccionada;
+
+            const rutasUnicas = new Set(paradasCercanas.map(p => (p.ruta._id || p.ruta.id).toString()));
+            const numRutas = rutasUnicas.size;
+            const totalParadas = paradasCercanas.length;
+
+            let mensaje = `Se detectó la parada ${paradaMasCercana.nombre} cerca de tu ubicación.`;
+            if (totalParadas > 1) {
+                if (numRutas === 1) {
+                    mensaje = `Se han detectado ${totalParadas} paradas de la misma ruta. Destacando: ${paradaMasCercana.nombre}`;
+                } else {
+                    if (paradasSuscritas.length > 0) {
+                        mensaje = `Se ha detectado más de una parada de distinta ruta, priorizando ruta suscrita: ${paradaMasCercana.nombre}`;
+                    } else {
+                        mensaje = `Se ha detectado más de una parada de distinta ruta. Destacando: ${paradaMasCercana.nombre}`;
+                    }
+                }
+            }
+
             setRadarNotificado(true); // Evitar re-notificar
             
             disparar({
                 tipo: 'info',
                 titulo: 'Radar Automático',
-                mensaje: `Se detectó la parada ${paradaMasCercana.nombre} cerca de tu ubicación.`,
+                mensaje: mensaje,
                 textoAccion: 'Abrir Radar',
                 onAccion: () => {
                     handleCentrarUsuario();
                 }
             });
         }
-    }, [userPos, rutasDisponibles, radarNotificado, disparar]);
+    }, [userPos, rutasDisponibles, radarNotificado, disparar, rutasFavoritas]);
 
     // Cargar Perfil y Favoritos
     const fetchPerfil = async () => {
@@ -534,7 +555,7 @@ const Pasajero = () => {
             rutasDisponibles.forEach(ruta => {
                 ruta.paradas?.forEach(parada => {
                     const d = calcularDistancia(userPos[0], userPos[1], parada.latitud, parada.longitud);
-                    if (d <= 1000) { // Umbral de 1km
+                    if (d <= 500) { // Umbral de 1km
                         paradasCercanas.push({ parada, ruta, distancia: d });
                     }
                 });
@@ -545,17 +566,39 @@ const Pasajero = () => {
                 paradasCercanas.sort((a, b) => a.distancia - b.distancia);
 
                 const idsSuscritos = rutasFavoritas.map(f => (f._id || f.id).toString());
+                const paradasSuscritas = paradasCercanas.filter(p => idsSuscritos.includes((p.ruta._id || p.ruta.id).toString()));
 
-                // Ya no filtramos por rutas no suscritas para permitir el ETA en rutas habituales
-                const seleccionada = paradasCercanas[0];
+                // Priorizar suscrita más cercana, si no, la más cercana general
+                const seleccionada = paradasSuscritas.length > 0 ? paradasSuscritas[0] : paradasCercanas[0];
                 const { parada: paradaCercana, ruta: rutaAsociada } = seleccionada;
 
-                // Contar rutas únicas cercanas (todas, incluso suscritas) para información
                 const rutasUnicas = new Set(paradasCercanas.map(p => (p.ruta._id || p.ruta.id).toString()));
                 const numRutas = rutasUnicas.size;
+                const totalParadas = paradasCercanas.length;
 
                 const rid = (rutaAsociada._id || rutaAsociada.id).toString();
                 const estaSuscrito = idsSuscritos.includes(rid);
+
+                let tituloMensaje = '';
+                let textoMensaje = '';
+
+                if (totalParadas > 1) {
+                    if (numRutas === 1) {
+                        tituloMensaje = `${totalParadas} Paradas Cercanas`;
+                        textoMensaje = `Se han detectado ${totalParadas} paradas de la misma ruta. Se fijó la más cercana: ${paradaCercana.nombre}`;
+                    } else {
+                        if (paradasSuscritas.length > 0) {
+                            tituloMensaje = 'Múltiples Rutas';
+                            textoMensaje = `Se ha detectado más de una parada de distinta ruta, priorizando ruta suscrita: ${paradaCercana.nombre}`;
+                        } else {
+                            tituloMensaje = 'Múltiples Rutas';
+                            textoMensaje = `Se ha detectado más de una parada de distinta ruta. Se fijó la más cercana: ${paradaCercana.nombre}`;
+                        }
+                    }
+                } else {
+                    tituloMensaje = estaSuscrito ? 'Ruta Habitual' : 'Radar: Parada Detectada';
+                    textoMensaje = estaSuscrito ? `${paradaCercana.nombre} (En tu ruta)` : `${paradaCercana.nombre}`;
+                }
 
                 setParadaDetectada({
                     parada: paradaCercana,
@@ -594,8 +637,8 @@ const Pasajero = () => {
 
                 disparar({
                     tipo: 'info',
-                    titulo: estaSuscrito ? 'Ruta Habitual' : (numRutas > 1 ? `${numRutas} Rutas Detectadas` : `Radar: Parada Detectada`),
-                    mensaje: estaSuscrito ? `${paradaCercana.nombre} (En tu ruta)` : (numRutas > 1 ? `La más cercana es ${paradaCercana.nombre}` : `${paradaCercana.nombre}`)
+                    titulo: tituloMensaje,
+                    mensaje: textoMensaje
                 });
             } else {
                 setParadaDetectada(null);
@@ -719,7 +762,7 @@ const Pasajero = () => {
                                 }}
                             />
                             <CapaVehiculos vehicles={vehicles} selectedVehicleId={selectedVehicle?.id} onVehicleClick={handleVehicleClick} />
-                            {userPos && <CapaUsuario posicion={userPos} radio={mostrarRadar ? 1000 : 0} />}
+                            {userPos && <CapaUsuario posicion={userPos} radio={mostrarRadar ? 200 : 0} />}
                         </Mapa>
 
                         {/* Radar de Descubrimiento */}
