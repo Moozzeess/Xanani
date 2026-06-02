@@ -6,7 +6,7 @@
  */
 const router = require('express').Router();
 const autenticacionController = require('../controllers/autenticacion.controller');
-const { requireAuth } = require('../middlewares/auth');
+const { requireAuth } = require('../middlewares/auth.middleware');
 
 router.post('/registro', autenticacionController.registrar);
 router.post('/login', autenticacionController.iniciarSesion);

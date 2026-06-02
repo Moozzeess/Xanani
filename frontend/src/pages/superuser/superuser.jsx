@@ -45,7 +45,7 @@ const Superususario = () => {
             <span className="text-white font-bold text-lg">S</span>
           </div>
           <div>
-            <h1 className="text-white font-bold tracking-wide">Panel Superusuario</h1>
+            <h1 className="text-white font-bold tracking-wide">Panel de Superadministrador</h1>
             <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">Sistema de Control Global</p>
           </div>
         </div>

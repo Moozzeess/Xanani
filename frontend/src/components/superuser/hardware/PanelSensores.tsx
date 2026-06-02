@@ -31,7 +31,7 @@ const MapaAsientosHardware = ({ celdasCarga, totalAsientos }: MapaProps) => {
           Monitoreo de Asientos (Celdas Activas)
         </h3>
         <div className="flex gap-2">
-          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+          <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded">
             {numOcupados} Ocupados
           </span>
           <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">
@@ -47,7 +47,7 @@ const MapaAsientosHardware = ({ celdasCarga, totalAsientos }: MapaProps) => {
             <div
               key={asiento.id}
               className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all duration-300 relative group ${asiento.ocupado
-                ? 'bg-slate-100 border-2 border-slate-500 text-slate-700'
+                ? 'bg-red-100 border-2 border-red-500 text-slate-700'
                 : 'bg-green-50 border-2 border-green-500 text-green-600'
                 }`}
             >
