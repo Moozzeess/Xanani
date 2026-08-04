@@ -1,6 +1,6 @@
 #  Xanani - Plataforma de Movilidad Inteligente
 
-Xanani es una plataforma de movilidad inteligente diseñada para optimizar el transporte público, ofreciendo información en tiempo real, seguimiento de unidades y una experiencia de usuario mejorada para pasajeros y operadores.
+Xanani es una plataforma de movilidad inteligente diseñada para optimizar el transporte público, ofreciendo información en tiempo real, seguimiento de unidades y una experiencia de usuario mejorada para pasajeros y operadores. Cuenta con un motor de simulación en caso de que los dispositivos IoT se encuentren inactivos.
 
 ##  Características Principales
 
@@ -74,7 +74,7 @@ Xanani/
    npm install
    ```
 
-4. Iniciar los servicios:
+4. Iniciar los servicios de prueba:
    ```bash
    # En una terminal (backend)
    cd backend
@@ -85,9 +85,8 @@ Xanani/
    npm run dev
    ```
 
-5. Acceder a las aplicaciones:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:4000
+5. Acceder a las aplicación:
+   https://xanani.online/#/LandingPage
 
 ## 📚 Documentación
 
@@ -111,3 +110,4 @@ Xanani/
 - Mongoose
 - JWT (Autenticación)
 - Socket.IO (Tiempo real)
+- Despliegue en AWS
