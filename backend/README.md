@@ -4,7 +4,7 @@ Desarrollado con Node.js y Express. Optimizado con balanceo de carga nativo y to
 ## Tecnologías y Características
 - **Balanceo de Carga Multi-Core**: Integrado nativamente con el módulo `cluster`, genera una instancia del servidor por cada núcleo lógico del CPU host, previendo y auto-reiniciando caídas para garantizar altísima disponibilidad.
 - **Rendimiento de Red**: Compresión gzip configurada en la capa de transmisión HTTP, junto con control asíncrono de *Timeouts* e incremento de conexiones al Data Pool de base de datos.
-
+- **Despliegue en AWS mediante instancia EC2, servidor MQTT**
 
 ## Estructura del Proyecto
 
@@ -54,15 +54,6 @@ Configurar el backend:
    # Editar .env con las credenciales coresponientes
    npm install
    ```
-## Estructura del archivo de variables de entorno .env
-```
-# Configuración del servidor
-# Base de datos MongoDB
-MONGO_URI='mongodb+srv://ENLACE_DE_MONGO_EN_ATLAS'
-# JSON WEB TOKEN (USAR EL PROGRAMA https://jwtsecretkeygenerator.com/es/)
-JWT_SECRET="TOKEN"
-```
-
  Iniciar los servicios:
    ```bash
    # En una terminal (backend)
